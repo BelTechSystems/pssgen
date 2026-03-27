@@ -332,6 +332,36 @@ test_e2e.py passes all tests including 7 new VHDL parser
 tests, AND the pipeline runs end-to-end against
 tests/fixtures/counter.vhd in --no-llm mode with exit 0.
 
+## Current phase: v2a — SNL intent file
+
+Goal: implement --intent flag so engineers can provide
+structured natural language verification intent alongside
+their HDL source.
+
+File extension: .intent
+Format: free-form sections with preferred headings.
+        No schema enforcement. Agent maps any heading
+        to PSS constructs by semantic understanding.
+
+Preferred section headings (documented, not required):
+  reset behavior:
+  counting sequences:
+  coverage goals:
+  corner cases:
+  constraints:
+  register access:      (future — v4)
+  error injection:      (future — v3+)
+  performance:          (future)
+
+IR field: ir.pss_intent (Optional[str], already exists)
+Agent: pss_gen.py — use ir.pss_intent when present,
+       IR-only inference when absent.
+
+Done condition: pssgen --input counter.vhd
+  --intent counter.intent --sim vivado --no-llm
+  exits 0 and the PSS model contains more specific
+  action constraints than IR-only inference produces.
+  All 26 non-e2e tests still pass.
 
 ## How to Work Effectively With Claude Code on This Project
 
