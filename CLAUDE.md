@@ -107,6 +107,14 @@ def check(artifacts: list[Artifact], sim_target: str) -> CheckResult:
 ```
 Internal checks grow. This interface does not change.
 
+### Rule 7: --no-llm flag bypasses LLM for testing
+The CLI supports --no-llm which renders Jinja2 templates 
+only, with no API call. This mode is used for all unit 
+tests, integration tests, and CI. The real LLM path is 
+only invoked in end-to-end tests and production use. 
+Never remove this flag. Never make tests depend on a 
+live API key.
+
 ---
 
 ## Component Contracts (Stable Across All Phases)
@@ -271,6 +279,13 @@ Architecture questions, phase planning, strategic trade-offs — bring those to
 the Claude chat session where this project was designed. Implementation and
 debugging belong in Claude Code. The chat session is the design partner;
 Claude Code is the implementation partner. DESIGN.md is the bridge.
+
+## Windows environment note
+Always use the project virtual environment interpreter, not 
+the system python3. Activate before running any Python 
+commands:
+    .venv\Scripts\activate
+Then use: python -m pytest (not python3 -m pytest)
 
 ---
 
