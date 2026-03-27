@@ -10,6 +10,7 @@ Parses command-line arguments and dispatches one orchestrator run.
 import argparse
 import sys
 from orchestrator import run, JobSpec
+from parser.dispatch import resolve_parser
 
 
 def main() -> None:
@@ -38,6 +39,12 @@ def main() -> None:
     )
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args()
+
+    try:
+        resolve_parser(args.input)
+    except ValueError as exc:
+        print(f"[pssgen] CONFIG ERROR: {exc}", file=sys.stderr)
+        sys.exit(3)
 
     job = JobSpec(
         input_file=args.input,

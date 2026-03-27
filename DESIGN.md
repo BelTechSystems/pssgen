@@ -154,3 +154,10 @@ No phase begins until the previous phase satisfies all of the following:
 
 These gates are not bureaucracy. They are the mechanism that keeps a solo maker
 from discovering integration problems six phases deep with no clean rollback point.
+
+## Notes
+
+dispatch.py — extension-to-parser routing helper shared by
+cli.py and orchestrator.py. Consider moving to parser/
+dispatch.py if the parser package grows in v1b+.
+

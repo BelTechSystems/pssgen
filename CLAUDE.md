@@ -311,6 +311,28 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ---
 
+## Current phase: v1a — VHDL parser
+
+Goal: implement parser/vhdl.py so the pipeline accepts
+.vhd input and produces the same IR structure as the
+Verilog parser.
+
+Supported port types (v1a only):
+  - std_logic                      → width 1
+  - std_logic_vector(N downto 0)   → width N+1
+  - std_logic_vector(0 to N)       → width N+1
+  Anything else raises ParseError.
+
+Port modes:
+  in → "input", out → "output",
+  inout → "inout", buffer → "output"
+
+Done condition: python -m pytest tests/ --ignore=tests/
+test_e2e.py passes all tests including 7 new VHDL parser
+tests, AND the pipeline runs end-to-end against
+tests/fixtures/counter.vhd in --no-llm mode with exit 0.
+
+
 ## How to Work Effectively With Claude Code on This Project
 
 **Prefer goal + context over commands.**

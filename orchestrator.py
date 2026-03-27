@@ -13,7 +13,7 @@ from typing import Optional
 import json, os
 
 from ir import IR
-from parser.verilog import parse as parse_verilog
+from parser.dispatch import parse_source
 from agents.structure_gen import generate
 from checkers.verifier import check
 from emitters.vivado import emit as emit_vivado
@@ -69,7 +69,7 @@ def run(job: JobSpec) -> OrchestratorResult:
         OrchestratorResult describing success, outputs, attempts, and failure.
     """
     # --- Parse ---
-    ir = parse_verilog(job.input_file, job.top_module)
+    ir = parse_source(job.input_file, job.top_module)
     ir.emission_target = job.sim_target
     ir.output_dir = job.out_dir
 
@@ -91,6 +91,8 @@ def run(job: JobSpec) -> OrchestratorResult:
         result = check(artifacts, job.sim_target)
 
         if result.passed:
+            if job.verbose:
+                print(f"[orchestrator] Checker passed all tiers; tier-1 structural checks passed")
             output_files = emit_vivado(ir, artifacts, job.out_dir)
             return OrchestratorResult(
                 success=True,
