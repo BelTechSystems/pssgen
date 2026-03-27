@@ -87,6 +87,11 @@ def _tier1_structural(artifacts: list[Artifact]) -> CheckResult:
 def _tier2_syntax(artifacts: list[Artifact], sim_target: str) -> CheckResult:
     # OI-10 (SDS): PSS elaboration/parser tier is deferred because no
     # pip-installable open-source PSS parser is available for integration.
+    # OI-11: C artifact tier-2 syntax check — deferred.
+    # Future: call gcc --syntax-only on .c artifacts.
+    # Requires gcc on PATH. Skip gracefully if absent.
+    # .c files are intentionally excluded here; they are not validated by
+    # xvlog/vlog and have no structural UVM checks in any tier.
     sv_files = [a for a in artifacts if a.filename.endswith(".sv")]
     if not sv_files:
         return CheckResult(passed=True, tier=2, reason="no sv files to check")

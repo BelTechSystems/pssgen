@@ -363,28 +363,28 @@ Done condition: pssgen --input counter.vhd
   action constraints than IR-only inference produces.
   All 26 non-e2e tests still pass.
 
-## Current phase: v2b — C/C++ test case emission
+## Current phase: v2b — C test case emission
 
 Goal: promote emitters/generic_c.py from stub to working
-implementation. Takes ir.pss_model (already populated by
-pss_gen) and generates C test functions — one per PSS
-action — suitable for post-silicon bringup and embedded
-validation.
+implementation. Generates C test functions from the PSS
+model stored in ir.pss_model.
 
 Approach:
+  - Extract action names from ir.pss_model using regex
+    pattern: r'action\s+(\w+)\s*\{'
+  - One C function per action: void test_<action>(void)
+  - A run_all_pss_tests() harness calls all functions
   - New Jinja2 template: templates/c/test_functions.c.jinja
-  - One C function per PSS action in the model
-  - Functions follow a simple pattern:
-      void test_<action_name>(void) { ... }
-  - --no-llm mode renders template only
-  - --sim generic activates C emission target
+  - Activated by: --sim generic
   - Output filename: <design_name>_pss_tests.c
+  - --no-llm mode renders template only
 
 Done condition: pssgen --input counter.vhd
   --intent counter.intent --sim generic --no-llm
-  exits 0 and produces <design_name>_pss_tests.c
-  containing at least one C test function.
-  All 29 non-e2e tests still pass.
+  exits 0 and produces up_down_counter_pss_tests.c
+  containing at least one void test_ function and
+  run_all_pss_tests(). All 29 non-e2e tests still pass.
+```
 
 
 ## How to Work Effectively With Claude Code on This Project

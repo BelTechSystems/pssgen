@@ -18,6 +18,8 @@ from agents.structure_gen import Artifact, generate
 from agents.pss_gen import generate_pss
 from checkers.verifier import check
 from emitters.vivado import emit as emit_vivado
+from emitters.questa import emit as emit_questa
+from emitters.generic_c import emit as emit_generic_c
 
 
 @dataclass
@@ -28,7 +30,7 @@ class JobSpec:
         input_file: Path to the HDL input file.
         top_module: Optional explicit top module name.
         out_dir: Output directory for emitted artifacts.
-        sim_target: Simulator target name (for example, "vivado").
+        sim_target: Simulator target name ("vivado", "questa", or "generic").
         max_retries: Maximum checker-guided regeneration attempts.
         intent_file: Optional path to structured natural language intent file.
         dump_ir: Whether to write an `ir.json` snapshot into `out_dir`.
@@ -60,6 +62,32 @@ class OrchestratorResult:
     output_files: list[str] = field(default_factory=list)
     attempts: int = 0
     last_fail_reason: str = ""
+
+
+def _resolve_emitter(sim_target: str):
+    """Return the emit callable for the requested simulator target.
+
+    Args:
+        sim_target: One of "vivado", "questa", or "generic".
+
+    Returns:
+        Callable matching the emitter interface:
+        ``emit(ir, artifacts, out_dir) -> list[str]``.
+
+    Raises:
+        ValueError: If sim_target is not a recognised target.
+    """
+    dispatch = {
+        "vivado":  emit_vivado,
+        "questa":  emit_questa,
+        "generic": emit_generic_c,
+    }
+    if sim_target not in dispatch:
+        raise ValueError(
+            f"Unknown sim_target '{sim_target}'. "
+            f"Valid targets: {sorted(dispatch)}"
+        )
+    return dispatch[sim_target]
 
 
 def run(job: JobSpec) -> OrchestratorResult:
@@ -104,7 +132,8 @@ def run(job: JobSpec) -> OrchestratorResult:
         if result.passed:
             if job.verbose:
                 print(f"[orchestrator] Checker passed all tiers; tier-1 structural checks passed")
-            output_files = emit_vivado(ir, artifacts, job.out_dir)
+            emitter = _resolve_emitter(job.sim_target)
+            output_files = emitter(ir, artifacts, job.out_dir)
             return OrchestratorResult(
                 success=True,
                 output_files=output_files,
