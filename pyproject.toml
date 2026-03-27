@@ -12,6 +12,11 @@ dependencies = [
     "anthropic>=0.30",
 ]
 
+[tool.pytest.ini_options]
+markers = [
+    "e2e: end-to-end tests requiring ANTHROPIC_API_KEY and optional xvlog",
+]
+
 [project.optional-dependencies]
 dev = ["pytest", "pytest-cov"]
 
