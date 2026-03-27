@@ -85,6 +85,8 @@ def _output_filename(design_name: str, tmpl_name: str) -> str:
     name = tmpl_name.replace(".jinja", "").replace("interface", f"{design_name}_if")
     for role in ["driver", "monitor", "sequencer", "agent", "test"]:
         name = name.replace(role, f"{design_name}_{role}")
+    # Preserve v0 file contract: sequencer class file is named *_seqr.sv.
+    name = name.replace(f"{design_name}_sequencer", f"{design_name}_seqr")
     name = name.replace("build_vivado", "build")
     return name
 
