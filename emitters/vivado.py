@@ -5,7 +5,7 @@
 Phase: v0
 Layer: 5 (emitters)
 
-Writes generated artifacts to disk for Vivado/XSIM flows.
+Writes generated artifacts (.sv, .pss, build scripts) to disk for Vivado/XSIM flows.
 """
 from agents.structure_gen import Artifact
 from ir import IR
@@ -17,7 +17,7 @@ def emit(ir: IR, artifacts: list[Artifact], out_dir: str) -> list[str]:
 
     Args:
         ir: Parsed design IR (retained for interface stability).
-        artifacts: Generated artifacts to write.
+        artifacts: Generated artifacts to write, including optional .pss models.
         out_dir: Destination directory path.
 
     Returns:

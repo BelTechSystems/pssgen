@@ -41,6 +41,7 @@ class IR:
         emission_target: Simulator/output target name.
         output_dir: Output directory for emitted artifacts.
         pss_intent: Optional PSS intent text (introduced in later phases).
+        pss_model: Optional generated PSS source model text.
     """
     design_name: str
     hdl_source: str
@@ -51,3 +52,4 @@ class IR:
     output_dir: str
     # v1+: append new Optional fields below this line
     pss_intent: Optional[str] = None
+    pss_model: Optional[str] = None

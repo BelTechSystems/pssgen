@@ -41,6 +41,13 @@ def check(artifacts: list[Artifact], sim_target: str = "vivado") -> CheckResult:
     if not result.passed:
         return result
 
+    for artifact in artifacts:
+        if artifact.filename.endswith(".pss"):
+            design_name = os.path.splitext(os.path.basename(artifact.filename))[0]
+            result = _tier1_pss_structural(artifact, design_name)
+            if not result.passed:
+                return result
+
     result = _tier2_syntax(artifacts, sim_target)
     if not result.passed:
         return result
@@ -78,6 +85,8 @@ def _tier1_structural(artifacts: list[Artifact]) -> CheckResult:
 # ── Tier 2: syntax check (calls xvlog or vlog) ────────────────────────
 
 def _tier2_syntax(artifacts: list[Artifact], sim_target: str) -> CheckResult:
+    # OI-10 (SDS): PSS elaboration/parser tier is deferred because no
+    # pip-installable open-source PSS parser is available for integration.
     sv_files = [a for a in artifacts if a.filename.endswith(".sv")]
     if not sv_files:
         return CheckResult(passed=True, tier=2, reason="no sv files to check")
@@ -116,3 +125,24 @@ def _tier3_smoke(artifacts: list[Artifact]) -> CheckResult:
     if not any("build" in n for n in names):
         return CheckResult(passed=False, tier=3, reason="no build script generated")
     return CheckResult(passed=True, tier=3, reason="")
+
+
+def _tier1_pss_structural(artifact: Artifact, design_name: str) -> CheckResult:
+    """Validate minimum structural requirements for a generated PSS model.
+
+    Args:
+        artifact: PSS artifact under validation.
+        design_name: Expected design/component stem name.
+
+    Returns:
+        Tier-1 CheckResult for PSS structural validity.
+    """
+    required = ["component", "action", design_name]
+    for req in required:
+        if req not in artifact.content:
+            return CheckResult(
+                passed=False,
+                tier=1,
+                reason=f"{artifact.filename}: missing '{req}'",
+            )
+    return CheckResult(passed=True, tier=1, reason="")

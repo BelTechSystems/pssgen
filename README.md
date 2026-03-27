@@ -87,6 +87,8 @@ plain English intent / HDL source file
 
 **Key design principles:**
 
+Design change history for reviewer convenience is tracked in the Companion Changelog (v1 Reality) section of DESIGN.md.
+
 - The orchestrator owns the retry loop. Agents do not retry themselves.
 - The IR is append-only. Fields are added across phases; existing fields are never
   renamed or removed.

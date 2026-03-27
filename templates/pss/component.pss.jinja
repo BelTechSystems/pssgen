@@ -1,3 +1,41 @@
-component {{ ir.design_name }}_comp {
-    // TODO: add actions, resources, and scenarios
+component {{ design_name }}_comp {
+{% if reset_ports %}
+    action do_reset {
+        // Reset behavior inferred from reset-role port(s).
+    }
+{% endif %}
+{% for port in control_ports %}
+    action drive_{{ port.name }} {
+        // Drive behavior inferred from control input '{{ port.name }}'.
+    }
+{% endfor %}
+{% for port in data_ports %}
+    action sample_{{ port.name }} {
+        // Sample behavior inferred from data output '{{ port.name }}'.
+    }
+{% endfor %}
+
+    action main {
+{% if reset_ports %}
+        do_reset r;
+{% endif %}
+{% for port in control_ports %}
+        drive_{{ port.name }} d_{{ loop.index }};
+{% endfor %}
+{% for port in data_ports %}
+        sample_{{ port.name }} s_{{ loop.index }};
+{% endfor %}
+
+        // LLM_FILL_CONSTRAINTS_START
+        constraint c_default {
+            // TODO: add meaningful scenario constraints
+        }
+        // LLM_FILL_CONSTRAINTS_END
+
+        // LLM_FILL_COVERAGE_START
+        covergroup cg_default {
+            // TODO: add meaningful coverage intent
+        }
+        // LLM_FILL_COVERAGE_END
+    }
 }

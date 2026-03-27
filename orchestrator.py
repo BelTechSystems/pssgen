@@ -14,7 +14,8 @@ import json, os
 
 from ir import IR
 from parser.dispatch import parse_source
-from agents.structure_gen import generate
+from agents.structure_gen import Artifact, generate
+from agents.pss_gen import generate_pss
 from checkers.verifier import check
 from emitters.vivado import emit as emit_vivado
 
@@ -88,6 +89,8 @@ def run(job: JobSpec) -> OrchestratorResult:
             print(f"[orchestrator] Attempt {attempt}/{job.max_retries}")
 
         artifacts = generate(ir, fail_reason=last_fail_reason, no_llm=job.no_llm)
+        pss_model = generate_pss(ir, fail_reason=last_fail_reason, no_llm=job.no_llm)
+        artifacts.append(Artifact(filename=f"{ir.design_name}.pss", content=pss_model))
         result = check(artifacts, job.sim_target)
 
         if result.passed:

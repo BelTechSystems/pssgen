@@ -37,6 +37,10 @@ def test_orchestrator_retry_fires(tmp_path):
         return GOOD_ARTIFACTS
 
     with patch("orchestrator.generate", side_effect=mock_generate), \
+         patch(
+             "orchestrator.generate_pss",
+             return_value="component up_down_counter_comp { action a {} }",
+         ), \
          patch("orchestrator.emit_vivado", return_value=[]):
         result = run(job)
 

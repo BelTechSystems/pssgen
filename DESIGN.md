@@ -157,7 +157,76 @@ from discovering integration problems six phases deep with no clean rollback poi
 
 ## Notes
 
+Note 1:
 dispatch.py — extension-to-parser routing helper shared by
 cli.py and orchestrator.py. Consider moving to parser/
 dispatch.py if the parser package grows in v1b+.
 
+Note 2:
+OI-10: PSS tier-2 elaboration check — deferred. No pip-installable
+open-source PSS parser exists as of v1b. PSSTools/pssparser
+(github.com/PSSTools/pssparser) is the candidate when it becomes
+pip-installable. Until then, PSS validation is tier-1 structural only.
+
+---
+
+## Companion Changelog (v1 Reality)
+
+This section mirrors the SDS addendum in plain text so code reviewers can
+inspect scope changes directly in git diffs without opening the .docx.
+
+### v1a — VHDL Parser Scope (Implemented)
+
+- Module: parser/vhdl.py
+- Supported port types:
+   - std_logic -> width 1
+   - std_logic_vector(N downto 0) -> width N+1
+   - std_logic_vector(0 to N) -> width N+1
+- Port mode mapping to IR:
+   - in -> input
+   - out -> output
+   - inout -> inout
+   - buffer -> output
+- Integer generics are extracted into IR.parameters as string defaults.
+- Role classification matches parser/verilog.py heuristics:
+   clock, reset_n, reset, control, data.
+- Unsupported VHDL port types raise ParseError naming both type and port.
+
+### v1a — Extension-Based Parser Dispatch (Implemented)
+
+- Module: parser/dispatch.py
+- Dispatch mapping:
+   - .v -> parser.verilog.parse
+   - .sv -> parser.systemverilog.parse
+   - .vhd/.vhdl -> parser.vhdl.parse
+- CLI validates extension dispatch and exits code 3 on unsupported extensions.
+- Orchestrator parses through shared dispatch to avoid duplicated routing logic.
+
+### v1b — PSS Model Generator Agent (Implemented)
+
+- Module: agents/pss_gen.py
+- Public interface:
+   generate_pss(ir, fail_reason=None, no_llm=False) -> str
+- Template path: templates/pss/component.pss.jinja
+- no_llm=True renders template-only output with no API call.
+- no_llm=False renders skeleton first, then prompts LLM to fill constraints and
+   coverage placeholders.
+- Generated source is stored in ir.pss_model and emitted as <design_name>.pss.
+
+### v1b — Checker Integration for PSS (Implemented)
+
+- Module: checkers/verifier.py
+- Tier-1 PSS structural checks now apply when .pss artifacts are present.
+- Required content checks:
+   - contains "component"
+   - contains "action"
+   - contains design_name
+
+### v1b — Open Issue OI-10 (Formal)
+
+- PSS elaboration/syntax parsing in tier-2 remains deferred.
+- Rationale: no pip-installable open-source PSS parser is currently viable for
+   CI integration.
+- Impact: PSS validation is tier-1 structural only in v1b.
+- Follow-up: add a PSS elaboration tier when a stable parser/elaborator becomes
+   automation-ready.
