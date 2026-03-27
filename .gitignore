@@ -1,0 +1,69 @@
+# ── Python ────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# ── Virtual environments ──────────────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+
+# ── Package / distribution build ─────────────────────────────────────
+*.egg-info/
+dist/
+build/
+*.egg
+MANIFEST
+
+# ── pytest ────────────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# ── pssgen runtime output ─────────────────────────────────────────────
+# Generated testbench files — these are tool output, not source
+out/
+*.ucdb
+
+# IR snapshots produced by --dump-ir
+ir.json
+
+# ── API keys — never commit these ────────────────────────────────────
+.env
+.env.*
+*.env
+
+# ── Vivado / XSIM build artifacts ────────────────────────────────────
+*.jou
+*.log
+*.pb
+*.wdb
+xsim.dir/
+*.str
+webtalk*.xml
+vivado_*.backup.jou
+
+# ── Questa / ModelSim artifacts ──────────────────────────────────────
+work/
+transcript
+vsim.wlf
+modelsim.ini
+
+# ── OS artifacts ─────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Editor artifacts ─────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ── Windows ───────────────────────────────────────────────────────────
+*.lnk
