@@ -124,21 +124,24 @@ The choice of an 8-bit up/down counter as the v0 canonical case is deliberate:
 
 ---
 
-## Why Cursor + Claude Chat as the Development Environment
+## Why Claude Chat + VSCode as the Development Environment
 
-This architecture was developed in Claude chat before a line of code was written.
-The chat session is the systems definition process: market analysis, architectural
-trade-offs, strategic positioning, component interface design, and phase planning.
+This architecture was developed in Claude chat before a
+line of code was written. The chat session is the systems
+definition process: market analysis, architectural
+trade-offs, strategic positioning, component interface
+design, and phase planning.
 
-Cursor handles implementation with the full file tree and test runner in view.
-The risk is context drift — Cursor doesn't see the design rationale unless it is
-in the repo. This document, cursor.md, and SDS.md exist specifically to prevent
-that drift. When Cursor suggests something that conflicts with a design decision
-recorded here, the document wins. The suggestion may be locally correct but
-globally wrong.
+VSCode Chat handles implementation with the full file
+tree and test runner in view. The risk is context drift —
+VSCode Chat doesn't see the design rationale unless it is
+in the repo. CLAUDE.md, DESIGN.md, and SDS.md exist
+specifically to prevent that drift. When the AI suggests
+something that conflicts with a design decision recorded
+here, the document wins.
 
-Design decisions are made in chat. Implementation is done in Cursor. The documents
-are the bridge.
+Design decisions are made in chat. Implementation is done
+in VSCode. The documents are the bridge.
 
 ---
 
@@ -231,34 +234,34 @@ inspect scope changes directly in git diffs without opening the .docx.
 - Follow-up: add a PSS elaboration tier when a stable parser/elaborator becomes
    automation-ready.
 
-## v2 - The Canonical Intent Fixture
+### v2a — Structured Natural Language Intent (Implemented)
 
-# verification intent: up_down_counter
-# author: BelTech Systems LLC
-# description: 8-bit up/down counter with synchronous enable
-#              and active-low reset
+- Flag: --intent <file> (.intent extension)
+- IR field: ir.pss_intent (Optional[str], append-only)
+- Format: free-form sections, no schema enforcement.
+  Preferred headings: reset behavior, counting sequences,
+  coverage goals, corner cases, constraints.
+  Any heading is accepted — the LLM maps intent to PSS
+  by semantic understanding, not by validation.
+- When present: pss_gen includes intent in LLM prompt
+  and preserves it as a comment block in the PSS model.
+- When absent: IR-only inference (existing behavior).
 
-reset behavior:
-  Apply rst_n low for at least 2 clock cycles before any
-  counting sequence begins. Verify that the count output
-  is zero immediately after reset deasserts.
+---
 
-counting sequences:
-  Exercise count_up for random lengths between 1 and 255
-  steps with enable held high throughout.
-  Exercise count_down for random lengths between 1 and 255
-  steps with enable held high throughout.
-  Alternate between count_up and count_down sequences at
-  least once per scenario.
+## License Decision Record
 
-coverage goals:
-  Count reaches maximum value 255 and rolls over to 0.
-  Count reaches minimum value 0 and rolls under to 255.
-  Enable deasserted mid-sequence — count must hold its
-  current value for the duration.
+Current license: MIT (BelTech Systems LLC, 2026).
 
-corner cases:
-  Reset asserted during an active counting sequence.
-  Enable toggled rapidly while counting up.
-  Count_up immediately followed by count_down with no
-  intervening reset.
+MIT was chosen for maximum adoption with zero legal
+friction. Apache 2.0 was considered and has advantages:
+explicit patent grant and patent retaliation clause,
+which may ease enterprise legal review at aerospace
+primes and defense contractors — pssgen's primary target
+audience.
+
+Decision: revisit at v1.0 release. If a target
+enterprise customer flags the patent grant as a blocker,
+switch to Apache 2.0 at that boundary. As sole author,
+relicensing requires no contributor consent until
+external contributions are accepted.
