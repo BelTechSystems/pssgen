@@ -30,20 +30,6 @@ testbench. Everything after that is additive to a working system.
 
 ---
 
-## Current Phase: v0 — Walking Skeleton
-
-Do not add features beyond v0 scope until the v0 e2e test passes and all
-v0 tests are green. The v0 scope is exactly:
-
-- Input: `tests/fixtures/counter.v` (8-bit up/down counter)
-- Output: 7 files in `./out/` (interface, driver, monitor, seqr, agent, test, build.tcl)
-- Emission target: Vivado/XSIM only
-- Gate: `xvlog --sv *.sv` exits 0
-
-Phases v1 through v4 are defined in README.md. Do not implement them early.
-
----
-
 ## Architecture: Five Layers — One Responsibility Each
 
 ```
@@ -311,7 +297,21 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ---
 
-## Current phase: v1a — VHDL parser
+## Completed Phase: v0 — Walking Skeleton
+
+Do not add features beyond v0 scope until the v0 e2e test passes and all
+v0 tests are green. The v0 scope is exactly:
+
+- Input: `tests/fixtures/counter.v` (8-bit up/down counter)
+- Output: 7 files in `./out/` (interface, driver, monitor, seqr, agent, test, build.tcl)
+- Emission target: Vivado/XSIM only
+- Gate: `xvlog --sv *.sv` exits 0
+
+Phases v1 through v4 are defined in README.md. Do not implement them early.
+
+---
+
+## Completed phase: v1a — VHDL parser
 
 Goal: implement parser/vhdl.py so the pipeline accepts
 .vhd input and produces the same IR structure as the
@@ -332,7 +332,7 @@ test_e2e.py passes all tests including 7 new VHDL parser
 tests, AND the pipeline runs end-to-end against
 tests/fixtures/counter.vhd in --no-llm mode with exit 0.
 
-## Current phase: v2a — SNL intent file
+## Completed phase: v2a — SNL intent file
 
 Goal: implement --intent flag so engineers can provide
 structured natural language verification intent alongside
@@ -362,6 +362,30 @@ Done condition: pssgen --input counter.vhd
   exits 0 and the PSS model contains more specific
   action constraints than IR-only inference produces.
   All 26 non-e2e tests still pass.
+
+## Current phase: v2b — C/C++ test case emission
+
+Goal: promote emitters/generic_c.py from stub to working
+implementation. Takes ir.pss_model (already populated by
+pss_gen) and generates C test functions — one per PSS
+action — suitable for post-silicon bringup and embedded
+validation.
+
+Approach:
+  - New Jinja2 template: templates/c/test_functions.c.jinja
+  - One C function per PSS action in the model
+  - Functions follow a simple pattern:
+      void test_<action_name>(void) { ... }
+  - --no-llm mode renders template only
+  - --sim generic activates C emission target
+  - Output filename: <design_name>_pss_tests.c
+
+Done condition: pssgen --input counter.vhd
+  --intent counter.intent --sim generic --no-llm
+  exits 0 and produces <design_name>_pss_tests.c
+  containing at least one C test function.
+  All 29 non-e2e tests still pass.
+
 
 ## How to Work Effectively With Claude Code on This Project
 

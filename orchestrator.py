@@ -30,6 +30,7 @@ class JobSpec:
         out_dir: Output directory for emitted artifacts.
         sim_target: Simulator target name (for example, "vivado").
         max_retries: Maximum checker-guided regeneration attempts.
+        intent_file: Optional path to structured natural language intent file.
         dump_ir: Whether to write an `ir.json` snapshot into `out_dir`.
         no_llm: Whether generation should run in template-only mode.
         verbose: Whether to print orchestrator progress logs.
@@ -39,6 +40,7 @@ class JobSpec:
     out_dir: str
     sim_target: str
     max_retries: int
+    intent_file: Optional[str] = None
     dump_ir: bool = False
     no_llm: bool = False
     verbose: bool = False
@@ -73,6 +75,12 @@ def run(job: JobSpec) -> OrchestratorResult:
     ir = parse_source(job.input_file, job.top_module)
     ir.emission_target = job.sim_target
     ir.output_dir = job.out_dir
+
+    if job.intent_file:
+        with open(job.intent_file, "r", encoding="utf-8") as intent_handle:
+            ir.pss_intent = intent_handle.read()
+        if job.verbose:
+            print(f"[orchestrator] Loaded intent file: {job.intent_file}")
 
     if job.dump_ir:
         os.makedirs(job.out_dir, exist_ok=True)

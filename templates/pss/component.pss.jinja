@@ -1,3 +1,9 @@
+{% if pss_intent %}
+/*
+ * Verification intent (structured natural language):
+ * {{ pss_intent | replace('\n', '\n * ') }}
+ */
+{% endif %}
 component {{ design_name }}_comp {
 {% if reset_ports %}
     action do_reset {

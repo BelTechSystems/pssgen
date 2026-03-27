@@ -18,12 +18,23 @@ def main() -> None:
 
     Parses command-line arguments, builds a `JobSpec`, and invokes the
     orchestrator. Exits with status code 0 on success and 1 on failure.
+
+    The optional ``--intent`` flag allows engineers to provide structured
+    natural language verification intent that supplements HDL-derived IR.
     """
     parser = argparse.ArgumentParser(
         prog="pssgen",
         description="AI-driven PSS + UVM + C testbench generator."
     )
-    parser.add_argument("--input",  required=True, help="HDL source file or intent .txt")
+    parser.add_argument("--input",  required=True, help="HDL source file (.v, .sv, .vhd, .vhdl)")
+    parser.add_argument(
+        "--intent",
+        default=None,
+        help=(
+            "Structured natural language intent file (.intent). "
+            "Supplements HDL port inference with engineer-provided verification intent."
+        ),
+    )
     parser.add_argument("--top",    default=None,  help="Top-level module name")
     parser.add_argument("--out",    default="./out", help="Output directory (default: ./out)")
     parser.add_argument("--sim",    default="vivado", choices=["vivado", "questa", "generic"])
@@ -48,6 +59,7 @@ def main() -> None:
 
     job = JobSpec(
         input_file=args.input,
+        intent_file=args.intent,
         top_module=args.top,
         out_dir=args.out,
         sim_target=args.sim,

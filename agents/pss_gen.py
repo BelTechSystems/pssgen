@@ -68,6 +68,7 @@ def _build_context(ir: IR) -> dict:
     ports = ir.ports
     return {
         "design_name": ir.design_name,
+        "pss_intent": ir.pss_intent,
         "ports": ports,
         "clock_ports": [p for p in ports if p.role == "clock"],
         "reset_ports": [p for p in ports if p.role in {"reset", "reset_n"}],
@@ -87,15 +88,34 @@ def _build_prompt(ir: IR, skeleton: str, fail_reason: str | None) -> str:
     Returns:
         Prompt string for LLM completion.
     """
-    lines = [
-        "Generate a valid PSS v3.0 model.",
-        f"Design name: {ir.design_name}",
-        f"Ports: {[p.__dict__ for p in ir.ports]}",
-        "Fill the constraints and coverage placeholders with meaningful content.",
-        "Return only PSS DSL source code.",
-        "",
-        skeleton,
-    ]
+    if ir.pss_intent is None:
+        lines = [
+            "Generate a valid PSS v3.0 model.",
+            f"Design name: {ir.design_name}",
+            f"Ports: {[p.__dict__ for p in ir.ports]}",
+            "Fill the constraints and coverage placeholders with meaningful content.",
+            "Return only PSS DSL source code.",
+            "",
+            skeleton,
+        ]
+    else:
+        lines = [
+            "Generate a valid PSS v3.0 model.",
+            "Use the provided intent to produce specific, meaningful PSS constraints",
+            "and coverage goals instead of generic placeholders.",
+            "",
+            "PSS skeleton:",
+            skeleton,
+            "",
+            "IR context:",
+            f"- Design name: {ir.design_name}",
+            f"- Port roles: {[p.__dict__ for p in ir.ports]}",
+            "",
+            "Structured natural language intent:",
+            ir.pss_intent,
+            "",
+            "Return only PSS DSL source code.",
+        ]
     if fail_reason:
         lines = [
             f"Previous attempt failed with: {fail_reason}",

@@ -105,6 +105,7 @@ Design change history for reviewer convenience is tracked in the Companion Chang
 
 ```
 pssgen --input  <file>      HDL source (.v, .sv, .vhd) or intent description (.txt)
+        --intent <file>     Structured natural language intent file (.intent)
         --top   <module>    Top-level module name (required if multiple modules)
         --out   <dir>       Output directory (default: ./out)
         --sim   <target>    Emission target: vivado | questa | generic (default: vivado)
@@ -112,6 +113,28 @@ pssgen --input  <file>      HDL source (.v, .sv, .vhd) or intent description (.t
         --dump-ir           Write IR snapshot to <out>/ir.json
         --verbose           Print orchestrator loop steps to stdout
 ```
+
+## Providing verification intent
+
+A `.intent` file is a structured natural language companion to your HDL input that captures engineer-defined verification behavior, scenarios, and goals. pssgen reads this text and maps it to more specific PSS constraints and coverage intent than HDL-port inference alone can provide.
+
+Preferred section headings (recommended, not required):
+
+- reset behavior:
+- counting sequences:
+- coverage goals:
+- corner cases:
+- constraints:
+
+Example CLI usage:
+
+```bash
+pssgen --input counter.vhd \
+       --intent counter.intent \
+       --sim vivado
+```
+
+Any section heading is accepted. The agent maps intent to PSS by semantic understanding, not by schema validation.
 
 **Exit codes:**
 

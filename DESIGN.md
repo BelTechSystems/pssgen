@@ -230,3 +230,35 @@ inspect scope changes directly in git diffs without opening the .docx.
 - Impact: PSS validation is tier-1 structural only in v1b.
 - Follow-up: add a PSS elaboration tier when a stable parser/elaborator becomes
    automation-ready.
+
+## v2 - The Canonical Intent Fixture
+
+# verification intent: up_down_counter
+# author: BelTech Systems LLC
+# description: 8-bit up/down counter with synchronous enable
+#              and active-low reset
+
+reset behavior:
+  Apply rst_n low for at least 2 clock cycles before any
+  counting sequence begins. Verify that the count output
+  is zero immediately after reset deasserts.
+
+counting sequences:
+  Exercise count_up for random lengths between 1 and 255
+  steps with enable held high throughout.
+  Exercise count_down for random lengths between 1 and 255
+  steps with enable held high throughout.
+  Alternate between count_up and count_down sequences at
+  least once per scenario.
+
+coverage goals:
+  Count reaches maximum value 255 and rolls over to 0.
+  Count reaches minimum value 0 and rolls under to 255.
+  Enable deasserted mid-sequence — count must hold its
+  current value for the duration.
+
+corner cases:
+  Reset asserted during an active counting sequence.
+  Enable toggled rapidly while counting up.
+  Count_up immediately followed by count_down with no
+  intervening reset.
