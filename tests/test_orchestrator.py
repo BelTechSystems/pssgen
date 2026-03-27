@@ -27,7 +27,7 @@ def test_orchestrator_retry_fires(tmp_path):
     )
     call_count = {"n": 0}
 
-    def mock_generate(ir, fail_reason=None):
+    def mock_generate(ir, fail_reason=None, no_llm=False):
         call_count["n"] += 1
         if call_count["n"] == 1:
             # First attempt: return bad artifact (missing run_phase in driver)

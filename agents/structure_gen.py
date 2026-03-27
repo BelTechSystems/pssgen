@@ -28,7 +28,7 @@ TEMPLATES = [
 ]
 
 
-def generate(ir: IR, fail_reason: Optional[str] = None) -> list[Artifact]:
+def generate(ir: IR, fail_reason: Optional[str] = None, no_llm: bool = False) -> list[Artifact]:
     env = Environment(loader=FileSystemLoader(TEMPLATE_DIR))
     artifacts = []
 
@@ -36,9 +36,12 @@ def generate(ir: IR, fail_reason: Optional[str] = None) -> list[Artifact]:
         template = env.get_template(tmpl_name)
         partial = template.render(ir=ir)
 
-        # Build LLM prompt
-        prompt = _build_prompt(ir, tmpl_name, partial, fail_reason)
-        filled = _call_llm(prompt)
+        if no_llm:
+            filled = partial
+        else:
+            # Build LLM prompt
+            prompt = _build_prompt(ir, tmpl_name, partial, fail_reason)
+            filled = _call_llm(prompt)
 
         out_name = _output_filename(ir.design_name, tmpl_name)
         artifacts.append(Artifact(filename=out_name, content=filled))

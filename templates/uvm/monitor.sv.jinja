@@ -1,0 +1,11 @@
+class {{ ir.design_name }}_monitor extends uvm_monitor;
+    `uvm_component_utils({{ ir.design_name }}_monitor)
+
+    function new(string name, uvm_component parent);
+        super.new(name, parent);
+    endfunction
+
+    function void write(uvm_sequence_item item);
+        // TODO: publish observed transactions
+    endfunction
+endclass

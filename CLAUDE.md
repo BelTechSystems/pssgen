@@ -251,6 +251,64 @@ up_down_counter_test.sv
 build.tcl
 ```
 
+## Code style
+- Docstrings: Google style on all public functions, classes, and modules
+- Module headers: include filename, one-line purpose, phase, and layer
+- Inline comments: explain why, not what
+- Type hints: required on all function signatures
+```
+
+---
+
+## License
+
+For pssgen the right license is **MIT**, which you have already chosen and documented in the SDS. But it is worth understanding exactly why, since you asked:
+
+**MIT fits pssgen because:**
+
+The goal is maximum adoption by the widest possible community — individual engineers, small teams, academic researchers, and yes, large aerospace companies. MIT places zero restrictions on any of those users. A company can take pssgen, use it internally, build commercial products on top of it, and modify it without any obligation to contribute back. That sounds like it costs you something, but for an infrastructure tool where the success metric is adoption and citation rather than revenue, it is actually an advantage. Companies are far more likely to adopt a tool with zero legal friction.
+
+**Why not GPL or LGPL:**
+
+GPL requires any software that uses or distributes pssgen to also be GPL-licensed. That would make pssgen unusable inside a proprietary EDA toolchain or a defense contractor's internal workflow — exactly the users you want to reach. LGPL is less restrictive but still creates legal review overhead that enterprise legal teams dislike.
+
+**Why not Apache 2.0:**
+
+Apache 2.0 is also a good permissive license and would be a reasonable alternative. The difference from MIT is that Apache 2.0 includes an explicit patent grant and has more legal text. MIT is simpler, more widely understood, and for a tool at this stage there is no patent consideration that would make Apache 2.0's patent clause relevant.
+
+**The one thing MIT does not give you** is protection against someone taking your code, making minor changes, and releasing it as their own competing product without attribution. If that bothers you, MIT is still the right choice for adoption reasons, but you should know that is the trade-off. In practice, in the EDA and open hardware community, attribution norms are strong even when not legally required.
+
+---
+
+## The LICENSE File
+
+Add the MIT license file to the repo now. Go to your GitHub repo page, click **Add file → Create new file**, type `LICENSE` as the filename, and GitHub will offer a "Choose a license template" button. Select MIT, confirm your name and year, and commit it directly on GitHub. Then `git pull` locally to get it.
+
+The text will be:
+```
+MIT License
+
+Copyright (c) 2026 BelTech Systems LLC and contributors
+
+Permission is hereby granted, free of charge, to any person obtaining 
+a copy of this software and associated documentation files (the 
+"Software"), to deal in the Software without restriction, including 
+without limitation the rights to use, copy, modify, merge, publish, 
+distribute, sublicense, and/or sell copies of the Software, and to 
+permit persons to whom the Software is furnished to do so, subject to 
+the following conditions:
+
+The above copyright notice and this permission notice shall be included 
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS 
+OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF 
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. 
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY 
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, 
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE 
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
 ---
 
 ## How to Work Effectively With Claude Code on This Project

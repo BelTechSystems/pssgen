@@ -1,7 +1,9 @@
 """Unit tests for the verifier checker (tier 1, no simulator required)."""
 import pytest
 from agents.structure_gen import Artifact
-from checkers.verifier import check
+from agents.structure_gen import generate
+from checkers.verifier import check, _tier1_structural
+from parser.verilog import parse
 
 
 def _make_artifacts(driver_extra="", monitor_extra=""):
@@ -49,3 +51,20 @@ def test_checker_tier3_missing_build_script():
     result = check(artifacts, sim_target="vivado")
     assert result.passed is False
     assert result.tier == 3
+
+
+def test_template_only_output_passes_tier1(tmp_path):
+    """Templates alone must produce tier-1 passing output for the canonical counter design. No LLM required."""
+    ir = parse("tests/fixtures/counter.v", top_module=None)
+    ir.output_dir = str(tmp_path)
+    ir.emission_target = "vivado"
+
+    artifacts = generate(ir, no_llm=True)
+    result = check(artifacts, "vivado")
+
+    assert result.passed is True
+
+    # Explicitly validate tier-1 structural compliance as the primary contract.
+    tier1_result = _tier1_structural(artifacts)
+    assert tier1_result.passed is True
+    assert tier1_result.tier == 1

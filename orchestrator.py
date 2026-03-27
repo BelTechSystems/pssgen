@@ -9,7 +9,7 @@ import json, os
 from ir import IR
 from parser.verilog import parse as parse_verilog
 from agents.structure_gen import generate
-from checker import check
+from checkers.verifier import check
 from emitters.vivado import emit as emit_vivado
 
 
@@ -21,6 +21,7 @@ class JobSpec:
     sim_target: str
     max_retries: int
     dump_ir: bool = False
+    no_llm: bool = False
     verbose: bool = False
 
 
@@ -52,7 +53,7 @@ def run(job: JobSpec) -> OrchestratorResult:
         if job.verbose:
             print(f"[orchestrator] Attempt {attempt}/{job.max_retries}")
 
-        artifacts = generate(ir, fail_reason=last_fail_reason)
+        artifacts = generate(ir, fail_reason=last_fail_reason, no_llm=job.no_llm)
         result = check(artifacts, job.sim_target)
 
         if result.passed:

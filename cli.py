@@ -15,6 +15,7 @@ def main():
     parser.add_argument("--sim",    default="vivado", choices=["vivado", "questa", "generic"])
     parser.add_argument("--retry",  default=3, type=int, help="Max retry attempts (default: 3)")
     parser.add_argument("--dump-ir", action="store_true", help="Write IR snapshot to <out>/ir.json")
+    parser.add_argument("--no-llm", action="store_true", help="Skip LLM call; render templates only")
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args()
 
@@ -25,6 +26,7 @@ def main():
         sim_target=args.sim,
         max_retries=args.retry,
         dump_ir=args.dump_ir,
+        no_llm=args.no_llm,
         verbose=args.verbose,
     )
     result = run(job)
