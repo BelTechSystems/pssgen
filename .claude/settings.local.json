@@ -3,7 +3,8 @@
     "allow": [
       "Bash(.venv/Scripts/activate)",
       "Bash(python -m pytest tests/ -v --tb=short --ignore=tests/test_e2e.py)",
-      "Bash(python cli.py --input tests/fixtures/counter.vhd --intent tests/fixtures/counter.intent --top up_down_counter --out ./out_c --sim generic --no-llm --verbose)"
+      "Bash(python cli.py --input tests/fixtures/counter.vhd --intent tests/fixtures/counter.intent --top up_down_counter --out ./out_c --sim generic --no-llm --verbose)",
+      "Bash(python cli.py --input tests/fixtures/counter.vhd --intent tests/fixtures/counter.intent --top up_down_counter --out ./out_questa --sim questa --no-llm --verbose)"
     ]
   }
 }

@@ -363,7 +363,7 @@ Done condition: pssgen --input counter.vhd
   action constraints than IR-only inference produces.
   All 26 non-e2e tests still pass.
 
-## Current phase: v2b — C test case emission
+## Completed phase: v2b — C test case emission
 
 Goal: promote emitters/generic_c.py from stub to working
 implementation. Generates C test functions from the PSS
@@ -384,6 +384,27 @@ Done condition: pssgen --input counter.vhd
   exits 0 and produces up_down_counter_pss_tests.c
   containing at least one void test_ function and
   run_all_pss_tests(). All 29 non-e2e tests still pass.
+```
+
+## Current phase: v2c — Questa emitter
+
+Goal: promote emitters/questa.py from stub to working
+implementation. Generates the same UVM .sv files as the
+Vivado emitter plus a Questa-compatible Makefile.
+
+Approach:
+  - New Jinja2 template: templates/uvm/build_questa.mk.jinja
+  - Makefile uses vlog/vcom for compile, vsim for run
+  - .sv files are simulator-independent — reuse content
+    from structure_gen artifacts directly
+  - Checker tier-2 already calls vlog -quiet for questa
+    target (already implemented in verifier.py)
+  - Output: same 7 .sv files + Makefile + .pss file
+
+Done condition: pssgen --input counter.vhd
+  --sim questa --no-llm exits 0 and produces
+  Makefile alongside the 7 .sv files and .pss.
+  All 34 non-e2e tests still pass.
 ```
 
 

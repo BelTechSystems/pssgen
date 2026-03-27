@@ -171,6 +171,15 @@ open-source PSS parser exists as of v1b. PSSTools/pssparser
 (github.com/PSSTools/pssparser) is the candidate when it becomes
 pip-installable. Until then, PSS validation is tier-1 structural only.
 
+Note 3:
+generic_c.emit() writes all pipeline artifacts plus the .c file.
+That means when you run --sim generic you are getting both the UVM .sv files
+and the C file in the output directory.
+Confirm that is intentional behavior — it may be correct for now
+(engineer gets everything), but in a later phase the generic target may
+want to suppress the Vivado-specific build.tcl since that script is only
+meaningful to Vivado users.
+
 ---
 
 ## Companion Changelog (v1 Reality)
