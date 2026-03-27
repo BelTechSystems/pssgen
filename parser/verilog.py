@@ -1,4 +1,13 @@
-"""Verilog port extractor (v0). Regex-based — handles standard port declarations."""
+# Copyright (c) 2026 BelTech Systems LLC
+# MIT License — see LICENSE file for details
+"""parser/verilog.py — Verilog-to-IR parser.
+
+Phase: v0
+Layer: 1 (parser)
+
+Extracts design name, parameters, and top-level port metadata from Verilog
+source and converts the result into IR.
+"""
 import re
 from ir import IR, Port
 
@@ -9,6 +18,8 @@ RESET_NAMES  = {"rst", "reset", "rst_i"}
 
 
 class ParseError(Exception):
+    """Raised when a Verilog source file cannot be parsed into IR."""
+
     pass
 
 
@@ -26,6 +37,18 @@ def _classify_role(name: str, direction: str) -> str:
 
 
 def parse(source_file: str, top_module: str | None) -> IR:
+    """Parse a Verilog source file into IR.
+
+    Args:
+        source_file: Path to the Verilog file to parse.
+        top_module: Optional top module override.
+
+    Returns:
+        IR populated with design name, parameters, and port metadata.
+
+    Raises:
+        ParseError: If module or port extraction fails.
+    """
     with open(source_file) as f:
         src = f.read()
 

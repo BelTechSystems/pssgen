@@ -1,10 +1,23 @@
-"""pssgen CLI entry point. Argument parsing only — no business logic here."""
+# Copyright (c) 2026 BelTech Systems LLC
+# MIT License — see LICENSE file for details
+"""cli.py — Command-line entry point for pssgen.
+
+Phase: v0
+Layer: Entry point (above orchestration layers)
+
+Parses command-line arguments and dispatches one orchestrator run.
+"""
 import argparse
 import sys
 from orchestrator import run, JobSpec
 
 
-def main():
+def main() -> None:
+    """Run the pssgen CLI entry point.
+
+    Parses command-line arguments, builds a `JobSpec`, and invokes the
+    orchestrator. Exits with status code 0 on success and 1 on failure.
+    """
     parser = argparse.ArgumentParser(
         prog="pssgen",
         description="AI-driven PSS + UVM + C testbench generator."
@@ -15,7 +28,14 @@ def main():
     parser.add_argument("--sim",    default="vivado", choices=["vivado", "questa", "generic"])
     parser.add_argument("--retry",  default=3, type=int, help="Max retry attempts (default: 3)")
     parser.add_argument("--dump-ir", action="store_true", help="Write IR snapshot to <out>/ir.json")
-    parser.add_argument("--no-llm", action="store_true", help="Skip LLM call; render templates only")
+    parser.add_argument(
+        "--no-llm",
+        action="store_true",
+        help=(
+            "Skip LLM call; render templates only. "
+            "Used for testing and CI. Never requires ANTHROPIC_API_KEY."
+        ),
+    )
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args()
 

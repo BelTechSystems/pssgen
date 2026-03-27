@@ -1,7 +1,12 @@
-"""
-Verifier checker — 3-tier validation.
-External contract is frozen: check(artifacts, sim_target) -> CheckResult.
-Internal checks grow across phases without changing the interface.
+# Copyright (c) 2026 BelTech Systems LLC
+# MIT License — see LICENSE file for details
+"""checkers/verifier.py — Three-tier artifact verifier.
+
+Phase: v0
+Layer: 4 (checkers)
+
+Validates generated artifacts with structural checks, optional simulator syntax
+checks, and smoke checks while preserving a stable checker contract.
 """
 from dataclasses import dataclass
 from agents.structure_gen import Artifact
@@ -10,12 +15,28 @@ import re, subprocess, os, tempfile
 
 @dataclass
 class CheckResult:
+    """Checker response payload.
+
+    Attributes:
+        passed: Whether validation passed.
+        tier: Tier index that produced this result.
+        reason: Failure reason or informational message.
+    """
     passed: bool
     tier: int
     reason: str
 
 
 def check(artifacts: list[Artifact], sim_target: str = "vivado") -> CheckResult:
+    """Run checker tiers in order until failure or completion.
+
+    Args:
+        artifacts: Generated output artifacts to validate.
+        sim_target: Simulator target used for tier-2 syntax invocation.
+
+    Returns:
+        CheckResult from the first failing tier or final passing tier.
+    """
     result = _tier1_structural(artifacts)
     if not result.passed:
         return result
