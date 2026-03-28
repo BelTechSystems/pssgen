@@ -244,6 +244,53 @@ build.tcl
 - Type hints: required on all function signatures
 ```
 
+## File header standard
+
+Every Python file must begin with the standard pssgen
+file header. See DECISIONS.md D-011 for the rationale.
+The header contains:
+  FILE, PROJECT, COPYRIGHT, LICENSE
+  DESCRIPTION (2-4 sentences)
+  LAYER, PHASE
+  FUNCTIONS (1-2 lines each, public functions only)
+  DEPENDENCIES (stdlib and internal)
+  HISTORY (version, date, author, change summary)
+
+Template:
+  # ===========================================================
+  # FILE:         <path/filename.py>
+  # PROJECT:      pssgen — AI-Driven PSS + UVM + C Testbench Generator
+  # COPYRIGHT:    Copyright (c) 2026 BelTech Systems LLC
+  # LICENSE:      MIT License — see LICENSE file for details
+  # ===========================================================
+  #
+  # DESCRIPTION:
+  #   <2-4 sentences>
+  #
+  # LAYER:        <n — name>
+  # PHASE:        <vX>
+  #
+  # FUNCTIONS:
+  #   <function_name(args)>
+  #     <1-2 line description>
+  #
+  # DEPENDENCIES:
+  #   Standard library:  <modules>
+  #   Internal:          <modules>
+  #
+  # HISTORY:
+  #   <version>  <date>  <initials>  <change description>
+  #
+  # ===========================================================
+
+## Human authorship
+
+pssgen is built with AI assistance. The architecture,
+design decisions, domain expertise, and creative direction
+are human-authored. See [DECISIONS.md](DECISIONS.md) for
+a record of the human creative decisions that shaped this
+tool.
+
 ---
 
 ## License
@@ -406,6 +453,60 @@ Done condition: pssgen --input counter.vhd
   Makefile alongside the 7 .sv files and .pss.
   All 34 non-e2e tests still pass.
 ```
+
+## File convention (v3)
+
+.intent file:
+  Primary human input. Auto-detected as <stem>.intent.
+  Optional technically but recommended for meaningful output.
+  Never written or modified by pssgen.
+
+.req file:
+  Optional. Auto-detected as <stem>.req.
+  Lifecycle:
+    - Does not exist + intent has req IDs → extracted once
+    - Exists → never overwritten under any circumstance
+    - Does not exist + no req IDs → not created
+  Engineer owns this file from the moment it is created.
+
+Extraction behavior:
+  On first pass, pssgen extracts [REQ-xxx] style IDs from
+  the .intent file and writes a .req skeleton. The skeleton
+  contains IDs, detected waivers, and verification methods.
+  Requirement statements are left blank for the engineer
+  to fill from their specification documents.
+
+Never-overwrite rule is absolute:
+  Even if the .req file is empty, malformed, or outdated,
+  pssgen reads it and never replaces it. If the engineer
+  wants a fresh extraction they delete the .req file manually.
+```
+
+---
+
+## One More Thought on the "Required" Question
+
+Rather than calling `.intent` required or optional, the README should frame it this way:
+```
+pssgen has three levels of output quality:
+
+Level 1 — HDL only
+  Port inference from source file.
+  Generic PSS coverage goals.
+  Basic UVM scaffold.
+  Good for exploring the tool.
+
+Level 2 — HDL + intent file
+  Engineer-specified verification behavior.
+  Richer PSS model with specific sequences and corner cases.
+  [CONFIRMED] / [WAIVED] disposition tracking.
+  Recommended for any real verification work.
+
+Level 3 — HDL + intent + req file
+  Full requirements traceability.
+  Bidirectional gap analysis.
+  Coverage reports by requirement ID and scheme.
+  Suitable for DO-254 and similar compliance programs.
 
 
 ## How to Work Effectively With Claude Code on This Project

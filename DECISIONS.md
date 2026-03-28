@@ -1,0 +1,283 @@
+# pssgen Decision Record
+
+This document records human creative and technical decisions
+that shaped pssgen. It exists to establish the nature and
+extent of human authorship in a tool that uses AI assistance
+for implementation.
+
+Each entry identifies: the decision, the human who made it,
+the domain knowledge or judgment it required, and why AI
+assistance alone could not have produced the same outcome.
+
+Copyright (c) 2026 BelTech Systems LLC. All rights reserved.
+
+---
+
+## D-001: PSS as the intermediate representation
+
+Decision: Use PSS (Accellera Portable Stimulus Standard)
+as the IR rather than generating UVM directly.
+
+Author: S. Belvin, BelTech Systems LLC
+
+Domain knowledge required: Ten years of systems engineering
+experience at a major aerospace company, combined with VHDL
+design experience and UVM/UVMF verification experience.
+Direct experience as an IP library custodian who observed
+the re-verification problem across multiple programs. This
+decision required knowing that PSS exists, understanding
+what problem it solves, and recognizing that it was the
+right abstraction for a tool targeting the mid-market.
+
+Why AI could not have made this decision alone: AI tools
+available at the time of design did not identify PSS as the
+missing piece in the verification tool landscape. The
+insight that PSS adoption is blocked by onramp friction
+rather than capability limits came from direct professional
+experience with enterprise EDA tooling costs and the
+behavior of aerospace programs that avoided PSS because
+of those costs.
+
+---
+
+## D-002: Open source MIT license targeting aerospace adoption
+
+Decision: Release under MIT license rather than a more
+restrictive license or a commercial model.
+
+Author: S. Belvin, BelTech Systems LLC
+
+Domain knowledge required: Understanding of how aerospace
+and defense programs evaluate and adopt open-source
+software. Knowledge that enterprise legal departments
+approve MIT-licensed dependencies more readily than GPL
+or LGPL. Understanding that the competitive advantage
+of pssgen is domain expertise embedded in templates and
+design decisions, not the implementation code itself.
+
+Why AI could not have made this decision alone: The choice
+requires judgment about the target market's procurement
+behavior, legal review practices, and the strategic value
+of community adoption versus revenue generation. These are
+business and organizational judgments, not technical ones.
+
+---
+
+## D-003: Five-layer pipeline architecture
+
+Decision: Separate the pipeline into parser, IR, agents,
+checker, and emitter layers with strict contracts between
+them.
+
+Author: S. Belvin, BelTech Systems LLC
+
+Domain knowledge required: Systems engineering discipline
+applied to software architecture. The layer boundaries
+reflect the author's experience with IP library management
+— specifically, the insight that simulator-specific
+knowledge must be isolated in the emission layer so that
+adding a new simulator target requires no changes to
+verification logic. This mirrors the portability principle
+in the PSS standard itself.
+
+Why AI could not have made this decision alone: The
+specific layer boundaries chosen reflect professional
+judgment about which concerns change together and which
+must be isolated. The decision to freeze the checker
+external contract early reflects experience with interface
+stability in long-lived engineering tools.
+
+---
+
+## D-004: Checker renamed from shim
+
+Decision: Name the validation layer "checker" rather than
+"shim."
+
+Author: S. Belvin, BelTech Systems LLC
+
+Domain knowledge required: UVM methodology experience.
+"Checker" is the established UVM term for a component that
+validates structural or protocol correctness. "Shim" is a
+software engineering term for a compatibility adapter,
+which is not what this component does. The rename reflects
+domain vocabulary correctness.
+
+Why AI could not have made this decision alone: Required
+knowledge of both software engineering vocabulary and UVM
+methodology vocabulary to identify the mismatch and select
+the correct term.
+
+---
+
+## D-005: Structured natural language intent files
+
+Decision: Accept verification intent as structured natural
+language (.intent files) rather than YAML, JSON, or a
+formal grammar.
+
+Author: S. Belvin, BelTech Systems LLC
+
+Domain knowledge required: Ten years of systems engineering
+experience with requirements management tools including
+IBM DOORS. Familiarity with how engineers actually write
+requirements in practice — in natural language organized
+by topic, not in structured data formats. Understanding
+that the barrier to PSS adoption includes the learning
+curve of any new formal language, and that reducing that
+barrier required meeting engineers where they already work.
+
+Why AI could not have made this decision alone: The
+decision reflects a deliberate trade-off between machine
+parseability and human adoption friction. The judgment
+that engineers would adopt a natural language approach
+more readily than a formal schema came from professional
+experience with how verification teams respond to new
+tooling requirements.
+
+---
+
+## D-006: Requirement ID auto-detection by regex pattern
+
+Decision: Detect requirement ID schemes automatically
+from the intent file rather than requiring the user to
+configure a prefix.
+
+Author: S. Belvin, BelTech Systems LLC
+
+Domain knowledge required: Experience with real aerospace
+program requirement ID schemes across multiple programs.
+Knowledge that ID schemes vary by organization, by program,
+and by requirement type (SYS-REQ, FUNC-REQ, IF-REQ,
+PERF-REQ, VER-REQ, and many others). Understanding that
+a tool requiring prefix configuration would fail in
+programs with complex or multi-level schemes.
+
+Why AI could not have made this decision alone: Required
+knowledge of the actual variety of requirement ID schemes
+used in real aerospace and defense programs, combined with
+the judgment that auto-detection was preferable to
+configuration for adoption reasons.
+
+---
+
+## D-007: [CONFIRMED] / [WAIVED] disposition system
+
+Decision: Add explicit disposition keywords to intent file
+entries rather than treating all entries as active.
+
+Author: S. Belvin, BelTech Systems LLC
+
+Domain knowledge required: Experience with requirements
+management and verification closure in DO-254 programs.
+Understanding that waiver documentation is a required
+artifact in certification programs. Knowledge that without
+an explicit ignore mechanism, repeated gap warnings train
+engineers to ignore all warnings rather than respond to
+meaningful ones — a pattern observed in real program
+verification reviews.
+
+Why AI could not have made this decision alone: The
+disposition system reflects professional experience with
+how verification teams behave under time pressure and how
+certification auditors evaluate verification evidence.
+The specific three-state model (GENERATED / CONFIRMED /
+WAIVED) mirrors established practice in requirements
+management tools.
+
+---
+
+## D-008: .req file never overwritten
+
+Decision: Once a .req file exists, pssgen never overwrites
+it under any circumstance.
+
+Author: S. Belvin, BelTech Systems LLC
+
+Domain knowledge required: Experience with configuration
+management in aerospace programs. Understanding that
+engineer-owned artifacts in a certification program cannot
+be silently modified by automated tools — doing so would
+invalidate the audit trail. Knowledge that the .req file
+represents human review work that must be preserved.
+
+Why AI could not have made this decision alone: Required
+understanding of configuration management discipline in
+certified programs and the organizational consequences of
+automated tools modifying controlled artifacts.
+
+---
+
+## D-009: Two-pass workflow with engineer review between passes
+
+Decision: Design the tool for a deliberate two-pass
+workflow where the engineer reviews and edits the
+generated intent scaffold before pass 2, rather than
+optimizing for fully automated single-pass generation.
+
+Author: S. Belvin, BelTech Systems LLC
+
+Domain knowledge required: Systems engineering discipline
+applied to verification. Understanding that automated
+coverage closure against AI-generated goals does not
+constitute closure against a specification. Professional
+experience with the difference between a verification
+program that closes coverage and one that actually verifies
+the design meets its requirements.
+
+Why AI could not have made this decision alone: This
+decision deliberately prioritizes human review over
+automation convenience. It reflects a professional
+judgment that the tool's value is in supporting human
+verification engineers, not replacing their judgment.
+An AI optimizing for automation would not have made this
+choice.
+
+---
+
+## D-010: Three output levels (HDL only / + intent / + req)
+
+Decision: Frame the tool's capability as three explicit
+levels of rigor rather than a single mode with optional
+features.
+
+Author: S. Belvin, BelTech Systems LLC
+
+Domain knowledge required: Experience with how engineers
+at different levels of process maturity adopt tools.
+Understanding that DO-254 programs need Level 3 but
+students and exploratory users need Level 1, and that
+framing the tool as a continuum encourages adoption at
+all levels rather than intimidating users with compliance
+requirements.
+
+Why AI could not have made this decision alone: Required
+judgment about user adoption behavior across different
+organizational contexts, from academic to certifiable.
+
+---
+
+## D-011: File header standard with human contribution evidence
+
+Decision: Require a structured file header on every Python
+file containing identification, description, function list,
+dependencies, and change history.
+
+Author: S. Belton, BelTech Systems LLC
+
+Domain knowledge required: Experience with engineering
+configuration management practices in aerospace programs.
+Understanding that file-level change history is a
+requirement in DO-254 and similar standards. Knowledge
+that explicit human-authored function summaries in file
+headers create audit evidence distinguishing human design
+decisions from AI-generated implementation.
+
+Why AI could not have made this decision alone: The
+decision reflects professional judgment about what
+constitutes sufficient evidence of human authorship for
+copyright and compliance purposes. An AI tool optimizing
+for code generation efficiency would not impose this
+overhead. The standard exists because the human author
+understands the audit context in which this tool will
+be used.

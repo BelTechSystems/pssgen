@@ -1,5 +1,5 @@
-# Copyright (c) 2026 BelTech Systems LLC
-# MIT License — see LICENSE file for details
+# Copyright (c) 2026 BelTech Systems LLC and contributors
+# SPDX-License-Identifier: MIT
 """ir.py — Vendor-neutral intermediate representation.
 
 Phase: v0
@@ -53,3 +53,8 @@ class IR:
     # v1+: append new Optional fields below this line
     pss_intent: Optional[str] = None
     pss_model: Optional[str] = None
+    # v3a+: requirement traceability fields (append-only)
+    requirement_ids: list[str] = field(default_factory=list)
+    requirement_schemes: list[str] = field(default_factory=list)
+    intent_waivers: list[dict] = field(default_factory=list)
+    intent_gaps: list[str] = field(default_factory=list)

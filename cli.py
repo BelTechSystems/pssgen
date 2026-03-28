@@ -48,6 +48,36 @@ def main() -> None:
             "Used for testing and CI. Never requires ANTHROPIC_API_KEY."
         ),
     )
+    parser.add_argument(
+        "--req",
+        default=None,
+        help="Requirements file (.req). Supplements intent with formal requirement IDs.",
+    )
+    parser.add_argument(
+        "--no-intent",
+        action="store_true",
+        help="Suppress auto-loading of <stem>.intent alongside the input file.",
+    )
+    parser.add_argument(
+        "--no-req",
+        action="store_true",
+        help="Suppress auto-loading of <stem>.req alongside the input file.",
+    )
+    parser.add_argument(
+        "--scaffold",
+        action="store_true",
+        help=(
+            "Generate _generated.intent and _generated.req scaffold files in out_dir. "
+            "Existing scaffolds are never overwritten."
+        ),
+    )
+    parser.add_argument(
+        "--coverage-loop",
+        default=None,
+        type=int,
+        metavar="N",
+        help="(Stub — not yet implemented; see v3c) Coverage closure loop iterations.",
+    )
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args()
 
@@ -67,6 +97,11 @@ def main() -> None:
         dump_ir=args.dump_ir,
         no_llm=args.no_llm,
         verbose=args.verbose,
+        req_file=args.req,
+        no_intent=args.no_intent,
+        no_req=args.no_req,
+        scaffold=args.scaffold,
+        coverage_loop=args.coverage_loop,
     )
     result = run(job)
     if not result.success:
