@@ -1,5 +1,33 @@
-# Copyright (c) 2026 BelTech Systems LLC and contributors
-# SPDX-License-Identifier: MIT
+# ===========================================================
+# FILE:         agents/scaffold_gen.py
+# PROJECT:      pssgen — AI-Driven PSS + UVM + C Testbench Generator
+# COPYRIGHT:    Copyright (c) 2026 BelTech Systems LLC
+# LICENSE:      MIT License — see LICENSE file for details
+# ===========================================================
+#
+# DESCRIPTION:
+#   Generates _generated.intent and _generated.req scaffold files from IR
+#   and intent parse results. All machine-inferred lines are tagged with
+#   [GENERATED] to distinguish them from human-authored content. Both output
+#   files include a human-contribution notice and are never overwritten.
+#
+# LAYER:        3 — agents
+# PHASE:        v3a
+#
+# FUNCTIONS:
+#   generate_intent_scaffold(ir, intent_result, out_path)
+#     Write a _generated.intent scaffold with [GENERATED] port entries and gaps section.
+#   generate_req_scaffold(ir, intent_result, out_path)
+#     Write a _generated.req scaffold with skeleton entries for each intent req ID.
+#
+# DEPENDENCIES:
+#   Standard library:  os
+#   Internal:          ir
+#
+# HISTORY:
+#   v3a   2026-03-28  SB  Initial implementation; intent and req scaffold generation
+#
+# ===========================================================
 """agents/scaffold_gen.py — Intent and requirements scaffold file generator.
 
 Phase: v3a

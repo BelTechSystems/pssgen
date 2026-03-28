@@ -1,5 +1,36 @@
-# Copyright (c) 2026 BelTech Systems LLC and contributors
-# SPDX-License-Identifier: MIT
+# ===========================================================
+# FILE:         ir.py
+# PROJECT:      pssgen — AI-Driven PSS + UVM + C Testbench Generator
+# COPYRIGHT:    Copyright (c) 2026 BelTech Systems LLC
+# LICENSE:      MIT License — see LICENSE file for details
+# ===========================================================
+#
+# DESCRIPTION:
+#   Defines the append-only data model shared between parser, agents,
+#   checkers, and emitters. New fields are Optional with None default.
+#   Existing fields are never renamed, removed, or retyped.
+#
+# LAYER:        2 — IR
+# PHASE:        v0
+#
+# FUNCTIONS:
+#   Port  (dataclass)
+#     Single top-level HDL port with name, direction, width, and role.
+#   IR  (dataclass)
+#     Vendor-neutral pipeline data model carrying all parser outputs and
+#     phase-specific extensions.
+#
+# DEPENDENCIES:
+#   Standard library:  dataclasses, typing
+#   Internal:          none
+#
+# HISTORY:
+#   v0    2026-03-27  SB  Initial Port and IR dataclasses
+#   v1a   2026-03-27  SB  Added pss_intent Optional field
+#   v2b   2026-03-27  SB  Added pss_model Optional field
+#   v3a   2026-03-28  SB  Added requirement_ids, requirement_schemes, intent_waivers, intent_gaps
+#
+# ===========================================================
 """ir.py — Vendor-neutral intermediate representation.
 
 Phase: v0

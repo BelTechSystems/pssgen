@@ -263,7 +263,7 @@ Decision: Require a structured file header on every Python
 file containing identification, description, function list,
 dependencies, and change history.
 
-Author: S. Belton, BelTech Systems LLC
+Author: S. Belvin, BelTech Systems LLC
 
 Domain knowledge required: Experience with engineering
 configuration management practices in aerospace programs.

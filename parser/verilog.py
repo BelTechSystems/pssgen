@@ -1,5 +1,30 @@
-# Copyright (c) 2026 BelTech Systems LLC
-# MIT License — see LICENSE file for details
+# ===========================================================
+# FILE:         parser/verilog.py
+# PROJECT:      pssgen — AI-Driven PSS + UVM + C Testbench Generator
+# COPYRIGHT:    Copyright (c) 2026 BelTech Systems LLC
+# LICENSE:      MIT License — see LICENSE file for details
+# ===========================================================
+#
+# DESCRIPTION:
+#   Parses a Verilog source file and extracts the module name, parameters,
+#   and top-level port list into IR. Assigns semantic roles (clock, reset_n,
+#   reset, control, data) based on port names and directions.
+#
+# LAYER:        1 — parser
+# PHASE:        v0
+#
+# FUNCTIONS:
+#   parse(source_file, top_module)
+#     Parse a Verilog source file and return a populated IR instance.
+#
+# DEPENDENCIES:
+#   Standard library:  re
+#   Internal:          ir
+#
+# HISTORY:
+#   v0    2026-03-27  SB  Initial implementation; Verilog module and port parsing
+#
+# ===========================================================
 """parser/verilog.py — Verilog-to-IR parser.
 
 Phase: v0

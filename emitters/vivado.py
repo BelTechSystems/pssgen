@@ -1,5 +1,30 @@
-# Copyright (c) 2026 BelTech Systems LLC
-# MIT License — see LICENSE file for details
+# ===========================================================
+# FILE:         emitters/vivado.py
+# PROJECT:      pssgen — AI-Driven PSS + UVM + C Testbench Generator
+# COPYRIGHT:    Copyright (c) 2026 BelTech Systems LLC
+# LICENSE:      MIT License — see LICENSE file for details
+# ===========================================================
+#
+# DESCRIPTION:
+#   Vivado/XSIM emission layer. Writes all generated artifacts (.sv, .pss,
+#   build.tcl) to the output directory. No content transformation is applied;
+#   artifact content is written verbatim as produced by the generation agents.
+#
+# LAYER:        5 — emitters
+# PHASE:        v0
+#
+# FUNCTIONS:
+#   emit(ir, artifacts, out_dir)
+#     Write all artifacts to out_dir; return list of written file paths.
+#
+# DEPENDENCIES:
+#   Standard library:  os
+#   Internal:          agents.structure_gen, ir
+#
+# HISTORY:
+#   v0    2026-03-27  SB  Initial implementation; verbatim artifact write-out
+#
+# ===========================================================
 """emitters/vivado.py — Vivado/XSIM artifact emitter.
 
 Phase: v0

@@ -1,5 +1,30 @@
-# Copyright (c) 2026 BelTech Systems LLC
-# MIT License — see LICENSE file for details
+# ===========================================================
+# FILE:         parser/vhdl.py
+# PROJECT:      pssgen — AI-Driven PSS + UVM + C Testbench Generator
+# COPYRIGHT:    Copyright (c) 2026 BelTech Systems LLC
+# LICENSE:      MIT License — see LICENSE file for details
+# ===========================================================
+#
+# DESCRIPTION:
+#   Parses a constrained subset of VHDL entity declarations into IR.
+#   Supports std_logic and std_logic_vector port types with integer generics
+#   as symbolic bounds. Port modes in, out, buffer, and inout are supported.
+#
+# LAYER:        1 — parser
+# PHASE:        v1a
+#
+# FUNCTIONS:
+#   parse(source_file, top_module)
+#     Parse a VHDL source file and return a populated IR instance.
+#
+# DEPENDENCIES:
+#   Standard library:  re
+#   Internal:          ir
+#
+# HISTORY:
+#   v1a   2026-03-27  SB  Initial implementation; std_logic and std_logic_vector support
+#
+# ===========================================================
 """parser/vhdl.py — Minimal VHDL entity parser.
 
 Phase: v1a

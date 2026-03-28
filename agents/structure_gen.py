@@ -1,5 +1,32 @@
-# Copyright (c) 2026 BelTech Systems LLC
-# MIT License — see LICENSE file for details
+# ===========================================================
+# FILE:         agents/structure_gen.py
+# PROJECT:      pssgen — AI-Driven PSS + UVM + C Testbench Generator
+# COPYRIGHT:    Copyright (c) 2026 BelTech Systems LLC
+# LICENSE:      MIT License — see LICENSE file for details
+# ===========================================================
+#
+# DESCRIPTION:
+#   UVM artifact generation agent. Renders Jinja2 templates for interface,
+#   driver, monitor, sequencer, agent, test, and build script files.
+#   In --no-llm mode returns rendered templates directly; in production mode
+#   sends templates to the LLM for completion of dynamic content.
+#
+# LAYER:        3 — agents
+# PHASE:        v0
+#
+# FUNCTIONS:
+#   generate(ir, fail_reason, no_llm)
+#     Render UVM Jinja2 templates and optionally complete via LLM.
+#
+# DEPENDENCIES:
+#   Standard library:  dataclasses, typing, os
+#   External:          jinja2, anthropic
+#   Internal:          ir
+#
+# HISTORY:
+#   v0    2026-03-27  SB  Initial implementation; Jinja2 + LLM UVM generation
+#
+# ===========================================================
 """agents/structure_gen.py — UVM artifact generation agent.
 
 Phase: v0

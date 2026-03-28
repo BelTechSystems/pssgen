@@ -1,5 +1,43 @@
-# Copyright (c) 2026 BelTech Systems LLC
-# MIT License — see LICENSE file for details
+# ===========================================================
+# FILE:         orchestrator.py
+# PROJECT:      pssgen — AI-Driven PSS + UVM + C Testbench Generator
+# COPYRIGHT:    Copyright (c) 2026 BelTech Systems LLC
+# LICENSE:      MIT License — see LICENSE file for details
+# ===========================================================
+#
+# DESCRIPTION:
+#   Coordinates the parse, generation, checking, and emission pipeline.
+#   Owns the retry loop and injects checker failure reasons into subsequent
+#   generation attempts. Resolves intent and .req context files by convention
+#   or explicit flag and generates scaffold files when requested.
+#
+# LAYER:        Coordination (above Layers 1–5)
+# PHASE:        v0
+#
+# FUNCTIONS:
+#   run(job)
+#     Execute the end-to-end generation and checker loop; return OrchestratorResult.
+#   _resolve_emitter(sim_target)
+#     Return the emit callable for the requested simulator target.
+#   _write_req_skeleton(req_path, ir, intent_result)
+#     Write a minimal .req skeleton extracted from intent requirement IDs.
+#
+# DEPENDENCIES:
+#   Standard library:  dataclasses, typing, json, os
+#   Internal:          ir, parser.dispatch, parser.intent_parser, parser.req_parser,
+#                      parser.context, agents.structure_gen, agents.pss_gen,
+#                      agents.scaffold_gen, checkers.verifier,
+#                      emitters.vivado, emitters.questa, emitters.generic_c
+#
+# HISTORY:
+#   v0    2026-03-27  SB  Initial implementation; parse–generate–check–emit loop
+#   v1b   2026-03-27  SB  Added PSS model generation via agents.pss_gen
+#   v2a   2026-03-27  SB  Added --intent / ir.pss_intent propagation
+#   v2b   2026-03-27  SB  Added generic C emitter dispatch via _resolve_emitter
+#   v2c   2026-03-27  SB  Added Questa emitter dispatch
+#   v3a   2026-03-28  SB  Intent/req auto-detection, scaffold generation, verbose context logging
+#
+# ===========================================================
 """orchestrator.py — Pipeline coordinator and retry owner.
 
 Phase: v0

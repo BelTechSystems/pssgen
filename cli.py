@@ -1,5 +1,32 @@
-# Copyright (c) 2026 BelTech Systems LLC
-# MIT License — see LICENSE file for details
+# ===========================================================
+# FILE:         cli.py
+# PROJECT:      pssgen — AI-Driven PSS + UVM + C Testbench Generator
+# COPYRIGHT:    Copyright (c) 2026 BelTech Systems LLC
+# LICENSE:      MIT License — see LICENSE file for details
+# ===========================================================
+#
+# DESCRIPTION:
+#   Entry point for the pssgen command-line interface. Parses arguments,
+#   constructs a JobSpec, and invokes the orchestrator. All business logic
+#   is delegated; this module is argument parsing and dispatch only.
+#
+# LAYER:        Entry point (above all pipeline layers)
+# PHASE:        v0
+#
+# FUNCTIONS:
+#   main()
+#     Parse CLI arguments, build JobSpec, invoke orchestrator, exit 0/1/3.
+#
+# DEPENDENCIES:
+#   Standard library:  argparse, sys
+#   Internal:          orchestrator, parser.dispatch
+#
+# HISTORY:
+#   v0    2026-03-27  SB  Initial implementation; core HDL-to-UVM arguments
+#   v2a   2026-03-27  SB  Added --intent flag for structured natural language intent
+#   v3a   2026-03-28  SB  Added --req, --no-intent, --no-req, --scaffold, --coverage-loop
+#
+# ===========================================================
 """cli.py — Command-line entry point for pssgen.
 
 Phase: v0

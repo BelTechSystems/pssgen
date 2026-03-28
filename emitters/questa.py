@@ -1,5 +1,32 @@
-# Copyright (c) 2026 BelTech Systems LLC
-# MIT License — see LICENSE file for details
+# ===========================================================
+# FILE:         emitters/questa.py
+# PROJECT:      pssgen — AI-Driven PSS + UVM + C Testbench Generator
+# COPYRIGHT:    Copyright (c) 2026 BelTech Systems LLC
+# LICENSE:      MIT License — see LICENSE file for details
+# ===========================================================
+#
+# DESCRIPTION:
+#   Questa/QuestaSim emission layer. Writes .sv and .pss artifacts to the
+#   output directory and renders a Questa-compatible Makefile from a Jinja2
+#   template. Uses vlog for compilation and vsim for simulation. Vivado-
+#   specific build.tcl artifacts are intentionally excluded.
+#
+# LAYER:        5 — emitters
+# PHASE:        v2c
+#
+# FUNCTIONS:
+#   emit(ir, artifacts, out_dir)
+#     Write .sv/.pss artifacts and Makefile to out_dir; return written paths.
+#
+# DEPENDENCIES:
+#   Standard library:  os
+#   External:          jinja2
+#   Internal:          agents.structure_gen, ir
+#
+# HISTORY:
+#   v2c   2026-03-27  SB  Initial implementation; Makefile template and Questa emit
+#
+# ===========================================================
 """emitters/questa.py — Questa/QuestaSim artifact emitter.
 
 Phase: v2c

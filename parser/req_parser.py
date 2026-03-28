@@ -1,5 +1,30 @@
-# Copyright (c) 2026 BelTech Systems LLC and contributors
-# SPDX-License-Identifier: MIT
+# ===========================================================
+# FILE:         parser/req_parser.py
+# PROJECT:      pssgen — AI-Driven PSS + UVM + C Testbench Generator
+# COPYRIGHT:    Copyright (c) 2026 BelTech Systems LLC
+# LICENSE:      MIT License — see LICENSE file for details
+# ===========================================================
+#
+# DESCRIPTION:
+#   Parses .req requirements files containing structured requirement entries
+#   keyed by requirement ID. Supports verification method annotations and
+#   waiver entries. Files are read-only; this module never modifies input.
+#
+# LAYER:        1 — parser
+# PHASE:        v3a
+#
+# FUNCTIONS:
+#   parse_req(req_file)
+#     Parse a .req requirements file and return a ReqParseResult.
+#
+# DEPENDENCIES:
+#   Standard library:  re, dataclasses
+#   Internal:          none
+#
+# HISTORY:
+#   v3a   2026-03-28  SB  Initial implementation; requirement entry and waiver parsing
+#
+# ===========================================================
 """parser/req_parser.py — Requirements file (.req) parser.
 
 Phase: v3a

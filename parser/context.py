@@ -1,5 +1,31 @@
-# Copyright (c) 2026 BelTech Systems LLC and contributors
-# SPDX-License-Identifier: MIT
+# ===========================================================
+# FILE:         parser/context.py
+# PROJECT:      pssgen — AI-Driven PSS + UVM + C Testbench Generator
+# COPYRIGHT:    Copyright (c) 2026 BelTech Systems LLC
+# LICENSE:      MIT License — see LICENSE file for details
+# ===========================================================
+#
+# DESCRIPTION:
+#   Resolves .intent and .req file paths by stem-based convention or explicit
+#   CLI flag. Convention: look for <stem>.intent and <stem>.req in the same
+#   directory as the HDL input file. Explicit flags always take precedence.
+#   Returns a should_extract flag when no .req was found.
+#
+# LAYER:        1 — parser
+# PHASE:        v3a
+#
+# FUNCTIONS:
+#   resolve_context_files(input_file, intent_flag, req_flag, no_intent, no_req)
+#     Return (intent_path, req_path, should_extract) for the given inputs.
+#
+# DEPENDENCIES:
+#   Standard library:  os
+#   Internal:          none
+#
+# HISTORY:
+#   v3a   2026-03-28  SB  Initial implementation; stem convention and flag override logic
+#
+# ===========================================================
 """parser/context.py — Context file path resolver for intent and req files.
 
 Phase: v3a

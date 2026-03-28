@@ -1,5 +1,32 @@
-# Copyright (c) 2026 BelTech Systems LLC
-# MIT License — see LICENSE file for details
+# ===========================================================
+# FILE:         parser/dispatch.py
+# PROJECT:      pssgen — AI-Driven PSS + UVM + C Testbench Generator
+# COPYRIGHT:    Copyright (c) 2026 BelTech Systems LLC
+# LICENSE:      MIT License — see LICENSE file for details
+# ===========================================================
+#
+# DESCRIPTION:
+#   Provides extension-based parser dispatch used by both the CLI (for
+#   early validation) and the orchestrator (for runtime parsing). Maps
+#   .v, .sv, .vhd, and .vhdl extensions to their parser callables.
+#
+# LAYER:        1 — parser
+# PHASE:        v1a
+#
+# FUNCTIONS:
+#   resolve_parser(source_file)
+#     Return the parser callable for the given HDL file extension.
+#   parse_source(source_file, top_module)
+#     Dispatch an HDL source file to the correct parser and return IR.
+#
+# DEPENDENCIES:
+#   Standard library:  pathlib, typing
+#   Internal:          ir, parser.systemverilog, parser.verilog, parser.vhdl
+#
+# HISTORY:
+#   v1a   2026-03-27  SB  Initial implementation; Verilog, VHDL, SV dispatch
+#
+# ===========================================================
 """parser/dispatch.py — HDL parser selection helpers.
 
 Phase: v1a

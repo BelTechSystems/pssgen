@@ -1,5 +1,31 @@
-# Copyright (c) 2026 BelTech Systems LLC and contributors
-# SPDX-License-Identifier: MIT
+# ===========================================================
+# FILE:         parser/intent_parser.py
+# PROJECT:      pssgen — AI-Driven PSS + UVM + C Testbench Generator
+# COPYRIGHT:    Copyright (c) 2026 BelTech Systems LLC
+# LICENSE:      MIT License — see LICENSE file for details
+# ===========================================================
+#
+# DESCRIPTION:
+#   Parses .intent files containing structured natural language verification
+#   intent. Extracts section headings, requirement IDs, requirement scheme
+#   prefixes, and waiver entries. Disposition keywords (GENERATED, CONFIRMED,
+#   WAIVED) are explicitly excluded from requirement ID extraction.
+#
+# LAYER:        1 — parser
+# PHASE:        v3a
+#
+# FUNCTIONS:
+#   parse_intent(intent_file)
+#     Parse a .intent file and return an IntentParseResult.
+#
+# DEPENDENCIES:
+#   Standard library:  re, dataclasses, typing
+#   Internal:          none
+#
+# HISTORY:
+#   v3a   2026-03-28  SB  Initial implementation; section, req ID, scheme, and waiver extraction
+#
+# ===========================================================
 """parser/intent_parser.py — Structured natural language intent file parser.
 
 Phase: v3a

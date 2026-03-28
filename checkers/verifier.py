@@ -1,5 +1,32 @@
-# Copyright (c) 2026 BelTech Systems LLC
-# MIT License — see LICENSE file for details
+# ===========================================================
+# FILE:         checkers/verifier.py
+# PROJECT:      pssgen — AI-Driven PSS + UVM + C Testbench Generator
+# COPYRIGHT:    Copyright (c) 2026 BelTech Systems LLC
+# LICENSE:      MIT License — see LICENSE file for details
+# ===========================================================
+#
+# DESCRIPTION:
+#   Three-tier artifact validator. Tier 1 checks structural requirements
+#   (UVM macros, phases, PSS keywords) without a simulator. Tier 2 invokes
+#   xvlog or vlog for syntax validation, skipping gracefully if absent.
+#   Tier 3 checks that a build script is present. Checker contract is frozen.
+#
+# LAYER:        4 — checkers
+# PHASE:        v0
+#
+# FUNCTIONS:
+#   check(artifacts, sim_target)
+#     Run all checker tiers in order; return CheckResult from first failure or final pass.
+#
+# DEPENDENCIES:
+#   Standard library:  dataclasses, re, subprocess, os, tempfile
+#   Internal:          agents.structure_gen
+#
+# HISTORY:
+#   v0    2026-03-27  SB  Initial implementation; structural and smoke tiers
+#   v1b   2026-03-27  SB  Added PSS structural validation tier
+#
+# ===========================================================
 """checkers/verifier.py — Three-tier artifact verifier.
 
 Phase: v0

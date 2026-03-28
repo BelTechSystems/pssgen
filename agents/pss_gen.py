@@ -1,5 +1,33 @@
-# Copyright (c) 2026 BelTech Systems LLC
-# MIT License — see LICENSE file for details
+# ===========================================================
+# FILE:         agents/pss_gen.py
+# PROJECT:      pssgen — AI-Driven PSS + UVM + C Testbench Generator
+# COPYRIGHT:    Copyright (c) 2026 BelTech Systems LLC
+# LICENSE:      MIT License — see LICENSE file for details
+# ===========================================================
+#
+# DESCRIPTION:
+#   PSS v3.0 model generation agent. Renders a Jinja2 skeleton from IR and,
+#   in production mode, completes it via LLM. When pss_intent is present,
+#   the intent text is included in the prompt to produce design-specific
+#   constraints and coverage goals. Result stored in ir.pss_model.
+#
+# LAYER:        3 — agents
+# PHASE:        v1b
+#
+# FUNCTIONS:
+#   generate_pss(ir, fail_reason, no_llm)
+#     Generate a PSS v3.0 model from IR; store result in ir.pss_model.
+#
+# DEPENDENCIES:
+#   Standard library:  os
+#   External:          anthropic, jinja2
+#   Internal:          ir
+#
+# HISTORY:
+#   v1b   2026-03-27  SB  Initial implementation; PSS skeleton generation
+#   v2a   2026-03-27  SB  Added pss_intent propagation to LLM prompt
+#
+# ===========================================================
 """agents/pss_gen.py — PSS model generation agent.
 
 Phase: v1b

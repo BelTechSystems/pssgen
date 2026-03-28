@@ -1,5 +1,32 @@
-# Copyright (c) 2026 BelTech Systems LLC
-# MIT License — see LICENSE file for details
+# ===========================================================
+# FILE:         emitters/generic_c.py
+# PROJECT:      pssgen — AI-Driven PSS + UVM + C Testbench Generator
+# COPYRIGHT:    Copyright (c) 2026 BelTech Systems LLC
+# LICENSE:      MIT License — see LICENSE file for details
+# ===========================================================
+#
+# DESCRIPTION:
+#   Generic C test case emission layer. Extracts PSS action names from
+#   ir.pss_model via regex, renders a Jinja2 template to produce one void
+#   test_<action>() function per action, and a run_all_pss_tests() harness.
+#   Activated by --sim generic. Output: <design_name>_pss_tests.c.
+#
+# LAYER:        5 — emitters
+# PHASE:        v2b
+#
+# FUNCTIONS:
+#   emit(ir, artifacts, out_dir)
+#     Write all artifacts and <design_name>_pss_tests.c; return written paths.
+#
+# DEPENDENCIES:
+#   Standard library:  os, re
+#   External:          jinja2
+#   Internal:          agents.structure_gen, ir
+#
+# HISTORY:
+#   v2b   2026-03-27  SB  Initial implementation; PSS action extraction and C template
+#
+# ===========================================================
 """emitters/generic_c.py — Generic C test case emitter.
 
 Phase: v2b
