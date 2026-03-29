@@ -10,22 +10,27 @@
 #   in production mode, completes it via LLM. When pss_intent is present,
 #   the intent text is included in the prompt to produce design-specific
 #   constraints and coverage goals. Result stored in ir.pss_model.
+#   In v3b, _build_coverage_labels produces a three-tier hierarchy of named
+#   covergroup labels from requirement IDs, intent sections, and IR inference.
 #
 # LAYER:        3 — agents
 # PHASE:        v1b
 #
 # FUNCTIONS:
-#   generate_pss(ir, fail_reason, no_llm)
+#   generate_pss(ir, fail_reason, no_llm, intent_result)
 #     Generate a PSS v3.0 model from IR; store result in ir.pss_model.
+#   _build_coverage_labels(ir, intent_result)
+#     Build three-tier coverage label list from req IDs, intent sections, IR ports.
 #
 # DEPENDENCIES:
-#   Standard library:  os
+#   Standard library:  os, re
 #   External:          anthropic, jinja2
 #   Internal:          ir
 #
 # HISTORY:
 #   v1b   2026-03-27  SB  Initial implementation; PSS skeleton generation
 #   v2a   2026-03-27  SB  Added pss_intent propagation to LLM prompt
+#   v3b   2026-03-28  SB  Added _build_coverage_labels, coverage_labels context, intent_result param
 #
 # ===========================================================
 """agents/pss_gen.py — PSS model generation agent.
@@ -40,6 +45,7 @@ LLM completion in production mode.
 from __future__ import annotations
 
 import os
+import re
 
 import anthropic
 from jinja2 import Environment, FileSystemLoader
@@ -55,6 +61,7 @@ def generate_pss(
     ir: IR,
     fail_reason: str | None = None,
     no_llm: bool = False,
+    intent_result=None,
 ) -> str:
     """Generate a PSS v3.0 model from the IR.
 
@@ -62,6 +69,7 @@ def generate_pss(
         ir: Parsed design intermediate representation.
         fail_reason: Optional checker feedback from prior attempt.
         no_llm: If True, return template-rendered output without API usage.
+        intent_result: Optional IntentParseResult for coverage label derivation.
 
     Returns:
         PSS model source text.
@@ -71,7 +79,7 @@ def generate_pss(
     """
     env = Environment(loader=FileSystemLoader(TEMPLATE_DIR))
     template = env.get_template(TEMPLATE_NAME)
-    context = _build_context(ir)
+    context = _build_context(ir, intent_result=intent_result)
     skeleton = template.render(**context)
 
     if no_llm:
@@ -84,16 +92,18 @@ def generate_pss(
     return model
 
 
-def _build_context(ir: IR) -> dict:
+def _build_context(ir: IR, intent_result=None) -> dict:
     """Build template context groups from IR ports.
 
     Args:
         ir: Parsed design intermediate representation.
+        intent_result: Optional IntentParseResult for coverage label derivation.
 
     Returns:
         Context dictionary for PSS Jinja2 rendering.
     """
     ports = ir.ports
+    coverage_labels = _build_coverage_labels(ir, intent_result)
     return {
         "design_name": ir.design_name,
         "pss_intent": ir.pss_intent,
@@ -102,7 +112,101 @@ def _build_context(ir: IR) -> dict:
         "reset_ports": [p for p in ports if p.role in {"reset", "reset_n"}],
         "control_ports": [p for p in ports if p.role == "control" and p.direction == "input"],
         "data_ports": [p for p in ports if p.role == "data" and p.direction == "output"],
+        "coverage_labels": coverage_labels,
     }
+
+
+def _build_coverage_labels(ir: IR, intent_result=None) -> list[dict]:
+    """Build a three-tier hierarchy of PSS coverage labels.
+
+    Tier 1 (highest priority): Lines with [REQ-xxx] IDs — labelled by req ID.
+    Tier 2: Intent section headings without a req ID — labelled by section.
+    Tier 3 (fallback): IR port inference — one entry per data output and reset port
+        not already covered by Tier 1 or 2.
+
+    Args:
+        ir: Parsed design intermediate representation.
+        intent_result: Optional IntentParseResult (IntentParseResult | None).
+            Pass None when no intent is loaded.
+
+    Returns:
+        List of coverage label dicts with keys: label, display, source,
+        req_id, waived, waiver_reason.
+    """
+    labels: list[dict] = []
+    seen_req_ids: set[str] = set()
+
+    # Build set of waived req IDs for quick lookup
+    waived_req_ids: set[str] = set()
+    waiver_reasons: dict[str, str] = {}
+    if intent_result is not None and hasattr(intent_result, "waivers"):
+        for w in intent_result.waivers:
+            for rid in w.get("req_ids", []):
+                waived_req_ids.add(rid)
+                waiver_reasons[rid] = w.get("reason", "")
+
+    # --- Tier 1: lines with [REQ-xxx] IDs ---
+    if intent_result is not None and hasattr(intent_result, "req_ids"):
+        for req_id in intent_result.req_ids:
+            if req_id in seen_req_ids:
+                continue
+            seen_req_ids.add(req_id)
+            # PSS-safe: hyphens → underscores, prefix cg_
+            safe = "cg_" + req_id.replace("-", "_")
+            is_waived = req_id in waived_req_ids
+            labels.append({
+                "label": safe,
+                "display": req_id,
+                "source": "requirement",
+                "req_id": req_id,
+                "waived": is_waived,
+                "waiver_reason": waiver_reasons.get(req_id),
+            })
+
+    # --- Tier 2: intent sections (no req ID) ---
+    _SKIP_SECTIONS = {"intent gaps"}
+    if intent_result is not None and hasattr(intent_result, "sections"):
+        section_counters: dict[str, int] = {}
+        for heading in intent_result.sections:
+            if heading.lower() in _SKIP_SECTIONS:
+                continue
+            # One entry per section (section-level goal)
+            base = "cg_" + re.sub(r"[^a-z0-9]+", "_", heading.lower()).strip("_")
+            section_counters[base] = section_counters.get(base, 0) + 1
+            count = section_counters[base]
+            label = f"{base}_{count:02d}"
+            labels.append({
+                "label": label,
+                "display": heading,
+                "source": "intent",
+                "req_id": None,
+                "waived": False,
+                "waiver_reason": None,
+            })
+
+    # --- Tier 3: IR port inference ---
+    # Only for ports NOT already covered by Tier 1 or Tier 2.
+    # Data output ports and reset ports get inferred entries.
+    # Control inputs do NOT.
+    tier12_labels_lower = {lbl["label"].lower() for lbl in labels}
+    for port in ir.ports:
+        if port.role not in ("data", "reset", "reset_n"):
+            continue
+        if port.role == "data" and port.direction != "output":
+            continue
+        inferred_label = f"cg_inferred_{port.name}_01"
+        if inferred_label.lower() in tier12_labels_lower:
+            continue
+        labels.append({
+            "label": inferred_label,
+            "display": port.name,
+            "source": "inferred",
+            "req_id": None,
+            "waived": False,
+            "waiver_reason": None,
+        })
+
+    return labels
 
 
 def _build_prompt(ir: IR, skeleton: str, fail_reason: str | None) -> str:

@@ -36,6 +36,7 @@
 #   v2b   2026-03-27  SB  Added generic C emitter dispatch via _resolve_emitter
 #   v2c   2026-03-27  SB  Added Questa emitter dispatch
 #   v3a   2026-03-28  SB  Intent/req auto-detection, scaffold generation, verbose context logging
+#   v3b   2026-03-28  SB  Gap analysis wiring, coverage_labels, gap_report_path in OrchestratorResult
 #
 # ===========================================================
 """orchestrator.py — Pipeline coordinator and retry owner.
@@ -56,8 +57,9 @@ from parser.intent_parser import parse_intent
 from parser.req_parser import parse_req
 from parser.context import resolve_context_files
 from agents.structure_gen import Artifact, generate
-from agents.pss_gen import generate_pss
+from agents.pss_gen import generate_pss, _build_coverage_labels
 from agents.scaffold_gen import generate_intent_scaffold, generate_req_scaffold
+from agents.gap_agent import analyse_gaps, write_gap_report, format_console_summary
 from checkers.verifier import check
 from emitters.vivado import emit as emit_vivado
 from emitters.questa import emit as emit_questa
@@ -109,11 +111,13 @@ class OrchestratorResult:
         output_files: List of emitted output file paths.
         attempts: Number of generation attempts performed.
         last_fail_reason: Final checker failure reason if not successful.
+        gap_report_path: Path to the written gap report, or None if not produced.
     """
     success: bool
     output_files: list[str] = field(default_factory=list)
     attempts: int = 0
     last_fail_reason: str = ""
+    gap_report_path: Optional[str] = None
 
 
 def _resolve_emitter(sim_target: str):
@@ -293,8 +297,34 @@ def run(job: JobSpec) -> OrchestratorResult:
             print(f"[orchestrator] Attempt {attempt}/{job.max_retries}")
 
         artifacts = generate(ir, fail_reason=last_fail_reason, no_llm=job.no_llm)
-        pss_model = generate_pss(ir, fail_reason=last_fail_reason, no_llm=job.no_llm)
+        pss_model = generate_pss(
+            ir,
+            fail_reason=last_fail_reason,
+            no_llm=job.no_llm,
+            intent_result=intent_result,
+        )
         artifacts.append(Artifact(filename=f"{ir.design_name}.pss", content=pss_model))
+
+        # --- Gap analysis (v3b) ---
+        gap_report_path: Optional[str] = None
+        if intent_result is not None or req_result is not None:
+            stem = os.path.splitext(os.path.basename(job.input_file))[0]
+            coverage_labels = _build_coverage_labels(ir, intent_result)
+            gap_report = analyse_gaps(ir, intent_result, req_result, coverage_labels)
+            gap_report.input_file = job.input_file
+            gap_report.intent_path = intent_path or ""
+            gap_report.req_path = req_path or ""
+            os.makedirs(job.out_dir, exist_ok=True)
+            gap_report_path = os.path.join(
+                job.out_dir, f"{stem}_gap_report.txt"
+            )
+            write_gap_report(gap_report, gap_report_path)
+            summary = format_console_summary(gap_report)
+            print(f"{summary} -> {os.path.basename(gap_report_path)}")
+            if job.verbose and gap_report.errors:
+                for e in gap_report.errors:
+                    print(f"  [ERROR] {e['req_id']}: {e['message']}")
+
         result = check(artifacts, job.sim_target)
 
         if result.passed:
@@ -306,6 +336,7 @@ def run(job: JobSpec) -> OrchestratorResult:
                 success=True,
                 output_files=output_files,
                 attempts=attempt,
+                gap_report_path=gap_report_path,
             )
 
         last_fail_reason = result.reason

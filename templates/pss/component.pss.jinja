@@ -38,10 +38,27 @@ component {{ design_name }}_comp {
         }
         // LLM_FILL_CONSTRAINTS_END
 
-        // LLM_FILL_COVERAGE_START
+        {% if coverage_labels %}
+        {% for cov in coverage_labels %}
+        {% if not cov.waived %}
+        covergroup {{ cov.label }} {
+            {% if cov.req_id %}
+            // Traces to: {{ cov.req_id }}
+            {% endif %}
+            // {{ cov.display }}
+            // Source: {{ cov.source }}
+            // TODO: add specific bin definitions
+        }
+        {% else %}
+        // WAIVED: {{ cov.label }}
+        // Reason: {{ cov.waiver_reason }}
+        {% if cov.req_id %}// Requirement: {{ cov.req_id }}{% endif %}
+        {% endif %}
+        {% endfor %}
+        {% else %}
         covergroup cg_default {
             // TODO: add meaningful coverage intent
         }
-        // LLM_FILL_COVERAGE_END
+        {% endif %}
     }
 }

@@ -1,0 +1,16 @@
+# requirements: up_down_counter
+# extracted from: counter.intent
+# NOTE: Never overwritten by pssgen.
+
+[SYS-REQ-001] Counter shall support active-low reset.
+  verification: simulation
+
+[FUNC-REQ-002] Counter shall count up and down.
+  verification: simulation, post-silicon
+
+[FUNC-REQ-003] Count output shall roll over correctly.
+  verification: simulation
+
+[PERF-REQ-004] Reset response within one clock cycle.
+  verification: post-silicon
+  [WAIVED] Cannot verify sub-cycle timing pre-silicon.

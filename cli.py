@@ -25,6 +25,7 @@
 #   v0    2026-03-27  SB  Initial implementation; core HDL-to-UVM arguments
 #   v2a   2026-03-27  SB  Added --intent flag for structured natural language intent
 #   v3a   2026-03-28  SB  Added --req, --no-intent, --no-req, --scaffold, --coverage-loop
+#   v3b   2026-03-28  SB  Print gap report path from orchestrator result
 #
 # ===========================================================
 """cli.py — Command-line entry point for pssgen.
@@ -134,6 +135,8 @@ def main() -> None:
     if not result.success:
         print(f"[pssgen] FAILED after {result.attempts} attempt(s): {result.last_fail_reason}", file=sys.stderr)
         sys.exit(1)
+    if result.gap_report_path:
+        print(f"[pssgen] Gap report written: {result.gap_report_path}")
     if args.verbose:
         print(f"[pssgen] Done in {result.attempts} attempt(s). Files: {result.output_files}")
     sys.exit(0)

@@ -281,3 +281,58 @@ for code generation efficiency would not impose this
 overhead. The standard exists because the human author
 understands the audit context in which this tool will
 be used.
+
+---
+
+## D-012: Three-tier coverage label hierarchy
+
+Decision: Coverage labels for PSS covergroups follow
+a three-tier hierarchy: requirement IDs (Tier 1),
+intent section labels (Tier 2), IR port inference
+(Tier 3). Higher tiers take priority. Every level
+of human input produces correspondingly better output.
+
+Author: S. Belvin, BelTech Systems LLC
+
+Domain knowledge required: Experience with requirements
+traceability in DO-254 programs. Understanding that
+named covergroups traceable to requirements are
+auditable artifacts while generic covergroups are not.
+Professional judgment that rewarding human input with
+better output at every level encourages adoption of
+the full requirements workflow.
+
+Why AI could not have made this decision alone:
+The hierarchy reflects a deliberate design choice to
+meet engineers at their current level of process
+maturity rather than requiring full requirements
+compliance before the tool produces useful output.
+This is a human judgment about adoption behavior and
+tool design philosophy.
+
+## D-014: TOML project configuration file
+
+Decision: Support a pssgen.toml project configuration
+file that holds persistent settings. CLI flags override
+for single runs. TOML chosen over YAML or INI for
+standard library support (tomllib, Python 3.11+),
+readability, and consistency with pyproject.toml which
+pssgen users already know.
+
+Author: S. Belvin, BelTech Systems LLC
+
+Domain knowledge required: Experience with how
+engineering teams adopt tools in long-running programs.
+Understanding that command-line friction — repeatedly
+typing the same flags — is a common reason teams abandon
+tools that are otherwise valuable. Knowledge of TOML
+advantages over YAML for engineering tool configuration.
+
+Why AI could not have made this decision alone: Reflects
+professional judgment about the adoption lifecycle of
+tools in aerospace programs where projects run for years
+and the same IP blocks are verified repeatedly across
+program phases.
+```
+
+---
