@@ -508,7 +508,7 @@ Level 3 — HDL + intent + req file
   Coverage reports by requirement ID and scheme.
   Suitable for DO-254 and similar compliance programs.
 
-## Current phase: v3b — Requirement traceability and gap analysis
+## Completed: v3b — Requirement traceability and gap analysis
 
 Goal: connect the v3a parsers to the PSS generation
 pipeline and produce bidirectional gap reports.
@@ -551,7 +551,33 @@ Done condition:
   in PSS model. If counter.req present: req-traced
   covergroups and gap report written.
   All 57 non-e2e tests still pass.
-  
+
+## Current phase: v3c-a — pssgen.toml project configuration
+
+Goal: implement config.py to load pssgen.toml from the
+project directory. CLI flags override config file settings.
+Priority chain: toml defaults → toml settings → CLI flags.
+
+pssgen.toml location discovery (in order):
+  1. Current working directory
+  2. Directory containing --input file
+  3. Up the directory tree to filesystem root
+
+TOML sections:
+  [project]   name, description
+  [input]     file, top, intent, req
+  [output]    dir, sim
+  [generation] retries, no_llm, scaffold
+  [coverage]  loop, db
+
+New module: config.py (project root level)
+Modified:   cli.py — load config before arg parsing,
+            merge config with CLI args
+
+Done condition: pssgen.toml in tests/fixtures/ is loaded
+automatically. All 71 tests still pass.
+
+
 ## How to Work Effectively With Claude Code on This Project
 
 **Prefer goal + context over commands.**
