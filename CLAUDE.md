@@ -508,7 +508,50 @@ Level 3 — HDL + intent + req file
   Coverage reports by requirement ID and scheme.
   Suitable for DO-254 and similar compliance programs.
 
+## Current phase: v3b — Requirement traceability and gap analysis
 
+Goal: connect the v3a parsers to the PSS generation
+pipeline and produce bidirectional gap reports.
+
+Coverage label hierarchy (applied in order):
+  Tier 1: [REQ-xxx] ID present → cg_REQ_xxx
+  Tier 2: Intent section, no ID → cg_<section>_<n>
+  Tier 3: IR inference only → cg_inferred_<port>_<n>
+
+PSS-safe identifier conversion:
+  Hyphens → underscores
+  Spaces → underscores
+  Lowercase → preserved
+  Example: FUNC-REQ-113 → cg_FUNC_REQ_113
+  Example: "coverage goals" → cg_coverage_goals_01
+
+Gap report:
+  Written to <stem>_gap_report.txt in output directory
+  Console summary shows counts only
+  Direction A (req with no intent) → ERROR severity
+  Direction B (intent with no req) → WARNING severity
+  WAIVED items shown with reason, not counted as gaps
+
+Covergroup naming when req ID + intent section both present:
+  Tier 1 takes priority (req ID as name)
+  Intent section preserved as comment in covergroup
+
+New modules:
+  agents/gap_agent.py  — bidirectional gap analysis
+                         and gap report generation
+
+Modified modules:
+  agents/pss_gen.py    — use coverage label hierarchy
+  templates/pss/component.pss.jinja — named covergroups
+  orchestrator.py      — call gap agent, write report
+
+Done condition:
+  pssgen --input counter.vhd --no-llm exits 0.
+  If counter.intent present: intent-labeled covergroups
+  in PSS model. If counter.req present: req-traced
+  covergroups and gap report written.
+  All 57 non-e2e tests still pass.
+  
 ## How to Work Effectively With Claude Code on This Project
 
 **Prefer goal + context over commands.**
