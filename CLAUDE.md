@@ -508,7 +508,7 @@ Level 3 — HDL + intent + req file
   Coverage reports by requirement ID and scheme.
   Suitable for DO-254 and similar compliance programs.
 
-## Completed: v3b — Requirement traceability and gap analysis
+## Completed phase: v3b — Requirement traceability and gap analysis
 
 Goal: connect the v3a parsers to the PSS generation
 pipeline and produce bidirectional gap reports.
@@ -552,7 +552,7 @@ Done condition:
   covergroups and gap report written.
   All 57 non-e2e tests still pass.
 
-## Current phase: v3c-a — pssgen.toml project configuration
+## Completed phase: v3c-a — pssgen.toml project configuration
 
 Goal: implement config.py to load pssgen.toml from the
 project directory. CLI flags override config file settings.
@@ -577,6 +577,30 @@ Modified:   cli.py — load config before arg parsing,
 Done condition: pssgen.toml in tests/fixtures/ is loaded
 automatically. All 71 tests still pass.
 
+## Current phase: v3c-b — Coverage closure loop
+
+Goal: implement coverage XML reading, gap update from
+simulation results, and closure script generation.
+
+Supported simulators for closure scripts:
+  vivado  — xsim batch flow, Vivado Tcl
+  questa  — vlog/vsim, Makefile
+  icarus  — iverilog/vvp, shell script
+  none    — no simulator, read pre-existing XML only
+
+Coverage XML:
+  --coverage-db <file> or pssgen.toml [coverage] db
+  If not set and --coverage-loop > 0: warn and skip loop
+  Format: Vivado XML (v3c-b); Questa UCDB deferred (OI-12)
+
+New modules:
+  agents/coverage_reader.py  — reads Vivado XML
+  agents/closure_gen.py      — generates closure scripts
+
+Done condition:
+  pssgen --coverage-db sim/coverage.xml --coverage-loop 3
+  reads XML, updates gap report, writes closure script.
+  All 80 non-e2e tests still pass.
 
 ## How to Work Effectively With Claude Code on This Project
 
