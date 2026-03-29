@@ -28,6 +28,7 @@
 #
 # HISTORY:
 #   v3c-a  2026-03-29  SB  Initial implementation; TOML project config support
+#   v3c-b  2026-03-29  SB  Resolve TOML file paths relative to TOML directory
 #
 # ===========================================================
 """config.py — pssgen.toml project configuration loader.
@@ -134,26 +135,43 @@ def load_project_config(config_path: str) -> dict:
         loop    → coverage_loop (--coverage-loop)
         db      → coverage_db   (--coverage-db, empty string = absent)
 
+    File paths (input_file, intent_file, req_file, coverage_db) are resolved
+    relative to the directory that contains ``config_path``, so the TOML
+    file is self-contained and pssgen can be invoked from any working directory.
+    Non-path values (top, sim, retries, etc.) are returned as-is.
+
     Args:
         config_path: Absolute path to a pssgen.toml file.
 
     Returns:
         Flat dict of recognised config values keyed by CLI argument name.
+        File-path values are absolute.
     """
     with open(config_path, "rb") as fh:
         raw = tomllib.load(fh)
+
+    # File paths in the TOML are relative to the TOML file's directory so that
+    # pssgen can be invoked from any working directory while keeping the config
+    # self-contained in the project folder.
+    toml_dir = os.path.dirname(os.path.abspath(config_path))
+
+    def _resolve(path: str) -> str:
+        """Resolve a path from the TOML file to an absolute path."""
+        if os.path.isabs(path):
+            return path
+        return os.path.abspath(os.path.join(toml_dir, path))
 
     config: dict = {}
 
     input_sec = raw.get("input", {})
     if "file" in input_sec:
-        config["input_file"] = input_sec["file"]
+        config["input_file"] = _resolve(input_sec["file"])
     if "top" in input_sec:
         config["top_module"] = input_sec["top"]
     if "intent" in input_sec:
-        config["intent_file"] = input_sec["intent"]
+        config["intent_file"] = _resolve(input_sec["intent"])
     if "req" in input_sec:
-        config["req_file"] = input_sec["req"]
+        config["req_file"] = _resolve(input_sec["req"])
 
     output_sec = raw.get("output", {})
     if "dir" in output_sec:

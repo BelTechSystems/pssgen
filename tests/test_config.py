@@ -108,12 +108,20 @@ def test_config_returns_none_when_not_found(tmp_path) -> None:
 # ---------------------------------------------------------------------------
 
 def test_config_load_reads_input_section() -> None:
-    """load_project_config() returns input_file and top_module from [input]."""
+    """load_project_config() returns absolute input_file and top_module from [input].
+
+    File paths are resolved relative to the TOML directory so they are
+    absolute regardless of the caller's working directory.
+    """
     config = load_project_config(FIXTURE_TOML)
-    assert config["input_file"] == "counter.vhd"
+    # Paths should be absolute and point into the fixtures directory
+    assert os.path.isabs(config["input_file"])
+    assert config["input_file"].endswith("counter.vhd")
     assert config["top_module"] == "up_down_counter"
-    assert config["intent_file"] == "counter.intent"
-    assert config["req_file"] == "counter.req"
+    assert os.path.isabs(config["intent_file"])
+    assert config["intent_file"].endswith("counter.intent")
+    assert os.path.isabs(config["req_file"])
+    assert config["req_file"].endswith("counter.req")
 
 
 def test_config_load_reads_output_section() -> None:

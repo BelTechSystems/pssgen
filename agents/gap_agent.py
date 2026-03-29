@@ -18,6 +18,8 @@
 # FUNCTIONS:
 #   analyse_gaps(ir, intent_result, req_result, coverage_labels)
 #     Build a GapReport from bidirectional gap analysis.
+#   update_gaps_from_coverage(report, coverage)
+#     Update GapReport with simulation coverage data; mark hit/miss/unknown.
 #   write_gap_report(report, out_path)
 #     Write the formatted gap report to a file; return the path.
 #   format_console_summary(report)
@@ -25,10 +27,11 @@
 #
 # DEPENDENCIES:
 #   Standard library:  dataclasses, typing, os, datetime
-#   Internal:          ir
+#   Internal:          ir, agents.coverage_reader
 #
 # HISTORY:
 #   v3b   2026-03-28  SB  Initial implementation; bidirectional gap analysis
+#   v3c-b 2026-03-29  SB  Added coverage hit/miss tracking and update_gaps_from_coverage
 #
 # ===========================================================
 """agents/gap_agent.py — Bidirectional requirements traceability gap analysis.
@@ -48,6 +51,7 @@ from typing import Optional
 import os
 
 from ir import IR
+from agents.coverage_reader import CoverageResult
 
 
 @dataclass
@@ -76,6 +80,11 @@ class GapReport:
     input_file: str = ""
     intent_path: str = ""
     req_path: str = ""
+    # Coverage simulation result fields (populated by update_gaps_from_coverage)
+    covered_labels: list[str] = field(default_factory=list)
+    missed_labels: list[str] = field(default_factory=list)
+    uncovered_labels: list[str] = field(default_factory=list)
+    coverage_pass: int = 0  # 0 = no coverage data applied; N = pass number
 
 
 def analyse_gaps(
@@ -169,6 +178,67 @@ def analyse_gaps(
     return report
 
 
+def update_gaps_from_coverage(
+    report: GapReport,
+    coverage: CoverageResult,
+) -> GapReport:
+    """Update gap report with simulation coverage data.
+
+    Marks each coverage label as hit, missed, or unknown based on the
+    ``CoverageResult``. Removes errors whose requirement is now fully
+    covered. Removes warnings whose label is now fully hit. Waiver
+    entries are preserved unchanged.
+
+    Args:
+        report: Existing GapReport produced by :func:`analyse_gaps`.
+        coverage: Coverage data from :func:`~agents.coverage_reader.read_coverage_xml`.
+
+    Returns:
+        The same ``report`` object with ``covered_labels``, ``missed_labels``,
+        ``uncovered_labels`` populated and ``errors``/``warnings`` pruned.
+    """
+    # Reset coverage tracking lists (idempotent if called multiple times)
+    report.covered_labels = []
+    report.missed_labels = []
+    report.uncovered_labels = []
+
+    # Classify every known coverage label
+    covered_set: set[str] = set()
+    missed_set: set[str] = set()
+
+    for lbl in report.coverage_labels:
+        label_name: str = lbl["label"]
+        if label_name in coverage.covergroups:
+            if coverage.covergroups[label_name]:
+                report.covered_labels.append(label_name)
+                covered_set.add(label_name)
+            else:
+                report.missed_labels.append(label_name)
+                missed_set.add(label_name)
+        else:
+            report.uncovered_labels.append(label_name)
+
+    # Build set of req_ids whose labels are now covered
+    covered_req_ids: set[str] = set()
+    for lbl in report.coverage_labels:
+        if lbl["label"] in covered_set and lbl.get("req_id"):
+            covered_req_ids.add(lbl["req_id"])
+
+    # Prune errors for fully-covered requirements
+    report.errors = [
+        e for e in report.errors
+        if e.get("req_id") not in covered_req_ids
+    ]
+
+    # Prune warnings for labels that are now hit
+    report.warnings = [
+        w for w in report.warnings
+        if w.get("label") not in covered_set
+    ]
+
+    return report
+
+
 def write_gap_report(report: GapReport, out_path: str) -> str:
     """Write a formatted gap report to a file.
 
@@ -247,6 +317,38 @@ def write_gap_report(report: GapReport, out_path: str) -> str:
     else:
         lines.append("  (none)")
     lines.append("")
+
+    # COVERAGE STATUS section — only when coverage data was applied
+    has_coverage = (
+        report.covered_labels
+        or report.missed_labels
+        or report.uncovered_labels
+    )
+    if has_coverage:
+        pass_label = (
+            f"from simulation pass {report.coverage_pass}"
+            if report.coverage_pass > 0
+            else "from simulation"
+        )
+        lines.append(f"COVERAGE STATUS ({pass_label}):")
+        lines.append("─" * 41)
+
+        # Build display-name lookup from coverage_labels
+        display_map: dict[str, str] = {
+            lbl["label"]: lbl.get("display", lbl["label"])
+            for lbl in report.coverage_labels
+        }
+
+        for name in report.covered_labels:
+            display = display_map.get(name, name)
+            lines.append(f"  HIT     {name}   ({display} covered)")
+        for name in report.missed_labels:
+            display = display_map.get(name, name)
+            lines.append(f"  MISSED  {name}   (add more sequences)")
+        for name in report.uncovered_labels:
+            display = display_map.get(name, name)
+            lines.append(f"  UNKNOWN {name}   (not in coverage XML)")
+        lines.append("")
 
     lines.append("=" * 72)
 

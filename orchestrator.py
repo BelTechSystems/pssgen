@@ -26,7 +26,8 @@
 #   Standard library:  dataclasses, typing, json, os
 #   Internal:          ir, parser.dispatch, parser.intent_parser, parser.req_parser,
 #                      parser.context, agents.structure_gen, agents.pss_gen,
-#                      agents.scaffold_gen, checkers.verifier,
+#                      agents.scaffold_gen, agents.gap_agent, agents.coverage_reader,
+#                      agents.closure_gen, checkers.verifier,
 #                      emitters.vivado, emitters.questa, emitters.generic_c
 #
 # HISTORY:
@@ -38,6 +39,7 @@
 #   v3a   2026-03-28  SB  Intent/req auto-detection, scaffold generation, verbose context logging
 #   v3b   2026-03-28  SB  Gap analysis wiring, coverage_labels, gap_report_path in OrchestratorResult
 #   v3c-a 2026-03-29  SB  Added coverage_db stub field to JobSpec
+#   v3c-b 2026-03-29  SB  Coverage closure loop, _run_closure_loop, closure_passes/script in result
 #
 # ===========================================================
 """orchestrator.py — Pipeline coordinator and retry owner.
@@ -60,7 +62,9 @@ from parser.context import resolve_context_files
 from agents.structure_gen import Artifact, generate
 from agents.pss_gen import generate_pss, _build_coverage_labels
 from agents.scaffold_gen import generate_intent_scaffold, generate_req_scaffold
-from agents.gap_agent import analyse_gaps, write_gap_report, format_console_summary
+from agents.gap_agent import analyse_gaps, update_gaps_from_coverage, write_gap_report, format_console_summary
+from agents.coverage_reader import read_coverage_xml
+from agents.closure_gen import generate_closure_script
 from checkers.verifier import check
 from emitters.vivado import emit as emit_vivado
 from emitters.questa import emit as emit_questa
@@ -115,12 +119,16 @@ class OrchestratorResult:
         attempts: Number of generation attempts performed.
         last_fail_reason: Final checker failure reason if not successful.
         gap_report_path: Path to the written gap report, or None if not produced.
+        closure_passes: Number of coverage closure iterations performed.
+        closure_script_path: Path to the last closure script written, or None.
     """
     success: bool
     output_files: list[str] = field(default_factory=list)
     attempts: int = 0
     last_fail_reason: str = ""
     gap_report_path: Optional[str] = None
+    closure_passes: int = 0
+    closure_script_path: Optional[str] = None
 
 
 def _resolve_emitter(sim_target: str):
@@ -174,6 +182,133 @@ def _write_req_skeleton(req_path: str, ir: IR, intent_result) -> None:
         fh.write("\n".join(lines) + "\n")
 
 
+def _run_closure_loop(
+    job: JobSpec,
+    ir: IR,
+    gap_report,
+    gap_report_path: Optional[str],
+    intent_result,
+    base_result: "OrchestratorResult",
+) -> "OrchestratorResult":
+    """Run the coverage-guided closure loop after the main pipeline.
+
+    Reads coverage XML each pass, updates the gap report, regenerates the
+    PSS model with uncovered labels as context, and writes a closure script
+    the engineer can run to advance to the next pass.
+
+    If ``job.coverage_db`` is not set: warns, generates pass-1 script, and
+    returns immediately with ``closure_passes=0``.
+
+    Args:
+        job: Job configuration (coverage_loop, coverage_db, sim_target, etc.).
+        ir: Populated design IR.
+        gap_report: GapReport from the main pipeline, or None.
+        gap_report_path: Path where gap report is written, or None.
+        intent_result: IntentParseResult for PSS regeneration context.
+        base_result: OrchestratorResult from the main pipeline loop.
+
+    Returns:
+        Updated OrchestratorResult with closure_passes and closure_script_path.
+    """
+    from agents.gap_agent import GapReport as _GapReport
+
+    # Ensure we always have a GapReport to work with
+    if gap_report is None:
+        gap_report = _GapReport(design_name=ir.design_name)
+
+    # If no closure DB provided: warn, generate pass-1 script, return
+    if not job.coverage_db:
+        print(
+            "[pssgen] --coverage-loop requires --coverage-db.\n"
+            "         Generate coverage XML by running your simulator,\n"
+            "         then re-run with --coverage-db <path>."
+        )
+        script_path = generate_closure_script(
+            ir=ir,
+            sim_target=job.sim_target,
+            pass_number=1,
+            gap_report=gap_report,
+            out_dir=job.out_dir,
+        )
+        if job.verbose:
+            print(f"[orchestrator] Closure script written: {script_path}")
+        base_result.closure_passes = 0
+        base_result.closure_script_path = script_path
+        return base_result
+
+    # ---- Main closure loop ----
+    script_path: Optional[str] = None
+    max_passes: int = job.coverage_loop  # type: ignore[assignment]
+
+    for pass_num in range(1, max_passes + 1):
+        if job.verbose:
+            print(f"[orchestrator] Closure pass {pass_num}/{max_passes}")
+
+        # 1. Read coverage XML and update gap report
+        cov_result = read_coverage_xml(job.coverage_db)
+        for warn in cov_result.parse_warnings:
+            print(f"[pssgen] Coverage XML warning: {warn}")
+
+        gap_report = update_gaps_from_coverage(gap_report, cov_result)
+        gap_report.coverage_pass = pass_num
+
+        # 2. Regenerate PSS model with uncovered labels as context
+        still_missed = gap_report.missed_labels + gap_report.uncovered_labels
+        if still_missed:
+            fail_reason = f"Uncovered: {', '.join(still_missed[:10])}"
+            if len(still_missed) > 10:
+                fail_reason += f" (+{len(still_missed) - 10} more)"
+        else:
+            # All labels covered — build a success message
+            fail_reason = None
+
+        pss_model = generate_pss(
+            ir,
+            fail_reason=fail_reason,
+            no_llm=job.no_llm,
+            intent_result=intent_result,
+        )
+        # Write updated .pss file
+        pss_file = os.path.join(job.out_dir, f"{ir.design_name}.pss")
+        os.makedirs(job.out_dir, exist_ok=True)
+        with open(pss_file, "w", encoding="utf-8") as fh:
+            fh.write(pss_model)
+
+        # 3. Generate closure script for this pass
+        script_path = generate_closure_script(
+            ir=ir,
+            sim_target=job.sim_target,
+            pass_number=pass_num,
+            gap_report=gap_report,
+            out_dir=job.out_dir,
+        )
+
+        # 4. Write updated gap report
+        if gap_report_path:
+            write_gap_report(gap_report, gap_report_path)
+        elif job.out_dir:
+            stem = os.path.splitext(os.path.basename(job.input_file))[0]
+            gap_report_path = os.path.join(job.out_dir, f"{stem}_gap_report.txt")
+            write_gap_report(gap_report, gap_report_path)
+
+        # 5. Console summary
+        print(format_console_summary(gap_report))
+        if job.verbose:
+            print(f"[orchestrator] Closure script written: {script_path}")
+
+        # Early exit if all errors closed
+        if not gap_report.errors:
+            if job.verbose:
+                print("[orchestrator] All requirement gaps closed — closure complete.")
+            break
+
+    base_result.closure_passes = pass_num  # type: ignore[possibly-undefined]
+    base_result.closure_script_path = script_path
+    if gap_report_path:
+        base_result.gap_report_path = gap_report_path
+    return base_result
+
+
 def run(job: JobSpec) -> OrchestratorResult:
     """Run the end-to-end generation and checker loop.
 
@@ -182,14 +317,7 @@ def run(job: JobSpec) -> OrchestratorResult:
 
     Returns:
         OrchestratorResult describing success, outputs, attempts, and failure.
-
-    Raises:
-        NotImplementedError: If coverage_loop is set (reserved for v3c).
     """
-    # --- coverage_loop guard (v3c stub) ---
-    if job.coverage_loop is not None:
-        raise NotImplementedError("--coverage-loop not implemented; see v3c")
-
     # --- Parse ---
     ir = parse_source(job.input_file, job.top_module)
     ir.emission_target = job.sim_target
@@ -295,6 +423,7 @@ def run(job: JobSpec) -> OrchestratorResult:
 
     # --- Orchestrator retry loop ---
     last_fail_reason: Optional[str] = None
+    gap_report = None  # populated inside loop if intent/req files present
     for attempt in range(1, job.max_retries + 1):
         if job.verbose:
             print(f"[orchestrator] Attempt {attempt}/{job.max_retries}")
@@ -335,12 +464,23 @@ def run(job: JobSpec) -> OrchestratorResult:
                 print(f"[orchestrator] Checker passed all tiers; tier-1 structural checks passed")
             emitter = _resolve_emitter(job.sim_target)
             output_files = emitter(ir, artifacts, job.out_dir)
-            return OrchestratorResult(
+            base_result = OrchestratorResult(
                 success=True,
                 output_files=output_files,
                 attempts=attempt,
                 gap_report_path=gap_report_path,
             )
+            # --- Coverage closure loop (v3c-b) ---
+            if job.coverage_loop is not None and job.coverage_loop > 0:
+                return _run_closure_loop(
+                    job=job,
+                    ir=ir,
+                    gap_report=gap_report if (intent_result is not None or req_result is not None) else None,
+                    gap_report_path=gap_report_path,
+                    intent_result=intent_result,
+                    base_result=base_result,
+                )
+            return base_result
 
         last_fail_reason = result.reason
         if job.verbose:

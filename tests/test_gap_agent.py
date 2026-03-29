@@ -16,6 +16,7 @@
 #
 # HISTORY:
 #   v3b   2026-03-28  SB  Initial implementation; 9 gap agent tests
+#   v3c-b 2026-03-29  SB  Added 3 tests for update_gaps_from_coverage (hit/miss/waiver)
 #
 # ===========================================================
 """Unit tests for the gap analysis agent."""
@@ -27,7 +28,11 @@ from typing import Optional
 
 import pytest
 
-from agents.gap_agent import analyse_gaps, write_gap_report, format_console_summary, GapReport
+from agents.gap_agent import (
+    analyse_gaps, update_gaps_from_coverage, write_gap_report,
+    format_console_summary, GapReport,
+)
+from agents.coverage_reader import CoverageResult
 from ir import IR, Port
 
 
@@ -244,3 +249,93 @@ def test_gap_agent_console_summary_format() -> None:
 
     assert "2 error" in summary
     assert "1 warning" in summary
+
+
+# ---------------------------------------------------------------------------
+# Coverage hit/miss update tests (v3c-b)
+# ---------------------------------------------------------------------------
+
+def _make_report_with_labels() -> GapReport:
+    """Return a GapReport with one requirement error and one intent warning."""
+    report = GapReport(design_name="test_design")
+    report.coverage_labels = [
+        {
+            "label": "cg_SYS_REQ_001",
+            "display": "SYS-REQ-001",
+            "source": "requirement",
+            "req_id": "SYS-REQ-001",
+            "waived": False,
+            "waiver_reason": None,
+        },
+        {
+            "label": "cg_coverage_goals_01",
+            "display": "coverage goals",
+            "source": "intent",
+            "req_id": None,
+            "waived": False,
+            "waiver_reason": None,
+        },
+    ]
+    report.errors = [
+        {
+            "req_id": "SYS-REQ-001",
+            "message": "Requirement 'SYS-REQ-001' has no corresponding PSS coverage label.",
+            "statement": "",
+        }
+    ]
+    report.warnings = [
+        {
+            "label": "cg_coverage_goals_01",
+            "display": "coverage goals",
+            "source": "intent",
+            "message": "Coverage label 'cg_coverage_goals_01' has no traceable requirement ID.",
+        }
+    ]
+    return report
+
+
+def test_update_gaps_marks_hit_covergroup() -> None:
+    """Covergroup at 100% is moved to covered_labels and its error is removed."""
+    report = _make_report_with_labels()
+    coverage = CoverageResult(
+        covergroups={"cg_SYS_REQ_001": True, "cg_coverage_goals_01": False},
+        source_file="test.xml",
+    )
+
+    updated = update_gaps_from_coverage(report, coverage)
+
+    assert "cg_SYS_REQ_001" in updated.covered_labels
+    # Error for SYS-REQ-001 should be pruned since it is now covered
+    assert all(e["req_id"] != "SYS-REQ-001" for e in updated.errors)
+
+
+def test_update_gaps_marks_missed_covergroup() -> None:
+    """Covergroup at 0% is placed in missed_labels and stays in warnings."""
+    report = _make_report_with_labels()
+    coverage = CoverageResult(
+        covergroups={"cg_SYS_REQ_001": True, "cg_coverage_goals_01": False},
+        source_file="test.xml",
+    )
+
+    updated = update_gaps_from_coverage(report, coverage)
+
+    assert "cg_coverage_goals_01" in updated.missed_labels
+    # Warning for this label should remain since it was not hit
+    assert any(w["label"] == "cg_coverage_goals_01" for w in updated.warnings)
+
+
+def test_update_gaps_preserves_waivers() -> None:
+    """Waivers are unchanged after coverage update."""
+    report = _make_report_with_labels()
+    report.waivers = [
+        {"req_id": "SYS-REQ-999", "waiver_reason": "Pre-silicon only.", "source": "requirement"}
+    ]
+    coverage = CoverageResult(
+        covergroups={"cg_SYS_REQ_001": True},
+        source_file="test.xml",
+    )
+
+    updated = update_gaps_from_coverage(report, coverage)
+
+    assert len(updated.waivers) == 1
+    assert updated.waivers[0]["req_id"] == "SYS-REQ-999"

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<coverage>
+  <covergroups>
+    <covergroup name="cg_reset_behavior_01">
+      <coverage_pct>100.0</coverage_pct>
+    </covergroup>
+    <covergroup name="cg_counting_sequences_01">
+      <coverage_pct>0.0</coverage_pct>
+    </covergroup>
+    <covergroup name="cg_inferred_rst_n_01">
+      <coverage_pct>100.0</coverage_pct>
+    </covergroup>
+  </covergroups>
+</coverage>

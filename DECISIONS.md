@@ -368,3 +368,31 @@ program phases.
 ```
 
 ---
+
+## D-015: Four simulator targets for closure scripts
+
+Decision: Support vivado, questa, icarus, and none as
+closure script targets. Icarus Verilog chosen as the
+open-source option — most widely installed, ships in
+Linux package managers, runs on Windows via WSL.
+none target supports pre-existing XML workflow without
+invoking any simulator. Questa UCDB reading deferred
+as OI-12.
+
+Author: S. Belvin, BelTech Systems LLC
+
+Domain knowledge required: Knowledge of open-source
+EDA simulator landscape. Understanding that Icarus
+is the most accessible free simulator for engineers
+who cannot afford enterprise licenses. Experience
+with how aerospace teams operate simulators in CI
+and lab environments.
+
+Why AI could not have made this decision alone:
+Required judgment about which open-source simulator
+has sufficient adoption to justify first-class support
+versus which should be deferred. Icarus vs Verilator
+vs GHDL is a domain-specific choice requiring knowledge
+of the target audience's toolchain preferences.
+
+---
