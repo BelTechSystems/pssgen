@@ -310,6 +310,38 @@ compliance before the tool produces useful output.
 This is a human judgment about adoption behavior and
 tool design philosophy.
 
+## D-013: File resolution verbose reporting
+
+Decision: In verbose mode, pssgen reports the resolved
+path and source label (explicit, auto-detected, from
+pssgen.toml, or none) for every input file — HDL source,
+intent, req, and config. In non-verbose mode, a single
+hint is emitted when no intent file will be found.
+
+Author: S. Belvin, BelTech Systems LLC
+
+Domain knowledge required: Experience with verification
+tool adoption in long-running programs. When engineers
+encounter unexpected behaviour — wrong intent file loaded,
+wrong output directory — the first question is "what did
+the tool actually use?" Verbose resolution reporting
+answers that question without requiring debug flags or
+source-code inspection. The distinction between
+"auto-detected" and "from pssgen.toml" matters because
+it tells the engineer whether the file was found by
+convention or was explicitly configured.
+
+Why AI could not have made this decision alone: The
+decision reflects professional judgment about what
+information engineers need to trust an automated tool in
+a certification context. The specific labels chosen
+(explicit, auto-detected, from pssgen.toml, none)
+mirror the mental model engineers already use when
+thinking about configuration layering, not the internal
+implementation model.
+
+---
+
 ## D-014: TOML project configuration file
 
 Decision: Support a pssgen.toml project configuration

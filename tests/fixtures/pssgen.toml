@@ -1,0 +1,20 @@
+[project]
+name        = "up_down_counter"
+description = "8-bit up/down counter test fixture"
+
+[input]
+file   = "counter.vhd"
+top    = "up_down_counter"
+intent = "counter.intent"
+req    = "counter.req"
+
+[output]
+dir = "./out_toml"
+sim = "vivado"
+
+[generation]
+retries = 3
+no_llm  = true
+
+[coverage]
+loop = 0

@@ -15,17 +15,20 @@
 #
 # FUNCTIONS:
 #   main()
-#     Parse CLI arguments, build JobSpec, invoke orchestrator, exit 0/1/3.
+#     Parse CLI arguments, load pssgen.toml config, build JobSpec,
+#     invoke orchestrator, exit 0/1/3.
 #
 # DEPENDENCIES:
-#   Standard library:  argparse, sys
-#   Internal:          orchestrator, parser.dispatch
+#   Standard library:  argparse, os, sys
+#   Internal:          config, orchestrator, parser.dispatch
 #
 # HISTORY:
 #   v0    2026-03-27  SB  Initial implementation; core HDL-to-UVM arguments
 #   v2a   2026-03-27  SB  Added --intent flag for structured natural language intent
 #   v3a   2026-03-28  SB  Added --req, --no-intent, --no-req, --scaffold, --coverage-loop
 #   v3b   2026-03-28  SB  Print gap report path from orchestrator result
+#   v3c-a 2026-03-29  SB  pssgen.toml config auto-detection, --config flag,
+#                          --coverage-db flag, file resolution verbose reporting
 #
 # ===========================================================
 """cli.py — Command-line entry point for pssgen.
@@ -33,28 +36,91 @@
 Phase: v0
 Layer: Entry point (above orchestration layers)
 
-Parses command-line arguments and dispatches one orchestrator run.
+Parses command-line arguments, loads pssgen.toml project config, merges
+config with CLI flags (CLI takes priority), and dispatches one orchestrator
+run.
 """
 import argparse
+import os
 import sys
+
+from config import find_project_config, load_project_config, merge_config_with_args
 from orchestrator import run, JobSpec
 from parser.dispatch import resolve_parser
+
+
+def _companion_path(input_file: str, ext: str) -> str | None:
+    """Return ``<stem><ext>`` if that file exists alongside *input_file*.
+
+    Args:
+        input_file: Path to the HDL input file.
+        ext: File extension including leading dot, e.g. ``".intent"``.
+
+    Returns:
+        Absolute path to the companion file if it exists, else None.
+    """
+    stem = os.path.splitext(os.path.abspath(input_file))[0]
+    path = stem + ext
+    return path if os.path.isfile(path) else None
 
 
 def main() -> None:
     """Run the pssgen CLI entry point.
 
-    Parses command-line arguments, builds a `JobSpec`, and invokes the
-    orchestrator. Exits with status code 0 on success and 1 on failure.
-
-    The optional ``--intent`` flag allows engineers to provide structured
-    natural language verification intent that supplements HDL-derived IR.
+    Parses command-line arguments, loads pssgen.toml project configuration
+    (auto-detected or via --config), merges config with CLI flags (CLI
+    takes priority), builds a ``JobSpec``, and invokes the orchestrator.
+    Exits with status code 0 on success, 1 on failure, and 3 on bad input.
     """
+    # ------------------------------------------------------------------
+    # Preliminary parse: discover --input and --config before full parse
+    # so we can locate pssgen.toml relative to the input file's directory.
+    # ------------------------------------------------------------------
+    pre_parser = argparse.ArgumentParser(add_help=False)
+    pre_parser.add_argument("--input", default=None)
+    pre_parser.add_argument("--config", default=None)
+    pre_args, _ = pre_parser.parse_known_args()
+
+    # Locate pssgen.toml: explicit --config wins, then search from input
+    # file directory, then fall back to cwd.
+    config_path: str | None = None
+    config_source: str = "none"
+
+    if pre_args.config:
+        config_path = os.path.abspath(pre_args.config)
+        config_source = "explicit"
+    elif pre_args.input:
+        start_dir = os.path.dirname(os.path.abspath(pre_args.input))
+        config_path = find_project_config(start_dir)
+        if config_path:
+            config_source = "auto-detected"
+    else:
+        config_path = find_project_config()
+        if config_path:
+            config_source = "auto-detected"
+
+    loaded_config: dict = {}
+    if config_path:
+        loaded_config = load_project_config(config_path)
+
+    # ------------------------------------------------------------------
+    # Full argument parser
+    # ------------------------------------------------------------------
     parser = argparse.ArgumentParser(
         prog="pssgen",
         description="AI-driven PSS + UVM + C testbench generator."
     )
-    parser.add_argument("--input",  required=True, help="HDL source file (.v, .sv, .vhd, .vhdl)")
+    parser.add_argument(
+        "--input",
+        default=None,
+        help="HDL source file (.v, .sv, .vhd, .vhdl)",
+    )
+    parser.add_argument(
+        "--config",
+        default=None,
+        metavar="FILE",
+        help="Project config file (default: pssgen.toml, auto-detected from input directory).",
+    )
     parser.add_argument(
         "--intent",
         default=None,
@@ -106,15 +172,100 @@ def main() -> None:
         metavar="N",
         help="(Stub — not yet implemented; see v3c) Coverage closure loop iterations.",
     )
+    parser.add_argument(
+        "--coverage-db",
+        default=None,
+        metavar="PATH",
+        help="(Stub — not yet implemented; see v3c) Coverage database path.",
+    )
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args()
 
+    # ------------------------------------------------------------------
+    # Merge pssgen.toml config into args (CLI flags take priority)
+    # ------------------------------------------------------------------
+    if loaded_config:
+        intent_before_merge = args.intent
+        req_before_merge = args.req
+        merge_config_with_args(loaded_config, args)
+        intent_from_cli = intent_before_merge is not None
+        req_from_cli = req_before_merge is not None
+    else:
+        intent_from_cli = args.intent is not None
+        req_from_cli = args.req is not None
+
+    # ------------------------------------------------------------------
+    # Validate that input_file is now set (CLI or config)
+    # ------------------------------------------------------------------
+    if not args.input:
+        parser.error(
+            "--input is required (provide on command line or set [input] file in pssgen.toml)"
+        )
+
+    # ------------------------------------------------------------------
+    # Validate HDL extension before further processing
+    # ------------------------------------------------------------------
     try:
         resolve_parser(args.input)
     except ValueError as exc:
         print(f"[pssgen] CONFIG ERROR: {exc}", file=sys.stderr)
         sys.exit(3)
 
+    # ------------------------------------------------------------------
+    # File resolution verbose reporting (D-013)
+    # ------------------------------------------------------------------
+    if args.verbose:
+        # Config
+        if config_path:
+            print(f"[pssgen] Config:  {config_path} ({config_source})")
+        else:
+            print("[pssgen] Config:  none")
+
+        # Input
+        print(f"[pssgen] Input:   {os.path.abspath(args.input)}")
+
+        # Intent
+        if intent_from_cli:
+            intent_label = f"{args.intent} (explicit)"
+        elif args.intent is not None:
+            # Value came from TOML merge
+            intent_label = f"{args.intent} (from pssgen.toml)"
+        else:
+            auto_intent = _companion_path(args.input, ".intent")
+            if auto_intent and not args.no_intent:
+                intent_label = f"{auto_intent} (auto-detected)"
+            else:
+                intent_label = "none — create <stem>.intent or use --intent <file> for richer PSS output"
+        print(f"[pssgen] Intent:  {intent_label}")
+
+        # Req
+        if req_from_cli:
+            req_label = f"{args.req} (explicit)"
+        elif args.req is not None:
+            req_label = f"{args.req} (from pssgen.toml)"
+        else:
+            auto_req = _companion_path(args.input, ".req")
+            if auto_req and not args.no_req:
+                req_label = f"{auto_req} (auto-detected)"
+            else:
+                req_label = "none — create <stem>.req or use --req <file> for requirements traceability"
+        print(f"[pssgen] Req:     {req_label}")
+
+    else:
+        # Non-verbose: hint if no intent will be found
+        if args.intent is None and not args.no_intent:
+            auto_intent = _companion_path(args.input, ".intent")
+            if not auto_intent:
+                stem = os.path.splitext(os.path.basename(args.input))[0]
+                print(
+                    f"[pssgen] No intent file found. Using IR-only inference.\n"
+                    f"         Create {stem}.intent or use --intent <file>\n"
+                    f"         for richer PSS output."
+                )
+
+    # ------------------------------------------------------------------
+    # Build JobSpec and run
+    # ------------------------------------------------------------------
     job = JobSpec(
         input_file=args.input,
         intent_file=args.intent,
@@ -130,6 +281,7 @@ def main() -> None:
         no_req=args.no_req,
         scaffold=args.scaffold,
         coverage_loop=args.coverage_loop,
+        coverage_db=args.coverage_db,
     )
     result = run(job)
     if not result.success:

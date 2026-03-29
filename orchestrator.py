@@ -37,6 +37,7 @@
 #   v2c   2026-03-27  SB  Added Questa emitter dispatch
 #   v3a   2026-03-28  SB  Intent/req auto-detection, scaffold generation, verbose context logging
 #   v3b   2026-03-28  SB  Gap analysis wiring, coverage_labels, gap_report_path in OrchestratorResult
+#   v3c-a 2026-03-29  SB  Added coverage_db stub field to JobSpec
 #
 # ===========================================================
 """orchestrator.py — Pipeline coordinator and retry owner.
@@ -85,6 +86,7 @@ class JobSpec:
         no_req: If True, suppress auto-detection of <stem>.req.
         scaffold: If True, generate _generated.intent and _generated.req in out_dir.
         coverage_loop: Stub — raises NotImplementedError when set; reserved for v3c.
+        coverage_db: Stub — coverage database path; reserved for v3c.
     """
     input_file: str
     top_module: Optional[str]
@@ -100,6 +102,7 @@ class JobSpec:
     no_req: bool = False
     scaffold: bool = False
     coverage_loop: Optional[int] = None
+    coverage_db: Optional[str] = None
 
 
 @dataclass
