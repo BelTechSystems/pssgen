@@ -2,7 +2,7 @@
 import pytest
 from agents.structure_gen import Artifact
 from agents.structure_gen import generate
-from checkers.verifier import check
+from checkers.verifier import check, _tier1_ral_structural
 from parser.verilog import parse
 
 
@@ -68,4 +68,67 @@ def test_template_only_output_passes_tier1(tmp_path):
     artifacts = generate(ir, no_llm=True)
     result = check(artifacts, "vivado")
 
+    assert result.passed is True
+
+
+# ── RAL tier-1 checker tests ──────────────────────────────────────────────
+
+def test_checker_passes_valid_reg_block() -> None:
+    """Minimal valid reg_block.sv passes _tier1_ral_structural."""
+    content = (
+        "class mydesign_ctrl_reg extends uvm_reg;\n"
+        "endclass\n"
+        "class mydesign_reg_block extends uvm_reg_block;\n"
+        "  function void build();\n"
+        "    reg_map = create_map(...);\n"
+        "    reg_map.add_reg(.rg(ctrl), .offset(0));\n"
+        "  endfunction\n"
+        "endclass\n"
+    )
+    a = Artifact("mydesign_reg_block.sv", content)
+    result = _tier1_ral_structural(a, "mydesign")
+    assert result.passed is True
+
+
+def test_checker_fails_missing_create_map() -> None:
+    """reg_block.sv without 'create_map' fails tier-1 with descriptive reason."""
+    content = (
+        "class mydesign_ctrl_reg extends uvm_reg;\nendclass\n"
+        "class mydesign_reg_block extends uvm_reg_block;\n"
+        "  function void build();\n"
+        "    reg_map.add_reg(.rg(ctrl), .offset(0));\n"
+        "  endfunction\n"
+        "endclass\n"
+    )
+    a = Artifact("mydesign_reg_block.sv", content)
+    result = _tier1_ral_structural(a, "mydesign")
+    assert result.passed is False
+    assert "create_map" in result.reason
+
+
+def test_checker_passes_valid_reg_pkg() -> None:
+    """Minimal valid reg_pkg.sv passes _tier1_ral_structural."""
+    content = (
+        "package mydesign_reg_pkg;\n"
+        "  import uvm_pkg::*;\n"
+        "  `include \"uvm_macros.svh\"\n"
+        "  `include \"mydesign_reg_block.sv\"\n"
+        "endpackage : mydesign_reg_pkg\n"
+    )
+    a = Artifact("mydesign_reg_pkg.sv", content)
+    result = _tier1_ral_structural(a, "mydesign")
+    assert result.passed is True
+
+
+def test_checker_passes_valid_reg_seq() -> None:
+    """Minimal valid reg_seq.sv passes _tier1_ral_structural."""
+    content = (
+        "class mydesign_reg_hw_reset_seq\n"
+        "    extends uvm_reg_hw_reset_seq;\n"
+        "endclass\n"
+        "class mydesign_reg_rw_seq extends uvm_reg_sequence;\n"
+        "endclass\n"
+    )
+    a = Artifact("mydesign_reg_seq.sv", content)
+    result = _tier1_ral_structural(a, "mydesign")
     assert result.passed is True

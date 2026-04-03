@@ -21,6 +21,24 @@ component {{ design_name }}_comp {
     }
 {% endfor %}
 
+{% if register_map %}
+    // ── PSS register actions (from register map)
+{% for reg in register_map.registers %}
+{% for field in reg.fields %}
+{% if field.pss_action %}
+    action {{ field.pss_action }} {
+        // Register: {{ reg.name }} offset {{ reg.offset }}
+        // Field: {{ field.field_name }}
+        // Access: {{ field.access }}
+        // Req: {{ field.req_id if field.req_id else 'none' }}
+        // LLM_FILL_REG_ACTION_START
+        // TODO: implement register action body
+        // LLM_FILL_REG_ACTION_END
+    }
+{% endif %}
+{% endfor %}
+{% endfor %}
+{% endif %}
     action main {
 {% if reset_ports %}
         do_reset r;

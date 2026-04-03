@@ -31,6 +31,7 @@
 #   v1b   2026-03-27  SB  Initial implementation; PSS skeleton generation
 #   v2a   2026-03-27  SB  Added pss_intent propagation to LLM prompt
 #   v3b   2026-03-28  SB  Added _build_coverage_labels, coverage_labels context, intent_result param
+#   v4b   2026-04-03  SB  Added register_map to _build_context; PSS template generates register actions
 #
 # ===========================================================
 """agents/pss_gen.py — PSS model generation agent.
@@ -113,6 +114,7 @@ def _build_context(ir: IR, intent_result=None) -> dict:
         "control_ports": [p for p in ports if p.role == "control" and p.direction == "input"],
         "data_ports": [p for p in ports if p.role == "data" and p.direction == "output"],
         "coverage_labels": coverage_labels,
+        "register_map": ir.register_map,
     }
 
 

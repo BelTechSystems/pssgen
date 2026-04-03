@@ -25,6 +25,7 @@
 # HISTORY:
 #   v0    2026-03-27  SB  Initial implementation; structural and smoke tiers
 #   v1b   2026-03-27  SB  Added PSS structural validation tier
+#   v4b   2026-04-03  SB  Added _tier1_ral_structural for reg_block/pkg/seq artifacts; utf-8 temp files
 #
 # ===========================================================
 """checkers/verifier.py — Three-tier artifact verifier.
@@ -72,6 +73,19 @@ def check(artifacts: list[Artifact], sim_target: str = "vivado") -> CheckResult:
         if artifact.filename.endswith(".pss"):
             design_name = os.path.splitext(os.path.basename(artifact.filename))[0]
             result = _tier1_pss_structural(artifact, design_name)
+            if not result.passed:
+                return result
+
+    _RAL_SUFFIXES = ("_reg_block.sv", "_reg_pkg.sv", "_reg_seq.sv")
+    for artifact in artifacts:
+        if any(artifact.filename.endswith(s) for s in _RAL_SUFFIXES):
+            # Derive design_name from the artifact filename
+            dn = artifact.filename
+            for s in _RAL_SUFFIXES:
+                if dn.endswith(s):
+                    dn = dn[: -len(s)]
+                    break
+            result = _tier1_ral_structural(artifact, dn)
             if not result.passed:
                 return result
 
@@ -127,7 +141,7 @@ def _tier2_syntax(artifacts: list[Artifact], sim_target: str) -> CheckResult:
         paths = []
         for a in sv_files:
             p = os.path.join(tmpdir, a.filename)
-            with open(p, "w") as f:
+            with open(p, "w", encoding="utf-8") as f:
                 f.write(a.content)
             paths.append(p)
 
@@ -176,5 +190,59 @@ def _tier1_pss_structural(artifact: Artifact, design_name: str) -> CheckResult:
                 passed=False,
                 tier=1,
                 reason=f"{artifact.filename}: missing '{req}'",
+            )
+    return CheckResult(passed=True, tier=1, reason="")
+
+
+def _tier1_ral_structural(artifact: Artifact, design_name: str) -> CheckResult:
+    """Tier-1 structural check for UVM RAL artifacts.
+
+    Verifies minimum required content is present without invoking any
+    external tool.
+
+    Args:
+        artifact: The generated RAL artifact to validate.
+        design_name: Design name expected in the artifact content.
+
+    Returns:
+        CheckResult with passed=True or a descriptive reason on failure.
+    """
+    fname = artifact.filename
+
+    if fname.endswith("_reg_block.sv"):
+        required = [
+            "extends uvm_reg_block",
+            "extends uvm_reg",
+            "create_map",
+            "add_reg",
+            design_name,
+        ]
+    elif fname.endswith("_reg_pkg.sv"):
+        required = ["package", "import uvm_pkg", design_name]
+    elif fname.endswith("_reg_seq.sv"):
+        # Either sequence base class is acceptable
+        has_seq = (
+            "extends uvm_reg_sequence" in artifact.content
+            or "extends uvm_reg_hw_reset_seq" in artifact.content
+        )
+        if not has_seq:
+            return CheckResult(
+                passed=False,
+                tier=1,
+                reason=(
+                    f"{fname}: missing 'extends uvm_reg_sequence' or "
+                    "'extends uvm_reg_hw_reset_seq'"
+                ),
+            )
+        required = [design_name]
+    else:
+        return CheckResult(passed=True, tier=1, reason="")
+
+    for req in required:
+        if req not in artifact.content:
+            return CheckResult(
+                passed=False,
+                tier=1,
+                reason=f"{fname}: missing '{req}'",
             )
     return CheckResult(passed=True, tier=1, reason="")

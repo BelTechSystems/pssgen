@@ -486,3 +486,33 @@ standard. An AI reasoning from documentation would
 have recommended IP-XACT as the "correct" format
 without knowledge of how rarely it is used in
 practice below the enterprise tier.
+
+---
+
+## D-018: RAL generation always template-only
+
+Decision: UVM RAL generation (agents/ral_gen.py)
+never calls the LLM. It is always template-only
+regardless of the --no-llm flag. The no_llm
+parameter is accepted for interface consistency
+but has no effect.
+
+Author: S. Belton, BelTech Systems LLC
+
+Domain knowledge required: UVM RAL model structure
+is highly constrained — a uvm_reg_block has
+exactly one build() function, registers are
+created with type_id::create(), fields are
+configured with configure(). The structure is
+deterministic given the register map data.
+An LLM adds no value here and introduces risk
+of generating structurally incorrect RAL code.
+
+Why AI could not have made this decision alone:
+Required professional judgment that the LLM
+retry loop is valuable for UVM behavioral
+scaffold generation (where creative variation
+in constraint and coverage content is helpful)
+but counterproductive for RAL generation (where
+structural correctness is mandatory and variation
+is harmful).

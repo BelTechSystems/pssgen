@@ -41,6 +41,7 @@
 #   v3c-a 2026-03-29  SB  Added coverage_db stub field to JobSpec
 #   v3c-b 2026-03-29  SB  Coverage closure loop, _run_closure_loop, closure_passes/script in result
 #   v4a   2026-04-03  SB  Added reg_map_file to JobSpec; register map loading + ir.register_map wiring
+#   v4b   2026-04-03  SB  Wired generate_ral; RAL artifacts appended to pipeline after regmap load
 #
 # ===========================================================
 """orchestrator.py — Pipeline coordinator and retry owner.
@@ -68,6 +69,7 @@ from agents.gap_agent import analyse_gaps, update_gaps_from_coverage, write_gap_
 from agents.coverage_reader import read_coverage_xml
 from agents.closure_gen import generate_closure_script
 from checkers.verifier import check
+from agents.ral_gen import generate_ral
 from emitters.vivado import emit as emit_vivado
 from emitters.questa import emit as emit_questa
 from emitters.generic_c import emit as emit_generic_c
@@ -470,6 +472,15 @@ def run(job: JobSpec) -> OrchestratorResult:
             intent_result=intent_result,
         )
         artifacts.append(Artifact(filename=f"{ir.design_name}.pss", content=pss_model))
+
+        if ir.register_map is not None:
+            ral_artifacts = generate_ral(ir, no_llm=job.no_llm)
+            artifacts.extend(ral_artifacts)
+            if job.verbose:
+                print(
+                    f"[orchestrator] RAL artifacts generated:"
+                    f" {len(ral_artifacts)} files"
+                )
 
         # --- Gap analysis (v3b) ---
         gap_report_path: Optional[str] = None

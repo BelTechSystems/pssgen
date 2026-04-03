@@ -23,6 +23,7 @@
 #
 # HISTORY:
 #   v0    2026-03-27  SB  Initial implementation; verbatim artifact write-out
+#   v4b   2026-04-03  SB  UTF-8 encoding on file writes (RAL templates use non-ASCII)
 #
 # ===========================================================
 """emitters/vivado.py — Vivado/XSIM artifact emitter.
@@ -52,7 +53,7 @@ def emit(ir: IR, artifacts: list[Artifact], out_dir: str) -> list[str]:
     written = []
     for artifact in artifacts:
         path = os.path.join(out_dir, artifact.filename)
-        with open(path, "w") as f:
+        with open(path, "w", encoding="utf-8") as f:
             f.write(artifact.content)
         written.append(path)
     return written

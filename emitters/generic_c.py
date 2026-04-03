@@ -25,6 +25,7 @@
 #
 # HISTORY:
 #   v2b   2026-03-27  SB  Initial implementation; PSS action extraction and C template
+#   v4b   2026-04-03  SB  UTF-8 encoding on file writes
 #
 # ===========================================================
 """emitters/generic_c.py — Generic C test case emitter.
@@ -75,7 +76,7 @@ def emit(ir: IR, artifacts: list[Artifact], out_dir: str) -> list[str]:
     written: list[str] = []
     for artifact in artifacts:
         path = os.path.join(out_dir, artifact.filename)
-        with open(path, "w") as fh:
+        with open(path, "w", encoding="utf-8") as fh:
             fh.write(artifact.content)
         written.append(path)
 

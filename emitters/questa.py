@@ -25,6 +25,7 @@
 #
 # HISTORY:
 #   v2c   2026-03-27  SB  Initial implementation; Makefile template and Questa emit
+#   v4b   2026-04-03  SB  UTF-8 encoding on file writes
 #
 # ===========================================================
 """emitters/questa.py — Questa/QuestaSim artifact emitter.
@@ -72,7 +73,7 @@ def emit(ir: IR, artifacts: list[Artifact], out_dir: str) -> list[str]:
         # Emit .sv and .pss artifacts; skip Vivado-specific build scripts.
         if artifact.filename.endswith(".sv") or artifact.filename.endswith(".pss"):
             path = os.path.join(out_dir, artifact.filename)
-            with open(path, "w") as fh:
+            with open(path, "w", encoding="utf-8") as fh:
                 fh.write(artifact.content)
             written.append(path)
             if artifact.filename.endswith(".sv"):
