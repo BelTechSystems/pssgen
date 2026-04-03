@@ -673,6 +673,13 @@ Done condition:
 
 ---
 
+## Test baseline
+Current: 107 tests (as of v4a)
+All non-e2e tests run with:
+  python -m pytest tests/ -v --tb=short
+      --ignore=tests/test_e2e.py
+
+---
 
 ## Git policy
 
