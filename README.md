@@ -299,6 +299,49 @@ pssgen --input tests/fixtures/counter.v --top up_down_counter --sim vivado
 pssgen --input tests/fixtures/counter.v --dump-ir --verbose
 ```
 
+## Working with requirements
+
+pssgen supports two requirement workflows depending on
+your program's process maturity.
+
+### Full requirements set
+
+If your program has a defined requirements document
+— from DOORS, a specification, or your own derivation
+— populate a .req file with your complete requirement set:
+
+    [FUNC-REQ-113]
+      Verification: simulation, post-silicon
+
+    [SYS-REQ-047]
+      Verification: simulation
+
+Tag every entry in your .intent file with the
+corresponding requirement ID. pssgen produces a gap
+report that accounts for every requirement — suitable
+for DO-254 or similar compliance programs.
+
+### Selective tagging
+
+If you do not have a formal requirements set, or if
+only certain behaviors are compliance-relevant, tag
+only the entries that matter. pssgen extracts those
+IDs automatically and generates a .req skeleton for
+the tagged items.
+
+    coverage goals:
+      Count rollover in both directions. [FUNC-REQ-113]
+      Enable deasserted mid-sequence.
+        (untagged — informal coverage goal only)
+
+Tagged items get requirement-traced covergroups and
+appear in the formal gap report. Untagged items still
+generate coverage but are not tracked as requirements.
+
+You can promote any untagged item to a requirement
+at any time by adding a requirement ID — no other
+changes needed.
+
 ---
 
 ## Contributing

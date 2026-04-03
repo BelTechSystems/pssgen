@@ -577,7 +577,7 @@ Modified:   cli.py — load config before arg parsing,
 Done condition: pssgen.toml in tests/fixtures/ is loaded
 automatically. All 71 tests still pass.
 
-## Current phase: v3c-b — Coverage closure loop
+## Completed phase: v3c-b — Coverage closure loop
 
 Goal: implement coverage XML reading, gap update from
 simulation results, and closure script generation.
@@ -602,6 +602,99 @@ Done condition:
   reads XML, updates gap report, writes closure script.
   All 80 non-e2e tests still pass.
 
+## Current phase: v4a — Register map parser and IR
+
+Goal: implement parser/regmap_parser.py to read the
+pssgen register map spreadsheet format (4-sheet xlsx)
+and the plain English register map section from .intent
+files. Populate ir.register_map with normalized data.
+
+Input formats:
+  Tier 1: .xlsx with Globals/Blocks/RegisterMap/Enums
+           sheets. Full metadata.
+  Tier 2: register map: section in .intent file.
+           Limited metadata — basic RAL only.
+
+New CLI flag:
+  --reg-map <file>   Register map spreadsheet (.xlsx)
+                     Auto-detected as <stem>_regmap.xlsx
+                     or <stem>.xlsx alongside input file.
+
+IR field (already reserved):
+  register_map: Optional[dict]
+    Populated by regmap_parser from either input tier.
+    Schema:
+      {
+        "globals": {...},
+        "blocks": [...],
+        "registers": [
+          {
+            "block": str,
+            "name": str,
+            "description": str,
+            "offset": str,
+            "width": int,
+            "fields": [
+              {
+                "name": str,
+                "bit_offset": int,
+                "bit_width": int,
+                "access": str,
+                "reset_value": str,
+                "volatile": bool,
+                "hw_access": str,
+                "sw_access": str,
+                "field_kind": str,
+                "enum_ref": str | None,
+                "uvm_has_coverage": bool,
+                "req_id": str | None,
+                "pss_action": str | None,
+                "hdl_path": str | None,
+                "description": str
+              }
+            ]
+          }
+        ],
+        "enums": {
+          "enum_name": [
+            {"value": int, "symbol": str,
+             "description": str}
+          ]
+        }
+      }
+
+Done condition:
+  pssgen --input counter.vhd
+         --reg-map tests/fixtures/counter_regmap.xlsx
+         --no-llm exits 0 and ir.register_map is
+         populated with 5 registers and 15 fields.
+  All 99 non-e2e tests still pass.
+
+
+---
+
+
+## Git policy
+
+Claude Code NEVER runs git push autonomously.
+Commit freely. Push only when explicitly instructed
+by the engineer with the words "push" or "git push".
+
+Rationale: pushing to the remote is a one-way action
+that affects the public repository and LinkedIn-visible
+commit history. The engineer reviews commits locally
+before deciding to push.
+
+Acceptable without instruction:
+  git add .
+  git commit -m "..."
+
+Requires explicit instruction:
+  git push
+  git push --force
+  git push origin <branch>
+  
+  
 ## How to Work Effectively With Claude Code on This Project
 
 **Prefer goal + context over commands.**
