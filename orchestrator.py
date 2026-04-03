@@ -40,6 +40,7 @@
 #   v3b   2026-03-28  SB  Gap analysis wiring, coverage_labels, gap_report_path in OrchestratorResult
 #   v3c-a 2026-03-29  SB  Added coverage_db stub field to JobSpec
 #   v3c-b 2026-03-29  SB  Coverage closure loop, _run_closure_loop, closure_passes/script in result
+#   v4a   2026-04-03  SB  Added reg_map_file to JobSpec; register map loading + ir.register_map wiring
 #
 # ===========================================================
 """orchestrator.py — Pipeline coordinator and retry owner.
@@ -58,7 +59,8 @@ from ir import IR
 from parser.dispatch import parse_source
 from parser.intent_parser import parse_intent
 from parser.req_parser import parse_req
-from parser.context import resolve_context_files
+from parser.context import resolve_context_files, resolve_regmap_file
+from parser.regmap_parser import parse_regmap
 from agents.structure_gen import Artifact, generate
 from agents.pss_gen import generate_pss, _build_coverage_labels
 from agents.scaffold_gen import generate_intent_scaffold, generate_req_scaffold
@@ -91,6 +93,7 @@ class JobSpec:
         scaffold: If True, generate _generated.intent and _generated.req in out_dir.
         coverage_loop: Stub — raises NotImplementedError when set; reserved for v3c.
         coverage_db: Stub — coverage database path; reserved for v3c.
+        reg_map_file: Optional explicit path to register map .xlsx or .intent file.
     """
     input_file: str
     top_module: Optional[str]
@@ -107,6 +110,7 @@ class JobSpec:
     scaffold: bool = False
     coverage_loop: Optional[int] = None
     coverage_db: Optional[str] = None
+    reg_map_file: Optional[str] = None
 
 
 @dataclass
@@ -376,6 +380,36 @@ def run(job: JobSpec) -> OrchestratorResult:
                 f"{len(intent_result.req_ids)}"
             )
             print(f"[orchestrator] Waivers: {len(intent_result.waivers)}")
+
+    # --- Register map loading (v4a) ---
+    regmap_path = resolve_regmap_file(job.input_file, job.reg_map_file)
+    if regmap_path:
+        ir.register_map = parse_regmap(regmap_path)
+        if job.verbose:
+            regs = ir.register_map.get("registers", [])
+            blocks = ir.register_map.get("blocks", [])
+            total_fields = sum(len(r.get("fields", [])) for r in regs)
+            regmap_source = "explicit" if job.reg_map_file else "auto-detected"
+            print(
+                f"[orchestrator] Register map loaded ({regmap_source}): "
+                f"{len(regs)} registers, {total_fields} fields across "
+                f"{len(blocks)} block(s)"
+            )
+    elif intent_result is not None and not job.reg_map_file:
+        # Fall back to register map: section in intent file if present
+        regmap_sections = {k: v for k, v in intent_result.sections.items()
+                           if k.lower().strip() == "register map"}
+        if regmap_sections:
+            section_lines = next(iter(regmap_sections.values()))
+            section_content = "register map:\n" + "\n".join(f"  {ln}" for ln in section_lines)
+            from parser.regmap_parser import _parse_intent_regmap
+            ir.register_map = _parse_intent_regmap(section_content)
+            if job.verbose and ir.register_map:
+                regs = ir.register_map.get("registers", [])
+                print(
+                    f"[orchestrator] Register map parsed from intent file: "
+                    f"{len(regs)} register(s) (Tier 2)"
+                )
 
     # --- Scaffold generation (--scaffold flag) ---
     if job.scaffold:

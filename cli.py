@@ -29,6 +29,7 @@
 #   v3b   2026-03-28  SB  Print gap report path from orchestrator result
 #   v3c-a 2026-03-29  SB  pssgen.toml config auto-detection, --config flag,
 #                          --coverage-db flag, file resolution verbose reporting
+#   v4a   2026-04-03  SB  Added --reg-map flag; verbose reg-map resolution reporting
 #
 # ===========================================================
 """cli.py — Command-line entry point for pssgen.
@@ -47,6 +48,7 @@ import sys
 from config import find_project_config, load_project_config, merge_config_with_args
 from orchestrator import run, JobSpec
 from parser.dispatch import resolve_parser
+from parser.context import resolve_regmap_file
 
 
 def _companion_path(input_file: str, ext: str) -> str | None:
@@ -178,6 +180,17 @@ def main() -> None:
         metavar="PATH",
         help="(Stub — not yet implemented; see v3c) Coverage database path.",
     )
+    parser.add_argument(
+        "--reg-map",
+        default=None,
+        dest="reg_map",
+        metavar="FILE",
+        help=(
+            "Register map spreadsheet (.xlsx) or intent file (.intent) containing "
+            "a register map: section. Auto-detected as <stem>_regmap.xlsx alongside "
+            "the input file if not specified."
+        ),
+    )
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args()
 
@@ -251,6 +264,16 @@ def main() -> None:
                 req_label = "none — create <stem>.req or use --req <file> for requirements traceability"
         print(f"[pssgen] Req:     {req_label}")
 
+        # Reg map
+        resolved_regmap = resolve_regmap_file(args.input, args.reg_map)
+        if args.reg_map:
+            regmap_label = f"{resolved_regmap} (explicit)" if resolved_regmap else f"{args.reg_map} (not found)"
+        elif resolved_regmap:
+            regmap_label = f"{resolved_regmap} (auto-detected)"
+        else:
+            regmap_label = "none"
+        print(f"[pssgen] Reg map: {regmap_label}")
+
     else:
         # Non-verbose: hint if no intent will be found
         if args.intent is None and not args.no_intent:
@@ -282,6 +305,7 @@ def main() -> None:
         scaffold=args.scaffold,
         coverage_loop=args.coverage_loop,
         coverage_db=args.coverage_db,
+        reg_map_file=args.reg_map,
     )
     result = run(job)
     if not result.success:

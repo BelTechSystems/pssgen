@@ -17,6 +17,8 @@
 # FUNCTIONS:
 #   resolve_context_files(input_file, intent_flag, req_flag, no_intent, no_req)
 #     Return (intent_path, req_path, should_extract) for the given inputs.
+#   resolve_regmap_file(input_file, regmap_flag)
+#     Return path to register map xlsx by convention or explicit flag, or None.
 #
 # DEPENDENCIES:
 #   Standard library:  os
@@ -24,6 +26,7 @@
 #
 # HISTORY:
 #   v3a   2026-03-28  SB  Initial implementation; stem convention and flag override logic
+#   v4a   2026-04-03  SB  Added resolve_regmap_file() for register map xlsx auto-detection
 #
 # ===========================================================
 """parser/context.py — Context file path resolver for intent and req files.
@@ -97,3 +100,38 @@ def resolve_context_files(
     should_extract = req_path is None
 
     return intent_path, req_path, should_extract
+
+
+def resolve_regmap_file(
+    input_file: str,
+    regmap_flag: str | None = None,
+) -> str | None:
+    """Resolve register map file path by convention or explicit flag.
+
+    Convention search order (after explicit flag):
+      1. ``<stem>_regmap.xlsx`` alongside *input_file*
+      2. ``<stem>.xlsx`` alongside *input_file*
+
+    ``.intent`` files are intentionally excluded — the ``register map:``
+    section in an intent file is handled by the intent auto-detection path
+    and ``regmap_parser._parse_intent_regmap``.
+
+    Args:
+        input_file: Path to the HDL source file.
+        regmap_flag: Explicit ``--reg-map`` path from the CLI, or None.
+
+    Returns:
+        Resolved path to an ``.xlsx`` register map file, or None if not found.
+    """
+    if regmap_flag is not None:
+        return regmap_flag if os.path.isfile(regmap_flag) else None
+
+    base_dir = os.path.dirname(os.path.abspath(input_file))
+    stem = os.path.splitext(os.path.basename(input_file))[0]
+
+    for candidate_name in (f"{stem}_regmap.xlsx", f"{stem}.xlsx"):
+        candidate = os.path.join(base_dir, candidate_name)
+        if os.path.isfile(candidate):
+            return candidate
+
+    return None

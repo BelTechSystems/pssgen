@@ -29,6 +29,7 @@
 #   v1a   2026-03-27  SB  Added pss_intent Optional field
 #   v2b   2026-03-27  SB  Added pss_model Optional field
 #   v3a   2026-03-28  SB  Added requirement_ids, requirement_schemes, intent_waivers, intent_gaps
+#   v4a   2026-04-03  SB  Added register_map Optional[dict] for register map parser output
 #
 # ===========================================================
 """ir.py — Vendor-neutral intermediate representation.
@@ -89,3 +90,5 @@ class IR:
     requirement_schemes: list[str] = field(default_factory=list)
     intent_waivers: list[dict] = field(default_factory=list)
     intent_gaps: list[str] = field(default_factory=list)
+    # v4a+: register map (append-only)
+    register_map: Optional[dict] = None

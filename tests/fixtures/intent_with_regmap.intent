@@ -1,0 +1,16 @@
+# verification intent: simple_reg_test
+# description: intent file with embedded register map
+
+reset behavior:
+  Apply rst_n low for 2 cycles.
+
+register map:
+  CTRL register at offset 0x00:
+    ENABLE field [0:0] RW reset=0 — enable the core
+    MODE field [2:1] RW reset=1 — operating mode
+
+  STATUS register at offset 0x04 (volatile):
+    TX_READY field [0:0] RO — transmit ready flag
+
+coverage goals:
+  Register reads and writes exercised.
