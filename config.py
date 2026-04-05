@@ -29,6 +29,7 @@
 # HISTORY:
 #   v3c-a  2026-03-29  SB  Initial implementation; TOML project config support
 #   v3c-b  2026-03-29  SB  Resolve TOML file paths relative to TOML directory
+#   v4c    2026-04-05  SB  [[register_maps]] array-of-tables multi-file support
 #
 # ===========================================================
 """config.py — pssgen.toml project configuration loader.
@@ -198,6 +199,29 @@ def load_project_config(config_path: str) -> dict:
         # Empty string is treated as "not set" — do not include in config.
         if db_val:
             config["coverage_db"] = db_val
+
+    # [[register_maps]] array-of-tables — multi-file register map support.
+    # Each entry: {file = "path", base_address = "0x..."}
+    # Single [register_map] (non-list) maps to reg_map_file for back-compat.
+    reg_maps_raw = raw.get("register_maps")
+    if reg_maps_raw is not None:
+        if isinstance(reg_maps_raw, list):
+            # [[register_maps]] table-array
+            entries = []
+            for entry in reg_maps_raw:
+                if isinstance(entry, dict) and "file" in entry:
+                    resolved_file = _resolve(entry["file"])
+                    entries.append({
+                        "file": resolved_file,
+                        "base_address": entry.get("base_address"),
+                    })
+            if entries:
+                config["register_maps_list"] = entries
+        elif isinstance(reg_maps_raw, dict) and "file" in reg_maps_raw:
+            # Single [register_maps] section (legacy / single file)
+            config["reg_map_file"] = _resolve(reg_maps_raw["file"])
+            if "base_address" in reg_maps_raw:
+                config["reg_map_base"] = reg_maps_raw["base_address"]
 
     return config
 

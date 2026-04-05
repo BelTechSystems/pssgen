@@ -132,3 +132,20 @@ def test_checker_passes_valid_reg_seq() -> None:
     a = Artifact("mydesign_reg_seq.sv", content)
     result = _tier1_ral_structural(a, "mydesign")
     assert result.passed is True
+
+
+def test_checker_passes_valid_reg_map() -> None:
+    """Minimal valid _reg_map.sv passes _tier1_ral_structural check."""
+    content = (
+        "class my_project_reg_map extends uvm_reg_block;\n"
+        "  uvm_reg_map sys_map;\n"
+        "  virtual function void build();\n"
+        "    sys_map = create_map(.name(\"sys_map\"), .base_addr(0), .n_bytes(4));\n"
+        "    blocka.build();\n"
+        "    sys_map.add_submap(blocka.reg_map, 32'h4000_0000);\n"
+        "  endfunction\n"
+        "endclass\n"
+    )
+    a = Artifact("my_project_reg_map.sv", content)
+    result = _tier1_ral_structural(a, "my_project")
+    assert result.passed is True

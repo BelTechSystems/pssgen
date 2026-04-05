@@ -306,6 +306,7 @@ def main() -> None:
         coverage_loop=args.coverage_loop,
         coverage_db=args.coverage_db,
         reg_map_file=args.reg_map,
+        register_maps_list=loaded_config.get("register_maps_list"),
     )
     result = run(job)
     if not result.success:

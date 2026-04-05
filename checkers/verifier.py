@@ -26,6 +26,7 @@
 #   v0    2026-03-27  SB  Initial implementation; structural and smoke tiers
 #   v1b   2026-03-27  SB  Added PSS structural validation tier
 #   v4b   2026-04-03  SB  Added _tier1_ral_structural for reg_block/pkg/seq artifacts; utf-8 temp files
+#   v4c   2026-04-05  SB  Extended _tier1_ral_structural to check _reg_map.sv system assembly
 #
 # ===========================================================
 """checkers/verifier.py — Three-tier artifact verifier.
@@ -76,7 +77,7 @@ def check(artifacts: list[Artifact], sim_target: str = "vivado") -> CheckResult:
             if not result.passed:
                 return result
 
-    _RAL_SUFFIXES = ("_reg_block.sv", "_reg_pkg.sv", "_reg_seq.sv")
+    _RAL_SUFFIXES = ("_reg_block.sv", "_reg_pkg.sv", "_reg_seq.sv", "_reg_map.sv")
     for artifact in artifacts:
         if any(artifact.filename.endswith(s) for s in _RAL_SUFFIXES):
             # Derive design_name from the artifact filename
@@ -235,6 +236,12 @@ def _tier1_ral_structural(artifact: Artifact, design_name: str) -> CheckResult:
                 ),
             )
         required = [design_name]
+    elif fname.endswith("_reg_map.sv"):
+        required = [
+            "extends uvm_reg_block",
+            "add_submap",
+            "sys_map",
+        ]
     else:
         return CheckResult(passed=True, tier=1, reason="")
 

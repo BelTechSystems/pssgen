@@ -42,6 +42,7 @@
 #   v3c-b 2026-03-29  SB  Coverage closure loop, _run_closure_loop, closure_passes/script in result
 #   v4a   2026-04-03  SB  Added reg_map_file to JobSpec; register map loading + ir.register_map wiring
 #   v4b   2026-04-03  SB  Wired generate_ral; RAL artifacts appended to pipeline after regmap load
+#   v4c   2026-04-05  SB  register_maps_list multi-file merge from pssgen.toml
 #
 # ===========================================================
 """orchestrator.py — Pipeline coordinator and retry owner.
@@ -96,6 +97,7 @@ class JobSpec:
         coverage_loop: Stub — raises NotImplementedError when set; reserved for v3c.
         coverage_db: Stub — coverage database path; reserved for v3c.
         reg_map_file: Optional explicit path to register map .xlsx or .intent file.
+        register_maps_list: Optional list of {file, base_address} dicts for multi-file mode.
     """
     input_file: str
     top_module: Optional[str]
@@ -113,6 +115,7 @@ class JobSpec:
     coverage_loop: Optional[int] = None
     coverage_db: Optional[str] = None
     reg_map_file: Optional[str] = None
+    register_maps_list: Optional[list] = None
 
 
 @dataclass
@@ -386,6 +389,10 @@ def run(job: JobSpec) -> OrchestratorResult:
     # --- Register map loading (v4a) ---
     regmap_path = resolve_regmap_file(job.input_file, job.reg_map_file)
     if regmap_path:
+        if job.verbose and regmap_path.endswith(".xlsx"):
+            from parser.regmap_parser import detect_regmap_format
+            fmt = detect_regmap_format(regmap_path)
+            print(f"[orchestrator] Register map format: {fmt}")
         ir.register_map = parse_regmap(regmap_path)
         if job.verbose:
             regs = ir.register_map.get("registers", [])
@@ -412,6 +419,35 @@ def run(job: JobSpec) -> OrchestratorResult:
                     f"[orchestrator] Register map parsed from intent file: "
                     f"{len(regs)} register(s) (Tier 2)"
                 )
+
+    # --- Multi-file register map merge (pssgen.toml [[register_maps]]) ---
+    if job.register_maps_list:
+        merged: dict = {"globals": {}, "blocks": [], "registers": [], "enums": {}}
+        first = True
+        for entry in job.register_maps_list:
+            block_data = parse_regmap(entry["file"])
+            # Apply per-entry base_address override to all blocks
+            if entry.get("base_address"):
+                for blk in block_data.get("blocks", []):
+                    blk["base_address"] = entry["base_address"]
+            if first:
+                merged["globals"] = block_data.get("globals", {})
+                first = False
+            merged["blocks"].extend(block_data.get("blocks", []))
+            merged["registers"].extend(block_data.get("registers", []))
+            for ename, evals in block_data.get("enums", {}).items():
+                if ename not in merged["enums"]:
+                    merged["enums"][ename] = evals
+        ir.register_map = merged
+        if job.verbose:
+            regs = merged.get("registers", [])
+            blocks = merged.get("blocks", [])
+            total_fields = sum(len(r.get("fields", [])) for r in regs)
+            print(
+                f"[orchestrator] Multi-file register maps merged: "
+                f"{len(regs)} registers, {total_fields} fields across "
+                f"{len(blocks)} block(s)"
+            )
 
     # --- Scaffold generation (--scaffold flag) ---
     if job.scaffold:
