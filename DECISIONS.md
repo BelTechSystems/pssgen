@@ -516,3 +516,148 @@ in constraint and coverage content is helpful)
 but counterproductive for RAL generation (where
 structural correctness is mandatory and variation
 is harmful).
+
+---
+
+  ## D-019: Simple block spreadsheet format
+
+  Decision: pssgen accepts a single-sheet 15-18
+  column spreadsheet as its minimum viable block
+  register map format. The first 15 columns match
+  what designers already produce without any pssgen
+  knowledge. Columns 16-18 (base_address, req_id,
+  pss_action) are optional and extend an existing
+  file without restructuring. Base address is
+  inherited row-to-row from the most recently
+  provided value, default 0x0000_0000 when absent.
+
+  Author: S. Belton, BelTech Systems LLC
+
+  Domain knowledge required: Direct UVMF verification
+  experience receiving register maps as per-block
+  spreadsheets from designers. Understanding that
+  requiring engineers to adopt a new spreadsheet
+  format is an adoption barrier, and that accepting
+  their existing format with minimal extension is
+  the correct tradeoff between tooling convenience
+  and user friction.
+
+  Why AI could not have made this decision alone:
+  The choice to match the engineer's existing format
+  rather than define a canonical pssgen-first format
+  reflects professional experience with how tooling
+  adoption fails in engineering organizations.
+  Engineers will not restructure working documents
+  to satisfy a tool. The tool must meet them where
+  they are.
+  
+  The format was validated against six real-world block
+  spreadsheets (GPIO, I2C, PWM, SPI, TIMER, UART) created
+  independently by an engineer with RAL generation in mind.
+  All six passed validation with no structural issues,
+  confirming that the 15-column baseline matches actual
+  engineering practice.
+  
+  ---
+  
+  ## D-020: One _reg_block.sv per block rather than
+          one monolithic RAL file
+
+Decision: pssgen generates one SystemVerilog file per
+design block (_reg_block.sv) rather than combining all
+blocks into a single monolithic RAL file.
+
+Author: S. Belton, BelTech Systems LLC
+
+Domain knowledge required: Experience with IP library
+management in aerospace programs where individual blocks
+are developed, versioned, and handed off independently.
+Understanding that a monolithic RAL file creates a
+configuration management problem — any change to any
+block requires regenerating and re-reviewing the entire
+file. Experience with UVM RAL architecture where per-block
+uvm_reg_block subclasses are the standard unit of
+reuse, matching how blocks appear in IP libraries.
+
+Why AI could not have made this decision alone:
+The monolithic approach is simpler to implement and
+reduces file count. Choosing per-block generation
+reflects professional judgment about how verification
+artifacts are maintained across program lifecycles —
+specifically, that the UART designer's RAL file should
+be independently versionable from the GPIO designer's
+RAL file, just as their HDL files are. An AI optimizing
+for implementation simplicity would have produced a
+single file. The per-block decision reflects
+configuration management discipline from real program
+experience.
+
+Alternatives considered:
+  Option A (chosen): One _reg_block.sv per block.
+    Each block is independently versionable. Adding a
+    new block to the system requires no changes to
+    existing block files. Consistent with how IP library
+    blocks are managed.
+  Option B (rejected): One monolithic file containing
+    all blocks. Simpler to implement. Creates coupling
+    between independently maintained blocks. Any change
+    triggers regeneration and review of the entire file.
+    Inconsistent with IP library management practice.
+
+---
+
+## D-021: System assembly uses add_submap() rather
+          than a flat unified address map
+
+Decision: The system-level register assembly
+(<project>_reg_map.sv) instantiates each block's
+uvm_reg_block and registers it as a sub-map using
+add_submap() rather than flattening all registers
+into a single uvm_reg_map with individual add_reg()
+calls.
+
+Author: S. Belton, BelTech Systems LLC
+
+Domain knowledge required: UVM RAL architecture
+experience, specifically the distinction between
+hierarchical register models (using add_submap) and
+flat models (using add_reg at the system level).
+Understanding that hierarchical models preserve the
+block boundary in the register model — a test can
+access uart.reg_map or gpio.reg_map independently,
+enabling block-level register sequences to run
+without modification in a system context. Knowledge
+that flat models require all register accesses to be
+re-expressed at the system level, losing the
+block-level abstraction.
+
+Why AI could not have made this decision alone:
+The flat address map approach is simpler to understand
+and generates a smaller SystemVerilog file. Choosing
+add_submap() reflects professional judgment that
+preserving the block boundary in the register model
+enables IP reuse — block-level register sequences
+written against uart_reg_block work identically
+whether the block is instantiated standalone or as
+part of a system. This matches how UVM RAL is used
+in real UVMF-based verification environments where
+block-level and system-level tests coexist. An AI
+without this experience would likely choose the
+simpler flat approach.
+
+Alternatives considered:
+  Option A (chosen): add_submap() per block.
+    Preserves block boundary. Block-level sequences
+    are reusable at system level without modification.
+    System test accesses uart registers via
+    regmodel.uart.ctrl.enable rather than
+    regmodel.ctrl.enable — namespace is clear.
+    Consistent with UVMF conventions.
+  Option B (rejected): Flat unified map with add_reg()
+    for all registers at system level. Simpler template.
+    Loses block boundary. Block-level sequences cannot
+    be reused at system level without modification.
+    Register names from different blocks can collide
+    if not carefully namespaced. Inconsistent with
+    how enterprise RAL tools generate system maps.
+  
