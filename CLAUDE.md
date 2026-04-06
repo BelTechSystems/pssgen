@@ -602,7 +602,7 @@ Done condition:
   reads XML, updates gap report, writes closure script.
   All 80 non-e2e tests still pass.
 
-## Current phase: v4a — Register map parser and IR
+## Completed phase: v4a — Register map parser and IR
 
 Goal: implement parser/regmap_parser.py to read the
 pssgen register map spreadsheet format (4-sheet xlsx)
@@ -680,6 +680,87 @@ All non-e2e tests run with:
       --ignore=tests/test_e2e.py
 
 ---
+
+## Completed phase: v4c — System RAL assembly
+
+Goal: support three block-level spreadsheet formats and
+generate a system-level reg_map.sv assembling all blocks.
+
+─────────────────────────────────────────────────────
+Three spreadsheet formats (auto-detected):
+─────────────────────────────────────────────────────
+
+simple_block — single flat sheet, 15-18 columns
+  Columns 1-15 match the engineer's existing format:
+    Block Name, Register Name, Register Offset,
+    Register Width, Register Description, Field Name,
+    Bit Offset, Bit Width, Access, Reset Value,
+    Field Description, Volatile, Hardware Access,
+    Software Access, Field Enumerations
+  Columns 16-18 optional (all may be absent):
+    base_address, req_id, pss_action
+  Base address inheritance: running value carried
+    row-to-row from first non-blank entry in col 16.
+    Default 0x0000_0000 if column absent entirely.
+  Coverage default: generate for all fields where
+    Hardware Access != N/A and Access != WO.
+  Detection: single sheet, no spreadsheet_file column.
+
+full_block — four sheets (existing pssgen format)
+  Globals / Blocks / RegisterMap / Enums
+  All 20 RegisterMap columns including uvm_has_coverage,
+    req_id, pss_action, hdl_path.
+  Detection: has RegisterMap sheet.
+
+system — two sheets referencing block files
+  System sheet: project globals
+  Blocks sheet: block_name | spreadsheet_file |
+                base_address | description
+  spreadsheet_file: relative path from this file
+    to each block's spreadsheet (simple_block or
+    full_block format).
+  base_address: overrides block spreadsheet value.
+  Detection: has Blocks sheet with spreadsheet_file
+    column.
+
+─────────────────────────────────────────────────────
+New template:
+─────────────────────────────────────────────────────
+  templates/ral/reg_map.sv.jinja
+  Generates <project_name>_reg_map.sv
+  System-level uvm_reg_block assembling all blocks
+  via add_submap().
+  Generated when 2+ blocks present in any format.
+
+─────────────────────────────────────────────────────
+New fixture:
+─────────────────────────────────────────────────────
+  tests/fixtures/counter_regmap_simple.xlsx
+  Single-sheet 18-column format for counter design.
+  Used to test simple_block parsing path.
+
+─────────────────────────────────────────────────────
+pssgen.toml multi-file mode (OI-26):
+─────────────────────────────────────────────────────
+  [[register_maps]]
+  file         = "uart/uart_regmap.xlsx"
+  base_address = "0x4000_0000"
+
+  [[register_maps]]
+  file         = "gpio/gpio_regmap.xlsx"
+  base_address = "0x5000_1000"
+
+  Each entry parsed independently. base_address
+  overrides spreadsheet value. Project name from
+  [project] name used for system assembly filename.
+
+─────────────────────────────────────────────────────
+Done condition:
+─────────────────────────────────────────────────────
+  All three formats parse cleanly to the same
+  ir.register_map dict structure.
+  System assembly generated when 2+ blocks present.
+  All 123 non-e2e tests still pass.
 
 ## Git policy
 
