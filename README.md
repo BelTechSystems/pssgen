@@ -1,372 +1,558 @@
 # pssgen
 
-> Describe your verification intent in plain English.  
-> Get a PSS model, working UVM testbench, and C test cases out.  
-> Runs free with AMD Vivado/XSIM. Works with Siemens Questa. No license required.
+> Give pssgen your HDL and your register map.  
+> Get a PSS model, UVM testbench, UVM RAL model, C test cases, and a requirement-traced gap report out.  
+> Runs free with AMD Vivado/XSIM. Works with Siemens Questa and Icarus. No license required.
 
 ---
 
-## What pssgen Is
+## What pssgen Does
 
-`pssgen` is an open-source, AI-driven command-line tool that bridges the gap between
-verification intent and working testbench code. An engineer describes what a design
-should do — in plain language or from an HDL source file — and pssgen produces:
+`pssgen` is an open-source, AI-driven command-line tool for FPGA and ASIC verification engineers. It takes your existing design files and produces working verification artifacts — without requiring you to write boilerplate UVM or maintain a separate register model by hand.
 
-- A **Portable Stimulus Standard (PSS) model** as the intermediate representation
-- A **UVM 1.2-compliant SystemVerilog testbench** targeting Vivado/XSIM or Questa
-- **C/C++ test cases** for embedded or post-silicon validation
+**Give pssgen:**
+- Your HDL source file (Verilog, SystemVerilog, or VHDL)
+- Your register map spreadsheet (the one your designer already maintains)
+- Optional: a plain English intent file describing what to verify
+- Optional: a requirements file for traceability
 
-PSS is the Accellera standard (current release: v3.0, August 2024) that defines
-verification intent once and lets it execute across simulation, FPGA prototyping,
-and post-silicon environments. pssgen makes PSS accessible without an enterprise
-tool license.
+**Get back:**
+- A **PSS v3.0 model** — portable, simulator-independent verification intent
+- A **UVM 1.2 testbench** — interface, driver, monitor, sequencer, agent, test
+- A **UVM RAL model** — one `uvm_reg_block` per block, register sequences, system assembly
+- **C test cases** for post-silicon bringup
+- A **requirement-traced gap report** showing which requirements have no coverage
+- A **coverage closure script** for your simulator
+
+The register map travels with the IP. When your block moves to the next program, the next verification engineer inherits the RAL model and sequences — not just the RTL.
 
 ---
 
 ## Why pssgen Exists
 
-The UVM testbench generation space is occupied by well-funded startups and incumbent
-EDA vendors (Siemens Questa Agentic Toolkit, MooresLabAI, ChipAgents). They generate
-initial scaffolds well.
+I spent years as the IP library custodian for a major aerospace company. My job was to build and maintain a shared library of verified HDL that project teams could draw from instead of designing the same blocks from scratch.
 
-Two problems remain unsolved for the mid-market FPGA and ASIC engineer:
+It didn't work the way it was supposed to.
 
-1. **The PSS onramp is broken.** PSS is the right abstraction for portable,
-   reusable verification. The tooling that exists is enterprise-licensed and
-   requires a significant mental model shift to adopt. No open, AI-assisted
-   onramp exists.
+Every project team had to re-verify the IP in their own environment. Our testbenches were simulator-specific and tightly coupled to our infrastructure. A team couldn't take our verification along with our design. Projects would rather clone a block and own it than participate in the shared library.
 
-2. **Coverage closure is manual.** Every tool generates the initial testbench.
-   Nobody has built an open, iterative loop that simulates, measures coverage,
-   identifies holes, regenerates targeted sequences, and drives to closure
-   automatically.
+I think the answer is portable verification intent. The [Accellera Portable Stimulus Standard](https://www.accellera.org/activities/working-groups/portable-stimulus) (PSS v3.0) lets you express what an IP block needs to be verified against — not as a simulator-specific testbench, but as an abstract, declarative model that generates tests for any target environment.
 
-pssgen addresses both, with PSS as the portable IR that makes the solution
-simulator-agnostic by design.
+pssgen makes PSS accessible without an enterprise EDA license.
+
+→ [Full founding post on LinkedIn](https://linkedin.com/in/stevebelton)
 
 ---
 
-## Architecture Overview
+## Quickstart — Your First Generated Testbench
 
-```
-plain English intent / HDL source file
-            │
-            ▼
-    ┌───────────────┐
-    │  HDL Parser   │  Port extraction, role classification
-    └───────────────┘
-            │
-            ▼
-    ┌───────────────┐
-    │      IR       │  Vendor-neutral intermediate representation
-    └───────────────┘
-            │
-            ▼
-    ┌───────────────────────────────────────┐
-    │            Orchestrator               │
-    │   (retry loop, max attempts, context  │
-    │    injection on checker fail)         │
-    └───────────────────────────────────────┘
-            │
-            ▼
-    ┌───────────────┐     ┌─────────────────────┐
-    │  PSS Agent    │────▶│   Checker           │
-    │  (LLM +       │◀────│   Tier 1: structure  │
-    │   templates)  │fail │   Tier 2: syntax     │
-    └───────────────┘     │   Tier 3: smoke      │
-            │pass         └─────────────────────┘
-            ▼
-    ┌────────────────────────────────────────┐
-    │          Emission Layer                │
-    │  Vivado/XSIM  │  Questa  │  Generic C  │
-    └────────────────────────────────────────┘
-            │
-            ▼
-    ./out/  PSS model + UVM .sv files + C tests + build script
+### Prerequisites
+
+```bash
+python --version          # requires >= 3.11
+pip install -e ".[dev]"   # installs jinja2, anthropic, openpyxl, pytest
+export ANTHROPIC_API_KEY=your_key_here
 ```
 
-**Key design principles:**
+### Try the canonical counter example
 
-Design change history for reviewer convenience is tracked in the Companion Changelog (v1 Reality) section of DESIGN.md.
+The repo includes a complete set of fixtures for an 8-bit up/down counter in `tests/fixtures/`:
 
-- The orchestrator owns the retry loop. Agents do not retry themselves.
-- The IR is append-only. Fields are added across phases; existing fields are never
-  renamed or removed.
-- Templates constrain the LLM. Structural UVM/PSS skeletons come from Jinja2
-  templates. The LLM fills dynamic, design-specific content only.
-- The checker's external contract is stable. Internal checks grow over time
-  without changing the orchestrator interface.
-- The emission layer is the only component with simulator-specific knowledge.
-  Adding a new simulator target requires one new emitter only.
+```
+tests/fixtures/
+  counter.vhd               ← VHDL source (also counter.v for Verilog)
+  counter.intent            ← plain English verification intent
+  counter.req               ← requirements file with FUNC-REQ IDs
+  counter_regmap.xlsx       ← register map (full 4-sheet format)
+  counter_regmap_simple.xlsx← register map (simple 15-column format)
+  pssgen.toml               ← project config — run pssgen with no flags
+```
+
+**Simplest run — HDL only, no API key needed:**
+
+```bash
+pssgen --input tests/fixtures/counter.vhd \
+       --top up_down_counter \
+       --out ./out \
+       --sim vivado \
+       --no-llm
+```
+
+Output in `./out/`:
+```
+up_down_counter_if.sv
+up_down_counter_driver.sv
+up_down_counter_monitor.sv
+up_down_counter_seqr.sv
+up_down_counter_agent.sv
+up_down_counter_test.sv
+up_down_counter.pss
+build.tcl
+```
+
+**With intent file — richer PSS coverage goals:**
+
+```bash
+pssgen --input tests/fixtures/counter.vhd \
+       --intent tests/fixtures/counter.intent \
+       --top up_down_counter \
+       --out ./out \
+       --sim vivado \
+       --no-llm
+```
+
+**With register map — adds UVM RAL model:**
+
+```bash
+pssgen --input tests/fixtures/counter.vhd \
+       --reg-map tests/fixtures/counter_regmap_simple.xlsx \
+       --top up_down_counter \
+       --out ./out \
+       --sim vivado \
+       --no-llm
+```
+
+Additional output:
+```
+counter_reg_block.sv      ← uvm_reg_block with all registers
+counter_reg_pkg.sv        ← package wrapper
+counter_reg_seq.sv        ← hw_reset_seq, rw_seq, named action sequences
+```
+
+**With everything — full traceability and gap report:**
+
+```bash
+pssgen --input tests/fixtures/counter.vhd \
+       --intent tests/fixtures/counter.intent \
+       --req tests/fixtures/counter.req \
+       --reg-map tests/fixtures/counter_regmap.xlsx \
+       --top up_down_counter \
+       --out ./out \
+       --sim vivado \
+       --no-llm \
+       --verbose
+```
+
+Additional output:
+```
+up_down_counter_gap_report.txt  ← bidirectional traceability report
+run_closure_pass_1.sh           ← simulation closure script
+```
+
+**Using pssgen.toml — run with one word:**
+
+```bash
+cd tests/fixtures
+pssgen        # reads pssgen.toml, finds all files automatically
+```
+
+---
+
+## Using Your Own Design
+
+### Step 1 — Point pssgen at your HDL
+
+```bash
+pssgen --input path/to/your_design.vhd --sim vivado --no-llm
+```
+
+pssgen reads your ports, classifies their roles (clock, reset, control, data), and generates a basic UVM scaffold. No other files required.
+
+### Step 2 — Add your register map (optional)
+
+Take the spreadsheet your designer already maintains. If it has these 15 columns, pssgen reads it as-is — no reformatting required:
+
+```
+Block Name | Register Name | Register Offset | Register Width |
+Register Description | Field Name | Bit Offset | Bit Width |
+Access | Reset Value | Field Description | Volatile |
+Hardware Access | Software Access | Field Enumerations
+```
+
+Three optional columns can be added at the right edge of your existing file:
+
+```
+base_address | req_id | pss_action
+```
+
+Pass it with `--reg-map` or drop it alongside your HDL as `<design_stem>_regmap.xlsx` and pssgen finds it automatically.
+
+**Multi-block system — each designer keeps their own file:**
+
+```toml
+# pssgen.toml
+[[register_maps]]
+file         = "uart/uart_regmap.xlsx"
+base_address = "0x4000_0000"
+
+[[register_maps]]
+file         = "gpio/gpio_regmap.xlsx"
+base_address = "0x4001_0000"
+```
+
+pssgen generates one `_reg_block.sv` per block and a `<project>_reg_map.sv` system assembly.
+
+### Step 3 — Add a plain English intent file (optional)
+
+Create `your_design.intent` alongside your HDL. Write in plain English:
+
+```
+reset behavior:
+  Apply rst_n low for at least 2 clock cycles before any
+  counting sequence begins.
+
+coverage goals:
+  Count reaches maximum value and rolls over.
+  Enable deasserted mid-sequence — count must hold.
+
+corner cases:
+  Reset during an active counting sequence.
+```
+
+Any section headings work. The AI maps your words to PSS constructs.
+
+### Step 4 — Add requirements (optional)
+
+Create `your_design.req` or tag entries in your intent file with requirement IDs:
+
+```
+coverage goals:
+  Count reaches maximum value and rolls over. [FUNC-REQ-113]
+  Enable deasserted mid-sequence. [FUNC-REQ-114]
+```
+
+pssgen detects your requirement ID scheme automatically — SYS-REQ, FUNC-REQ, IF-REQ, PERF-REQ, or any similar scheme. No configuration needed.
+
+### Step 5 — Set up pssgen.toml for the team
+
+```toml
+# pssgen.toml — place at project root
+[project]
+name = "my_uart"
+
+[input]
+file   = "rtl/uart.vhd"
+top    = "uart_top"
+intent = "verification/uart.intent"
+req    = "requirements/uart.req"
+
+[output]
+dir = "./out"
+sim = "vivado"
+
+[register_maps]
+file         = "regmaps/uart_regmap.xlsx"
+base_address = "0x4000_0000"
+```
+
+Then anyone on the team runs:
+
+```bash
+pssgen
+```
+
+---
+
+## Project File Layout
+
+### Simplest — all files co-located
+
+```
+my_project/
+    uart.vhd
+    uart.intent            ← auto-detected
+    uart.req               ← auto-detected
+    uart_regmap.xlsx       ← auto-detected as <stem>_regmap.xlsx
+    pssgen.toml
+
+pssgen
+```
+
+### Separated — RTL and verification separate
+
+```
+my_project/
+    rtl/uart.vhd
+    verification/uart.intent
+    requirements/uart.req
+    regmaps/uart_regmap.xlsx
+
+pssgen --input rtl/uart.vhd \
+       --intent verification/uart.intent \
+       --req requirements/uart.req \
+       --reg-map regmaps/uart_regmap.xlsx
+```
+
+### Multi-block SOC — one spreadsheet per designer
+
+```
+my_soc/
+    uart/uart_regmap.xlsx    ← UART designer maintains
+    gpio/gpio_regmap.xlsx    ← GPIO designer maintains
+    spi/spi_regmap.xlsx      ← SPI designer maintains
+    pssgen.toml              ← verification lead maintains
+
+pssgen  ← generates all block RALs + soc_reg_map.sv
+```
+
+---
+
+## Three Output Levels
+
+| Level | What you provide | What you get |
+|---|---|---|
+| 1 | HDL only | UVM scaffold, inferred PSS model, C test cases |
+| 2 | HDL + .intent | Richer PSS with specific sequences and corner cases |
+| 3 | HDL + .intent + .req | Full traceability, gap report, closure scripts |
+| + | Any level + .xlsx | UVM RAL model, register sequences, system assembly |
 
 ---
 
 ## CLI Reference
 
 ```
-pssgen --input  <file>      HDL source (.v, .sv, .vhd) or intent description (.txt)
-        --intent <file>     Structured natural language intent file (.intent)
-        --top   <module>    Top-level module name (required if multiple modules)
-        --out   <dir>       Output directory (default: ./out)
-        --sim   <target>    Emission target: vivado | questa | generic (default: vivado)
-        --retry <n>         Max orchestrator retry attempts (default: 3)
-        --dump-ir           Write IR snapshot to <out>/ir.json
-        --verbose           Print orchestrator loop steps to stdout
+pssgen [--input <file>] [options]
 ```
 
-## Providing verification intent
+When `pssgen.toml` is present, all settings load automatically. `--input` is optional when the toml specifies it.
 
-A `.intent` file is a structured natural language companion to your HDL input that captures engineer-defined verification behavior, scenarios, and goals. pssgen reads this text and maps it to more specific PSS constraints and coverage intent than HDL-port inference alone can provide.
-
-Preferred section headings (recommended, not required):
-
-- reset behavior:
-- counting sequences:
-- coverage goals:
-- corner cases:
-- constraints:
-
-Example CLI usage:
-
-```bash
-pssgen --input counter.vhd \
-       --intent counter.intent \
-       --sim vivado
-```
-
-Any section heading is accepted. The agent maps intent to PSS by semantic understanding, not by schema validation.
+| Flag | Default | Description |
+|---|---|---|
+| `--input <file>` | from toml | HDL source (.v, .sv, .vhd, .vhdl) |
+| `--intent <file>` | auto-detected | SNL intent file. Auto: `<stem>.intent` |
+| `--req <file>` | auto-detected | Requirements file. Auto: `<stem>.req` |
+| `--reg-map <file>` | auto-detected | Register map (.xlsx). Auto: `<stem>_regmap.xlsx` |
+| `--no-intent` | off | Suppress auto-loading of intent file |
+| `--no-req` | off | Suppress auto-loading of req file |
+| `--top <n>` | largest module | Top-level module or entity name |
+| `--out <dir>` | ./out | Output directory |
+| `--sim <target>` | vivado | vivado \| questa \| generic \| icarus |
+| `--retry <n>` | 3 | Maximum orchestrator retry attempts |
+| `--no-llm` | off | Template-only mode. No API key required. |
+| `--scaffold` | off | Generate `_generated.intent` and `_generated.req` |
+| `--coverage-loop <n>` | 0 | Maximum closure iterations (0 = disabled) |
+| `--coverage-db <file>` | from toml | Vivado XML coverage database |
+| `--config <file>` | auto | Explicit pssgen.toml path |
+| `--dump-ir` | off | Write IR snapshot to `<out>/ir.json` |
+| `--verbose` | off | Print file resolution and pipeline steps |
 
 **Exit codes:**
 
 | Code | Meaning |
-|------|---------|
-| 0 | Success — all artifacts generated and verified |
+|---|---|
+| 0 | Success |
 | 1 | Checker failure — retries exhausted |
-| 2 | Parse failure — HDL source could not be parsed |
-| 3 | Configuration error — invalid arguments |
+| 2 | Parse failure — HDL could not be parsed |
+| 3 | Configuration error |
 
 ---
 
-## Phased Development Roadmap
+## Working with Requirements
 
-pssgen is built using a **vertical slice / walking skeleton** methodology.
-Each phase delivers a working end-to-end system. No phase breaks the previous
-phase's test suite. Capabilities are widened only after the current phase is
-verified end-to-end.
+### Full requirements set (DO-254 / compliance programs)
 
-### v0 — Walking Skeleton *(current)*
-**Goal:** Prove the full pipeline with the simplest meaningful design.
-
-- Input: `counter.v` (8-bit up/down counter, hardcoded)
-- Output: UVM 1.2 scaffold (interface, driver, monitor, sequencer, agent, test) + `build.tcl`
-- Emission target: Vivado/XSIM only
-- Definition of done: `xvlog --sv *.sv` exits 0 (compiles clean)
-- Orchestrator retry loop fires at least once in automated testing
-
-### v1 — Natural Language Intent + PSS Model
-**Goal:** Accept plain English verification intent; produce a PSS model as IR.
-
-- Input: natural language description of verification intent (`.txt`)
-- New agent: PSS model generator
-- PSS model elaborates in the Accellera open PSS reference tool
-- VHDL and SystemVerilog parser stubs promoted to working implementations
-
-### v2 — PSS → UVM + C Output
-**Goal:** One PSS model produces two output targets.
-
-- Emission: UVM 1.2 SystemVerilog (existing) + C/C++ test cases (new)
-- Questa emission target stub promoted to working implementation
-- Both targets compile clean from the same PSS model
-
-### v3 — Coverage Closure Feedback Loop
-**Goal:** Iterative simulation-driven coverage closure.
-
-- Reads coverage database (Vivado XML or Questa UCDB) after each sim run
-- Identifies uncovered bins; feeds gap analysis to sequence generator
-- Coverage holes measurably reduce on second orchestrator pass
-
-### v4 — Register / RAL Intent via PSS
-**Goal:** Highest daily-use value for FPGA engineers.
-
-- Plain English register intent → PSS register model → UVM RAL model
-- CSR programming sequences generated automatically
-- SVA assertions generated from register access rules
-
----
-
-## Project Structure
+Populate a `.req` file with your complete requirements:
 
 ```
-pssgen/
-├── README.md                   ← this file
-├── DESIGN.md                   ← architecture decisions and design rationale
-├── cursor.md                   ← Cursor AI coding assistant guidance
-├── SDS.md                      ← Software Design Specification (full)
-├── cli.py                      ← argparse entry point
-├── orchestrator.py             ← job loop, retry logic, checker calls
-├── ir.py                       ← IR dataclass, JSON serialize/deserialize
-├── parser/
-│   ├── __init__.py
-│   ├── verilog.py              ← regex-based port extractor (v0)
-│   ├── systemverilog.py        ← stub → v1
-│   └── vhdl.py                 ← stub → v1
-├── agents/
-│   ├── __init__.py
-│   ├── structure_gen.py        ← UVM scaffold agent (v0)
-│   └── pss_gen.py              ← PSS model agent → v1
-├── checkers/
-│   ├── __init__.py
-│   └── verifier.py             ← 3-tier checker
-├── emitters/
-│   ├── __init__.py
-│   ├── vivado.py               ← .sv files + build.tcl (v0)
-│   ├── questa.py               ← stub → v2
-│   └── generic_c.py            ← stub → v2
-├── templates/
-│   ├── uvm/
-│   │   ├── interface.sv.jinja
-│   │   ├── driver.sv.jinja
-│   │   ├── monitor.sv.jinja
-│   │   ├── sequencer.sv.jinja
-│   │   ├── agent.sv.jinja
-│   │   ├── test.sv.jinja
-│   │   └── build_vivado.tcl.jinja
-│   └── pss/
-│       └── component.pss.jinja ← v1
-└── tests/
-    ├── fixtures/
-    │   ├── counter.v           ← canonical v0 test input
-    │   └── counter_intent.txt  ← canonical v1 test input
-    ├── test_parser.py
-    ├── test_ir.py
-    ├── check.py
-    ├── test_orchestrator.py
-    └── test_e2e.py             ← end-to-end: counter.v → xvlog compiles clean
+[FUNC-REQ-113]
+  Verification: simulation, post-silicon
+
+[SYS-REQ-047]
+  Verification: simulation
 ```
+
+Tag every entry in your `.intent` file. The gap report becomes a compliance-ready verification closure argument.
+
+### Selective tagging
+
+Tag only the entries that matter:
+
+```
+coverage goals:
+  Count reaches maximum value and rolls over. [FUNC-REQ-113]
+  Enable deasserted mid-sequence.
+    (untagged — informal coverage, not a requirement)
+```
+
+Tagged items get requirement-traced covergroups and appear in the gap report. Untagged items still generate coverage. Any item can be promoted to formal by adding an ID — no other changes needed.
+
+### Scaffold mode — generate starting points
+
+```bash
+pssgen --input uart.vhd --scaffold --no-llm
+```
+
+Produces `uart_generated.intent` and `uart_generated.req` as editable starting points. The `[GENERATED]` markers show what the tool inferred. Review, confirm or edit, then run pssgen again with your reviewed files.
 
 ---
 
-## Stub Convention
+## Register Map Format
 
-All future-phase modules exist in the tree from day one with a `NotImplementedError`.
-This keeps import paths stable and prevents structural refactoring later.
+pssgen accepts three register map formats, auto-detected from the spreadsheet structure.
 
-```python
-# questa.py
-def emit(ir, out_dir):
-    raise NotImplementedError(
-        "Questa emission target not yet implemented. "
-        "Use --sim vivado. Tracked in roadmap v2.")
+### simple_block — your designer's existing spreadsheet
+
+Single sheet, 15 columns. This is the format designers already produce. No reformatting required. Three optional columns (`base_address`, `req_id`, `pss_action`) can be added at the right edge of your existing file without disturbing anything else.
+
+Six real-world block fixtures are included in `tests/fixtures/`:
+
 ```
+gpio_regmap_simple.xlsx    ← AXI GPIO
+uart_gpio_regmap_simple.xlsx ← UART + GPIO (two blocks)
+i2c_regmap_simple.xlsx     ← I2C
+spi_regmap_simple.xlsx     ← SPI master
+pwm_regmap_simple.xlsx     ← PWM
+timer_regmap_simple.xlsx   ← Timer
+```
+
+### full_block — pssgen extended format
+
+Four sheets: Globals, Blocks, RegisterMap (20 columns with full metadata), Enums. Use this format when you need per-field coverage control, HDL backdoor paths, or PSS action names. The template is at `docs/pssgen_regmap_template.xlsx`.
+
+### system — multi-block reference
+
+Two sheets: System (project globals) and Blocks (file references with base addresses). Each block keeps its own spreadsheet. The system sheet tells pssgen where to find each one and where it lives in the address map.
 
 ---
 
-## Dependencies
+## Architecture Overview
 
-**Runtime:**
-- Python >= 3.11
-- `jinja2` — template rendering
-- `anthropic` — LLM API (Claude)
+```
+HDL source + .intent + .req + .xlsx
+            │
+            ▼
+    ┌────────────────────────────────────┐
+    │  Parser Layer (Layer 1)            │
+    │  verilog / vhdl / intent / req /   │
+    │  regmap parsers                    │
+    └────────────────────────────────────┘
+            │
+            ▼
+    ┌────────────────────────────────────┐
+    │  IR (Layer 2) — append-only        │
+    │  ports, register_map, req IDs,     │
+    │  intent, waivers, gaps             │
+    └────────────────────────────────────┘
+            │
+            ▼
+    ┌────────────────────────────────────┐
+    │  Orchestrator — retry loop owner   │
+    └────────────────────────────────────┘
+            │
+            ▼
+    ┌────────────────────────────────────┐
+    │  Agents (Layer 3)                  │
+    │  structure_gen  pss_gen  ral_gen   │
+    │  scaffold_gen   gap_agent          │
+    │  coverage_reader  closure_gen      │
+    └────────────────────────────────────┘
+            │
+            ▼
+    ┌────────────────────────────────────┐
+    │  Checker (Layer 4) — 3-tier        │
+    │  structural / syntax / smoke       │
+    │  UVM + PSS + RAL checks            │
+    └────────────────────────────────────┘
+            │
+            ▼
+    ┌────────────────────────────────────┐
+    │  Emitters (Layer 5)                │
+    │  vivado  questa  generic_c         │
+    └────────────────────────────────────┘
+            │
+            ▼
+    ./out/  UVM .sv + PSS + RAL .sv + C + scripts + gap report
+```
 
-**Development:**
-- `pytest` — test runner
-- `pytest-cov` — coverage reporting
+Five inviolable design principles:
 
-**Optional (for checker tier 2):**
-- AMD Vivado (free) — `xvlog` for SystemVerilog syntax check
-- Siemens Questa — `vlog` for syntax check
-
-No EDA tool license is required to run pssgen in tier-1-only mode.
+- The orchestrator owns the retry loop. Agents never retry themselves.
+- The IR is append-only. Fields are added; existing fields are never renamed or removed.
+- Templates constrain the LLM. Jinja2 templates provide structural skeletons; the LLM fills design-specific content only.
+- The checker's external contract is frozen. Internal checks grow without changing the orchestrator interface.
+- The emission layer is the only simulator-aware layer. Adding a new simulator target requires one new emitter only.
 
 ---
 
 ## Installation
 
 ```bash
-git clone https://github.com/<your-org>/pssgen.git
+git clone https://github.com/BelTechSystems/pssgen.git
 cd pssgen
 pip install -e ".[dev]"
-export ANTHROPIC_API_KEY=your_key_here
+export ANTHROPIC_API_KEY=your_key_here   # not required for --no-llm mode
 ```
 
-## Quickstart
+**Python 3.11 or later required** (uses `tomllib` from the standard library).
+
+**openpyxl is required for register map support:**
 
 ```bash
-# Generate a UVM testbench for an up/down counter (v0)
-pssgen --input tests/fixtures/counter.v --top up_down_counter --sim vivado
-
-# Inspect the IR snapshot
-pssgen --input tests/fixtures/counter.v --dump-ir --verbose
+pip install openpyxl
 ```
 
-## Working with requirements
+---
 
-pssgen supports two requirement workflows depending on
-your program's process maturity.
+## Running the Tests
 
-### Full requirements set
+```bash
+# All tests except end-to-end (no API key or simulator needed)
+python -m pytest tests/ --ignore=tests/test_e2e.py -v
 
-If your program has a defined requirements document
-— from DOORS, a specification, or your own derivation
-— populate a .req file with your complete requirement set:
+# End-to-end tests (requires ANTHROPIC_API_KEY and xvlog)
+python -m pytest tests/test_e2e.py -v
+```
 
-    [FUNC-REQ-113]
-      Verification: simulation, post-silicon
+156 tests across 17 test modules. All phases covered.
 
-    [SYS-REQ-047]
-      Verification: simulation
+---
 
-Tag every entry in your .intent file with the
-corresponding requirement ID. pssgen produces a gap
-report that accounts for every requirement — suitable
-for DO-254 or similar compliance programs.
+## Human Authorship
 
-### Selective tagging
+pssgen is built with AI assistance. The architecture, design decisions, and domain expertise are human-authored by S. Belton, BelTech Systems LLC. A record of 19+ human creative decisions — including why PSS is the right IR, why the per-block spreadsheet format matches real engineering practice, and why the orchestrator owns the retry loop — is maintained in `DECISIONS.md`.
 
-If you do not have a formal requirements set, or if
-only certain behaviors are compliance-relevant, tag
-only the entries that matter. pssgen extracts those
-IDs automatically and generates a .req skeleton for
-the tagged items.
+For background on why this tool was built:
 
-    coverage goals:
-      Count rollover in both directions. [FUNC-REQ-113]
-      Enable deasserted mid-sequence.
-        (untagged — informal coverage goal only)
-
-Tagged items get requirement-traced covergroups and
-appear in the formal gap report. Untagged items still
-generate coverage but are not tracked as requirements.
-
-You can promote any untagged item to a requirement
-at any time by adding a requirement ID — no other
-changes needed.
+> *"I spent years as the IP library custodian for a major aerospace company... projects would rather clone an IP block and own it than participate in the shared library. I think the answer is portable verification intent."*
 
 ---
 
 ## Contributing
 
 pssgen is open source (MIT license). Contributions welcome — particularly:
-- HDL parser improvements (VHDL, SystemVerilog edge cases)
-- Additional Jinja2 UVM templates
-- PSS model generation prompt improvements
-- Coverage database readers (Vivado XML, Questa UCDB)
 
-Please read `DESIGN.md` before contributing. The architectural decisions recorded
-there explain *why* the code is structured as it is, not just *what* it does.
-Understanding the design rationale prevents well-intentioned changes that violate
-core principles (IR append-only policy, orchestrator owns retry logic, etc.).
+- HDL parser improvements (VHDL, SystemVerilog edge cases)
+- PSS model generation prompt improvements
+- Coverage database readers (Questa UCDB — see OI-12)
+- IP-XACT XML register map input (see OI-23)
+- Requirements document importers (see OI-28, OI-29)
+
+**Read `DESIGN.md` before contributing.** The architectural decisions recorded there explain *why* the code is structured as it is. Understanding the design rationale prevents well-intentioned changes that violate core principles (IR append-only policy, orchestrator owns retry logic, emission layer is simulator-aware only).
+
+---
+
+## Open Items
+
+Key deferred features tracked in the SDS (OI list):
+
+| ID | Item |
+|---|---|
+| OI-12 | Questa UCDB binary reading (requires vcover or pyucis) |
+| OI-23 | IP-XACT XML register map input |
+| OI-24 | Full RAL integration into UVM test and scoreboard |
+| OI-28 | Verification cross-reference spreadsheet importer |
+| OI-29 | Word SRS requirement ID extractor |
 
 ---
 
 ## License
 
-MIT License. See `LICENSE` for details.
+MIT License — BelTech Systems LLC, 2026. See `LICENSE` for details.
 
 ---
 
 ## Status
 
-**Current phase: v0 — Walking Skeleton**  
-The pipeline is real. The counter goes in. The UVM scaffold comes out. It compiles.
-Everything after that is additive.
+**Current release: v4c**
+
+156 tests passing. Full pipeline from HDL through UVM RAL model and system assembly. Real-world register map fixtures for GPIO, I2C, SPI, PWM, TIMER, and UART validated against the simple_block format.

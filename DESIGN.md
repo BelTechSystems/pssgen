@@ -3,6 +3,9 @@
 This document records *why* the tool is designed as it is. Code explains what.
 This document explains why. Read this before refactoring anything significant.
 
+The companion changelog for each phase is maintained in the SDS
+(`docs/pssgen_sds.docx`). Human authorship decisions are in `DECISIONS.md`.
+
 ---
 
 ## Why PSS as the Intermediate Representation
@@ -82,10 +85,60 @@ agents, or checker.
 
 ---
 
+## Why RAL Generation is Always Template-Only
+
+UVM RAL model structure is highly constrained. A `uvm_reg_block` has exactly one
+`build()` function. Registers are created with `type_id::create()`. Fields are
+configured with `.configure()`. The structure is deterministic given the register
+map data. An LLM adds no value here and introduces risk of generating structurally
+incorrect RAL code. Template-only generation applies regardless of the `--no-llm`
+flag. See DECISIONS.md D-018.
+
+---
+
+## Why One _reg_block.sv Per Block
+
+pssgen generates one SystemVerilog file per design block rather than one monolithic
+RAL file. This matches how register maps are developed in practice — each designer
+maintains their own block spreadsheet independently. A monolithic RAL file creates
+a configuration management problem: any change to any block requires regenerating
+and re-reviewing the entire file. Per-block generation means the UART designer's
+RAL file is independently versionable from the GPIO designer's. See DECISIONS.md
+D-020.
+
+---
+
+## Why System Assembly Uses add_submap()
+
+The system-level register assembly uses `add_submap()` rather than flattening all
+registers into a single `uvm_reg_map` with individual `add_reg()` calls. This
+preserves the block boundary in the register model — a test can access
+`uart.reg_map` or `gpio.reg_map` independently. Block-level register sequences
+written for standalone verification run unchanged in the system test. The flat
+approach loses this reusability. See DECISIONS.md D-021.
+
+---
+
+## Why the Simple_block Spreadsheet Format
+
+pssgen accepts the 15-column spreadsheet format that designers already produce,
+requiring no reformatting. Three optional columns (`base_address`, `req_id`,
+`pss_action`) extend the existing file at the right edge. This decision was
+validated against six real-world block spreadsheets — GPIO, I2C, PWM, SPI, TIMER,
+UART — all of which passed validation with no structural issues. See DECISIONS.md
+D-019.
+
+Base address is inherited row-to-row from the most recent non-blank value in
+column 16. Default is 0x0000_0000 when the column is absent entirely. This
+matches how engineers actually fill in spreadsheets — write a value at the top
+of a block and leave it implied for subsequent rows.
+
+---
+
 ## Why Open Source (MIT)
 
 A solo maker cannot compete with funded startups and incumbent EDA vendors on
-engineering resources. The competitive advantage is domain expertise — 
+engineering resources. The competitive advantage is domain expertise —
 specifically, the insight that PSS is the right IR for AI-generated verification
 and the knowledge to implement the PSS model correctly. That expertise is
 expressed in the design decisions, the templates, and the checker checks.
@@ -101,6 +154,9 @@ Open source with MIT license means:
 The lasting effect of this tool is not a product. It is infrastructure that
 teaches the mid-market how to use PSS with AI assistance. That effect compounds
 over time in a way that a closed product cannot.
+
+License review is deferred to v1.0 — consider Apache 2.0 for the explicit patent
+grant. See DECISIONS.md D-002.
 
 ---
 
@@ -124,24 +180,23 @@ The choice of an 8-bit up/down counter as the v0 canonical case is deliberate:
 
 ---
 
-## Why Claude Chat + VSCode as the Development Environment
+## Why Claude Chat + Claude Code as the Development Environment
 
-This architecture was developed in Claude chat before a
-line of code was written. The chat session is the systems
-definition process: market analysis, architectural
-trade-offs, strategic positioning, component interface
-design, and phase planning.
+This architecture was developed in Claude chat before a line of code was written.
+The chat session is the systems definition process: market analysis, architectural
+trade-offs, strategic positioning, component interface design, and phase planning.
 
-VSCode Chat handles implementation with the full file
-tree and test runner in view. The risk is context drift —
-VSCode Chat doesn't see the design rationale unless it is
-in the repo. CLAUDE.md, DESIGN.md, and SDS.md exist
-specifically to prevent that drift. When the AI suggests
-something that conflicts with a design decision recorded
-here, the document wins.
+Claude Code handles implementation with the full file tree and test runner in view.
+The risk is context drift — Claude Code does not see the design rationale unless
+it is in the repo. CLAUDE.md, DESIGN.md, DECISIONS.md, and the SDS exist
+specifically to prevent that drift. When Claude Code suggests something that
+conflicts with a design decision recorded here, the document wins.
 
-Design decisions are made in chat. Implementation is done
-in VSCode. The documents are the bridge.
+Design decisions are made in Claude chat. Implementation is done in Claude Code.
+The documents are the bridge.
+
+**Git policy:** Claude Code never runs `git push` autonomously. Commit freely.
+Push only when explicitly instructed.
 
 ---
 
@@ -158,103 +213,44 @@ No phase begins until the previous phase satisfies all of the following:
 These gates are not bureaucracy. They are the mechanism that keeps a solo maker
 from discovering integration problems six phases deep with no clean rollback point.
 
-## Notes
-
-Note 1:
-dispatch.py — extension-to-parser routing helper shared by
-cli.py and orchestrator.py. Consider moving to parser/
-dispatch.py if the parser package grows in v1b+.
-
-Note 2:
-OI-10: PSS tier-2 elaboration check — deferred. No pip-installable
-open-source PSS parser exists as of v1b. PSSTools/pssparser
-(github.com/PSSTools/pssparser) is the candidate when it becomes
-pip-installable. Until then, PSS validation is tier-1 structural only.
-
-Note 3:
-generic_c.emit() writes all pipeline artifacts plus the .c file.
-That means when you run --sim generic you are getting both the UVM .sv files
-and the C file in the output directory.
-Confirm that is intentional behavior — it may be correct for now
-(engineer gets everything), but in a later phase the generic target may
-want to suppress the Vivado-specific build.tcl since that script is only
-meaningful to Vivado users.
-
 ---
 
-## Companion Changelog (v1 Reality)
+## Notes and Open Items
 
-This section mirrors the SDS addendum in plain text so code reviewers can
-inspect scope changes directly in git diffs without opening the .docx.
+**Note 1 — generic_c.emit() behavior**
+When running `--sim generic`, the output directory contains both the UVM `.sv`
+files and the C file. This is correct for now — the engineer gets everything.
+In a future phase, the generic target may want to suppress `build.tcl` since it
+is only meaningful to Vivado users.
 
-### v1a — VHDL Parser Scope (Implemented)
+**Note 2 — PSS tier-2 elaboration (OI-10)**
+No pip-installable open-source PSS parser exists as of v4. PSSTools/pssparser
+(github.com/PSSTools/pssparser) is the candidate when it becomes pip-installable.
+Until then, PSS validation is tier-1 structural only.
 
-- Module: parser/vhdl.py
-- Supported port types:
-   - std_logic -> width 1
-   - std_logic_vector(N downto 0) -> width N+1
-   - std_logic_vector(0 to N) -> width N+1
-- Port mode mapping to IR:
-   - in -> input
-   - out -> output
-   - inout -> inout
-   - buffer -> output
-- Integer generics are extracted into IR.parameters as string defaults.
-- Role classification matches parser/verilog.py heuristics:
-   clock, reset_n, reset, control, data.
-- Unsupported VHDL port types raise ParseError naming both type and port.
+**Note 3 — Questa UCDB reading (OI-12)**
+Questa UCDB binary format reading is deferred. Requires `vcover` command or
+`pyucis` library. Current Questa closure scripts assume Vivado-compatible XML path.
 
-### v1a — Extension-Based Parser Dispatch (Implemented)
+**Note 4 — Full RAL integration (OI-24)**
+The RAL block is generated but not wired into the UVM test or scoreboard. The
+engineer instantiates the RAL block manually in their test. Full integration —
+wiring the RAL into the test, agent, and scoreboard — is deferred.
 
-- Module: parser/dispatch.py
-- Dispatch mapping:
-   - .v -> parser.verilog.parse
-   - .sv -> parser.systemverilog.parse
-   - .vhd/.vhdl -> parser.vhdl.parse
-- CLI validates extension dispatch and exits code 3 on unsupported extensions.
-- Orchestrator parses through shared dispatch to avoid duplicated routing logic.
+**Note 5 — IP-XACT input (OI-23)**
+IP-XACT XML register map input is planned for v5b. Deferred to allow v5a
+(requirements import) to ship first. Open-source IP repositories (OpenTitan,
+LowRISC, PULP Platform) provide real IP-XACT test fixtures.
 
-### v1b — PSS Model Generator Agent (Implemented)
+**Note 6 — DOORS integration (OI-15)**
+DOORS integration is deferred pending access to a real DOORS export file.
+DOORS exports to both Word and Excel, so v5a importers provide indirect DOORS
+support in the interim.
 
-- Module: agents/pss_gen.py
-- Public interface:
-   generate_pss(ir, fail_reason=None, no_llm=False) -> str
-- Template path: templates/pss/component.pss.jinja
-- no_llm=True renders template-only output with no API call.
-- no_llm=False renders skeleton first, then prompts LLM to fill constraints and
-   coverage placeholders.
-- Generated source is stored in ir.pss_model and emitted as <design_name>.pss.
-
-### v1b — Checker Integration for PSS (Implemented)
-
-- Module: checkers/verifier.py
-- Tier-1 PSS structural checks now apply when .pss artifacts are present.
-- Required content checks:
-   - contains "component"
-   - contains "action"
-   - contains design_name
-
-### v1b — Open Issue OI-10 (Formal)
-
-- PSS elaboration/syntax parsing in tier-2 remains deferred.
-- Rationale: no pip-installable open-source PSS parser is currently viable for
-   CI integration.
-- Impact: PSS validation is tier-1 structural only in v1b.
-- Follow-up: add a PSS elaboration tier when a stable parser/elaborator becomes
-   automation-ready.
-
-### v2a — Structured Natural Language Intent (Implemented)
-
-- Flag: --intent <file> (.intent extension)
-- IR field: ir.pss_intent (Optional[str], append-only)
-- Format: free-form sections, no schema enforcement.
-  Preferred headings: reset behavior, counting sequences,
-  coverage goals, corner cases, constraints.
-  Any heading is accepted — the LLM maps intent to PSS
-  by semantic understanding, not by validation.
-- When present: pss_gen includes intent in LLM prompt
-  and preserves it as a comment block in the PSS model.
-- When absent: IR-only inference (existing behavior).
+**Note 7 — Column mapping (OI-27)**
+A future enhancement to allow engineers to map arbitrary spreadsheet column names
+to pssgen fields via pssgen.toml, enabling acceptance of any existing spreadsheet
+format without renaming columns.
 
 ---
 
@@ -262,15 +258,12 @@ inspect scope changes directly in git diffs without opening the .docx.
 
 Current license: MIT (BelTech Systems LLC, 2026).
 
-MIT was chosen for maximum adoption with zero legal
-friction. Apache 2.0 was considered and has advantages:
-explicit patent grant and patent retaliation clause,
-which may ease enterprise legal review at aerospace
-primes and defense contractors — pssgen's primary target
-audience.
+MIT was chosen for maximum adoption with zero legal friction. Apache 2.0 was
+considered and has advantages: explicit patent grant and patent retaliation clause,
+which may ease enterprise legal review at aerospace primes and defense contractors
+— pssgen's primary target audience.
 
-Decision: revisit at v1.0 release. If a target
-enterprise customer flags the patent grant as a blocker,
-switch to Apache 2.0 at that boundary. As sole author,
-relicensing requires no contributor consent until
-external contributions are accepted.
+Decision: revisit at v1.0 release. If a target enterprise customer flags the patent
+grant as a blocker, switch to Apache 2.0 at that boundary. As sole author,
+relicensing requires no contributor consent until external contributions are
+accepted.
