@@ -8,7 +8,8 @@
 # DESCRIPTION:
 #   Parses .intent files containing structured natural language verification
 #   intent. Extracts section headings, requirement IDs, requirement scheme
-#   prefixes, and waiver entries. Disposition keywords (GENERATED, CONFIRMED,
+#   prefixes, waiver entries, and inline requirements from an optional
+#   [requirements] section. Disposition keywords (GENERATED, CONFIRMED,
 #   WAIVED) are explicitly excluded from requirement ID extraction.
 #
 # LAYER:        1 — parser
@@ -19,11 +20,12 @@
 #     Parse a .intent file and return an IntentParseResult.
 #
 # DEPENDENCIES:
-#   Standard library:  re, dataclasses, typing
+#   Standard library:  re, sys, dataclasses, typing
 #   Internal:          none
 #
 # HISTORY:
-#   v3a   2026-03-28  SB  Initial implementation; section, req ID, scheme, and waiver extraction
+#   v3a      2026-03-28  SB  Initial implementation; section, req ID, scheme, and waiver extraction
+#   v5a-prep 2026-04-06  SB  inline_requirements from [requirements] section; waiver-location warning (D-025)
 #
 # ===========================================================
 """parser/intent_parser.py — Structured natural language intent file parser.
@@ -32,10 +34,11 @@ Phase: v3a
 Layer: 1 (parser)
 
 Parses .intent files, extracting sections, requirement IDs, requirement
-schemes, and waivers. Requirement ID detection uses regex pattern matching;
-disposition keywords are explicitly excluded from ID extraction.
+schemes, waivers, and inline requirements. Requirement ID detection uses
+regex pattern matching; disposition keywords are explicitly excluded.
 """
 import re
+import sys
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -47,6 +50,17 @@ _DISPOSITION_KEYWORDS = {"GENERATED", "CONFIRMED", "WAIVED"}
 # Segments after the first may start with a digit (e.g. -047 in SYS-REQ-047).
 _REQ_ID_PATTERN = re.compile(r'\[([A-Z][A-Z0-9]*(?:-[A-Z0-9][A-Z0-9]*){1,4})\]')
 
+# Pattern for bare (unbracketed) requirement ID-like strings used in waiver warnings.
+# Requires three dash-separated segments where the last is numeric: SYS-REQ-001.
+_WAIVER_REQ_WARN_PATTERN = re.compile(
+    r'[A-Z][A-Z0-9]*-[A-Z0-9][A-Z0-9]*-[0-9]+'
+)
+
+# Pattern to match a requirement entry line in the [requirements] section.
+_REQ_INLINE_ENTRY_PATTERN = re.compile(
+    r'^\s*\[([A-Z][A-Z0-9]*(?:-[A-Z0-9][A-Z0-9]*){1,4})\]\s*(.*)'
+)
+
 
 @dataclass
 class IntentParseResult:
@@ -57,11 +71,16 @@ class IntentParseResult:
         req_ids: All requirement IDs found in the file.
         req_schemes: Unique requirement scheme prefixes, e.g. ["SYS-REQ"].
         waivers: List of waiver records with item, reason, and req_ids keys.
+        inline_requirements: Requirements parsed from the [requirements] section,
+            keyed by requirement ID. Each entry has the same structure as
+            ReqParseResult.requirements entries (statement, verification, waived,
+            waiver_reason). Empty dict when no [requirements] section is present.
     """
     sections: dict[str, list[str]] = field(default_factory=dict)
     req_ids: list[str] = field(default_factory=list)
     req_schemes: list[str] = field(default_factory=list)
     waivers: list[dict] = field(default_factory=list)
+    inline_requirements: dict[str, dict] = field(default_factory=dict)
 
 
 def _extract_req_ids(text: str) -> list[str]:
@@ -101,19 +120,79 @@ def _derive_scheme(req_id: str) -> Optional[str]:
     return "-".join(parts[:-1])
 
 
+def _parse_inline_requirements(lines: list[str]) -> dict[str, dict]:
+    """Parse requirement entries from the [requirements] section of an intent file.
+
+    Applies the same entry format as .req files: each entry begins with a
+    bracketed requirement ID line, optionally followed by indented
+    ``verification:`` and ``[WAIVED]`` lines.
+
+    Args:
+        lines: Content lines from the ``requirements`` section dict entry.
+
+    Returns:
+        Dict mapping requirement IDs to entry dicts with keys: statement,
+        verification, waived, waiver_reason.
+    """
+    requirements: dict[str, dict] = {}
+    current_id: Optional[str] = None
+    current_entry: Optional[dict] = None
+
+    for line in lines:
+        req_match = _REQ_INLINE_ENTRY_PATTERN.match(line)
+        if req_match:
+            if current_id is not None and current_entry is not None:
+                requirements[current_id] = current_entry
+            current_id = req_match.group(1)
+            current_entry = {
+                "statement": req_match.group(2).strip(),
+                "verification": [],
+                "waived": False,
+                "waiver_reason": "",
+            }
+            continue
+
+        if current_entry is None:
+            continue
+
+        stripped_line = line.strip()
+
+        if stripped_line.lower().startswith("verification:"):
+            methods_text = stripped_line.split(":", 1)[1].strip()
+            methods = [m.strip() for m in methods_text.split(",") if m.strip()]
+            current_entry["verification"].extend(methods)
+            continue
+
+        waiver_match = re.match(r'^\[WAIVED\]\s*(.*)', stripped_line)
+        if waiver_match:
+            current_entry["waived"] = True
+            current_entry["waiver_reason"] = waiver_match.group(1).strip()
+            continue
+
+    if current_id is not None and current_entry is not None:
+        requirements[current_id] = current_entry
+
+    return requirements
+
+
 def parse_intent(intent_file: str) -> IntentParseResult:
     """Parse a structured natural language intent file.
 
     Extracts disposition-tagged entries, requirement IDs,
-    waivers, and section content. Detects requirement ID
-    schemes automatically using regex pattern matching.
+    waivers, section content, and inline requirements from
+    an optional [requirements] section. Detects requirement
+    ID schemes automatically using regex pattern matching.
+
+    Emits a warning to stderr when [WAIVED] appears on a line
+    that also contains a requirement ID pattern — this indicates
+    a requirement waiver in the wrong file (D-025).
 
     Args:
         intent_file: Path to .intent file.
 
     Returns:
-        IntentParseResult with sections, req_ids,
-        req_schemes, and waivers.
+        IntentParseResult with sections, req_ids, req_schemes,
+        waivers, and inline_requirements.
 
     Raises:
         FileNotFoundError: If intent_file does not exist.
@@ -144,24 +223,38 @@ def parse_intent(intent_file: str) -> IntentParseResult:
                 sections[heading] = []
             continue
 
-        # Content line (may belong to current section)
-        if current_section is not None:
-            sections[current_section].append(stripped)
-
         # Waiver detection: line contains [WAIVED]
         if "[WAIVED]" in stripped:
-            waiver_ids = _extract_req_ids(stripped)
-            # item is the text after [WAIVED]
-            waived_match = re.search(r'\[WAIVED\](.*)', stripped)
-            item_text = waived_match.group(1).strip() if waived_match else stripped
-            # Remove any trailing req IDs from the item text for cleanliness
-            item_clean = _REQ_ID_PATTERN.sub("", item_text).strip()
-            waivers.append({
-                "item": item_clean,
-                "reason": item_clean,
-                "req_ids": waiver_ids,
-            })
+            # Warn when a req-ID-like pattern appears on the same [WAIVED] line —
+            # requirement waivers belong in .req, not .intent (D-025).
+            warn_ids = _WAIVER_REQ_WARN_PATTERN.findall(stripped)
+            for req_id in warn_ids:
+                print(
+                    f"[pssgen] WARNING: Requirement waiver for {req_id} found in"
+                    f" .intent — move to .req file (D-025)",
+                    file=sys.stderr,
+                )
+
+            if current_section == "requirements":
+                # Inline req waiver: keep in section content for post-processing.
+                # Do not add to the intent-file waivers list.
+                sections[current_section].append(stripped)
+            else:
+                # Standard intent-file waiver (coverage item waiver).
+                waiver_ids = _extract_req_ids(stripped)
+                waived_match = re.search(r'\[WAIVED\](.*)', stripped)
+                item_text = waived_match.group(1).strip() if waived_match else stripped
+                item_clean = _REQ_ID_PATTERN.sub("", item_text).strip()
+                waivers.append({
+                    "item": item_clean,
+                    "reason": item_clean,
+                    "req_ids": waiver_ids,
+                })
             continue
+
+        # Non-waiver content line: add to current section
+        if current_section is not None:
+            sections[current_section].append(stripped)
 
         # Collect requirement IDs from non-waiver lines
         line_ids = _extract_req_ids(stripped)
@@ -191,9 +284,15 @@ def parse_intent(intent_file: str) -> IntentParseResult:
             scheme_seen.add(scheme)
             unique_schemes.append(scheme)
 
+    # Parse inline requirements from the [requirements] section if present
+    inline_requirements: dict[str, dict] = {}
+    if "requirements" in sections:
+        inline_requirements = _parse_inline_requirements(sections["requirements"])
+
     return IntentParseResult(
         sections=sections,
         req_ids=unique_ids,
         req_schemes=unique_schemes,
         waivers=waivers,
+        inline_requirements=inline_requirements,
     )

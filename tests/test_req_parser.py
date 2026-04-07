@@ -51,6 +51,49 @@ def test_req_parser_reads_entries() -> None:
         os.unlink(path)
 
 
+def test_req_parser_mode_full() -> None:
+    """A .req file with at least one non-waived entry has mode == 'full'."""
+    content = """\
+[SYS-REQ-001] Counter shall support active-low reset.
+  verification: simulation
+"""
+    path = _write_req(content)
+    try:
+        result = parse_req(path)
+        assert result.mode == "full"
+    finally:
+        os.unlink(path)
+
+
+def test_req_parser_mode_campaign() -> None:
+    """A .req file where every entry is waived has mode == 'campaign'."""
+    content = """\
+[PERF-REQ-001] Reset response within one clock cycle.
+  verification: post-silicon
+  [WAIVED] Cannot verify sub-cycle timing pre-silicon.
+"""
+    path = _write_req(content)
+    try:
+        result = parse_req(path)
+        assert result.mode == "campaign"
+    finally:
+        os.unlink(path)
+
+
+def test_req_parser_mode_campaign_empty() -> None:
+    """A .req file with no entries (comments only) has mode == 'campaign'."""
+    content = """\
+# No requirements defined yet.
+# This is a campaign-mode file — requirements tracked externally.
+"""
+    path = _write_req(content)
+    try:
+        result = parse_req(path)
+        assert result.mode == "campaign"
+    finally:
+        os.unlink(path)
+
+
 def test_req_parser_reads_waivers() -> None:
     """Waived requirement entries are identified correctly."""
     content = """\

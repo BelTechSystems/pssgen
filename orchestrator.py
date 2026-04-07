@@ -42,7 +42,8 @@
 #   v3c-b 2026-03-29  SB  Coverage closure loop, _run_closure_loop, closure_passes/script in result
 #   v4a   2026-04-03  SB  Added reg_map_file to JobSpec; register map loading + ir.register_map wiring
 #   v4b   2026-04-03  SB  Wired generate_ral; RAL artifacts appended to pipeline after regmap load
-#   v4c   2026-04-05  SB  register_maps_list multi-file merge from pssgen.toml
+#   v4c      2026-04-05  SB  register_maps_list multi-file merge from pssgen.toml
+#   v5a-prep 2026-04-06  SB  .req is optional; inline_requirements flow through intent_result (D-025)
 #
 # ===========================================================
 """orchestrator.py — Pipeline coordinator and retry owner.
@@ -333,10 +334,13 @@ def run(job: JobSpec) -> OrchestratorResult:
     ir.output_dir = job.out_dir
 
     # --- Resolve context files (intent + req) via convention or explicit flags ---
+    # When no_req is set, suppress even a toml-specified req_file so that
+    # --no-req is an unconditional override (D-025: .req is optional).
+    effective_req_flag = None if job.no_req else job.req_file
     intent_path, req_path, should_extract = resolve_context_files(
         input_file=job.input_file,
         intent_flag=job.intent_file,
-        req_flag=job.req_file,
+        req_flag=effective_req_flag,
         no_intent=job.no_intent,
         no_req=job.no_req,
     )

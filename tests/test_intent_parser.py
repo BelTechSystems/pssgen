@@ -95,6 +95,55 @@ corner cases:
         os.unlink(path)
 
 
+def test_intent_parser_inline_requirements_section() -> None:
+    """A [requirements] section with one entry populates inline_requirements."""
+    content = """\
+requirements:
+[UART-BR-004] BAUD_TUNING shall only be written while UART_EN is deasserted.
+  verification: Simulation
+"""
+    path = _write_intent(content)
+    try:
+        result = parse_intent(path)
+        assert "UART-BR-004" in result.inline_requirements
+        entry = result.inline_requirements["UART-BR-004"]
+        assert "BAUD_TUNING" in entry["statement"]
+        assert "Simulation" in entry["verification"]
+        assert entry["waived"] is False
+    finally:
+        os.unlink(path)
+
+
+def test_intent_parser_inline_requirements_empty_without_section() -> None:
+    """An .intent file with no [requirements] section has inline_requirements == {}."""
+    content = """\
+reset behavior:
+  Apply reset low for 2 cycles.
+"""
+    path = _write_intent(content)
+    try:
+        result = parse_intent(path)
+        assert result.inline_requirements == {}
+    finally:
+        os.unlink(path)
+
+
+def test_intent_parser_waiver_req_id_warning(capsys) -> None:
+    """[WAIVED] with a req ID in a content line emits a WARNING to stderr."""
+    content = """\
+corner cases:
+  [WAIVED] SYS-REQ-001 Cannot test this pre-silicon.
+"""
+    path = _write_intent(content)
+    try:
+        parse_intent(path)
+        captured = capsys.readouterr()
+        assert "SYS-REQ-001" in captured.err
+        assert "WARNING" in captured.err
+    finally:
+        os.unlink(path)
+
+
 def test_intent_parser_no_req_ids() -> None:
     """A file with no requirement IDs returns an empty req_ids list."""
     content = """\

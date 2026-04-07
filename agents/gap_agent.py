@@ -30,8 +30,9 @@
 #   Internal:          ir, agents.coverage_reader
 #
 # HISTORY:
-#   v3b   2026-03-28  SB  Initial implementation; bidirectional gap analysis
-#   v3c-b 2026-03-29  SB  Added coverage hit/miss tracking and update_gaps_from_coverage
+#   v3b      2026-03-28  SB  Initial implementation; bidirectional gap analysis
+#   v3c-b    2026-03-29  SB  Added coverage hit/miss tracking and update_gaps_from_coverage
+#   v5a-prep 2026-04-06  SB  inline_requirements Direction A; req mode in report header (D-025)
 #
 # ===========================================================
 """agents/gap_agent.py — Bidirectional requirements traceability gap analysis.
@@ -127,7 +128,8 @@ def analyse_gaps(
         if lbl.get("req_id") is not None:
             covered_req_ids.add(lbl["req_id"])
 
-    # Direction A: requirements not covered by any PSS label
+    # Direction A: requirements not covered by any PSS label.
+    # Source priority: .req file > inline requirements in .intent file.
     if req_result is not None and hasattr(req_result, "requirements"):
         for req_id, req_detail in req_result.requirements.items():
             if req_detail.get("waived"):
@@ -146,6 +148,29 @@ def analyse_gaps(
                             f"Requirement '{req_id}' has no corresponding PSS coverage label."
                         ),
                         "statement": req_detail.get("statement", ""),
+                    })
+    elif req_result is None and intent_result is not None:
+        # No .req file — use inline requirements from [requirements] section of .intent.
+        # These are the stepping-stone requirements before promotion to a .req file.
+        inline_reqs = getattr(intent_result, "inline_requirements", {})
+        for req_id, req_detail in inline_reqs.items():
+            if req_detail.get("waived"):
+                report.waivers.append({
+                    "req_id": req_id,
+                    "statement": req_detail.get("statement", ""),
+                    "waiver_reason": req_detail.get("waiver_reason", ""),
+                    "source": "intent-inline",
+                })
+            else:
+                if req_id not in covered_req_ids:
+                    report.errors.append({
+                        "req_id": req_id,
+                        "message": (
+                            f"Requirement '{req_id}' (intent-inline) has no"
+                            f" corresponding PSS coverage label."
+                        ),
+                        "statement": req_detail.get("statement", ""),
+                        "source": "intent-inline",
                     })
 
     # Direction B: coverage labels from intent/req with no req_id
@@ -261,6 +286,11 @@ def write_gap_report(report: GapReport, out_path: str) -> str:
         lines.append(f"Intent:    {report.intent_path}")
     if report.req_path:
         lines.append(f"Reqs:      {report.req_path}")
+    req_mode = getattr(report.req_result, "mode", None)
+    if req_mode is not None:
+        lines.append(f"Req mode:  {req_mode}")
+    else:
+        lines.append("Req mode:  none (no .req file — Direction A skipped)")
     lines.append("=" * 72)
     lines.append("")
 

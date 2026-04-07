@@ -252,6 +252,95 @@ def test_gap_agent_console_summary_format() -> None:
 
 
 # ---------------------------------------------------------------------------
+# Inline requirements tests (v5a-prep)
+# ---------------------------------------------------------------------------
+
+@dataclass
+class _FakeIntentResultWithReqs:
+    """Extended fake with inline_requirements for inline requirement tests."""
+    sections: dict = field(default_factory=dict)
+    req_ids: list = field(default_factory=list)
+    req_schemes: list = field(default_factory=list)
+    waivers: list = field(default_factory=list)
+    inline_requirements: dict = field(default_factory=dict)
+
+
+@dataclass
+class _FakeReqResultWithMode:
+    """Fake ReqParseResult with an explicit mode attribute for report header tests."""
+    requirements: dict = field(default_factory=dict)
+    waivers: list = field(default_factory=list)
+    mode: str = "full"
+
+
+def test_gap_agent_inline_requirements_direction_a() -> None:
+    """inline_requirements with one entry and no coverage label → one Direction A error."""
+    ir = _make_ir()
+    intent_result = _FakeIntentResultWithReqs(
+        inline_requirements={
+            "UART-BR-004": {
+                "statement": "BAUD_TUNING shall only be written while UART_EN is deasserted.",
+                "verification": ["Simulation"],
+                "waived": False,
+                "waiver_reason": "",
+            }
+        }
+    )
+    coverage_labels: list[dict] = []
+
+    report = analyse_gaps(ir, intent_result, None, coverage_labels)
+
+    assert len(report.errors) == 1
+    assert report.errors[0]["req_id"] == "UART-BR-004"
+
+
+def test_gap_agent_inline_requirements_waived_not_counted() -> None:
+    """Waived inline requirement generates no Direction A error; appears in waivers."""
+    ir = _make_ir()
+    intent_result = _FakeIntentResultWithReqs(
+        inline_requirements={
+            "UART-BR-005": {
+                "statement": "Performance requirement waived for pre-silicon.",
+                "verification": ["post-silicon"],
+                "waived": True,
+                "waiver_reason": "Cannot verify sub-cycle timing pre-silicon.",
+            }
+        }
+    )
+    coverage_labels: list[dict] = []
+
+    report = analyse_gaps(ir, intent_result, None, coverage_labels)
+
+    assert len(report.errors) == 0
+    assert len(report.waivers) == 1
+    assert report.waivers[0]["req_id"] == "UART-BR-005"
+
+
+def test_gap_agent_report_header_shows_req_mode_full(tmp_path) -> None:
+    """Gap report header shows 'Req mode:  full' when req_result.mode == 'full'."""
+    report = GapReport(design_name="test_design")
+    report.req_result = _FakeReqResultWithMode(mode="full")
+    out_path = str(tmp_path / "gap_report.txt")
+
+    write_gap_report(report, out_path)
+
+    content = open(out_path, encoding="utf-8").read()
+    assert "Req mode:  full" in content
+
+
+def test_gap_agent_report_header_shows_no_req(tmp_path) -> None:
+    """Gap report header shows 'Direction A skipped' when req_result is None."""
+    report = GapReport(design_name="test_design")
+    # req_result is None by default in GapReport
+    out_path = str(tmp_path / "gap_report_no_req.txt")
+
+    write_gap_report(report, out_path)
+
+    content = open(out_path, encoding="utf-8").read()
+    assert "Direction A skipped" in content
+
+
+# ---------------------------------------------------------------------------
 # Coverage hit/miss update tests (v3c-b)
 # ---------------------------------------------------------------------------
 

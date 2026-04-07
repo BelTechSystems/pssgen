@@ -22,7 +22,8 @@
 #   Internal:          none
 #
 # HISTORY:
-#   v3a   2026-03-28  SB  Initial implementation; requirement entry and waiver parsing
+#   v3a      2026-03-28  SB  Initial implementation; requirement entry and waiver parsing
+#   v5a-prep 2026-04-06  SB  Added mode property — "full" vs "campaign" classification (D-025)
 #
 # ===========================================================
 """parser/req_parser.py — Requirements file (.req) parser.
@@ -56,9 +57,26 @@ class ReqParseResult:
             Each dict has keys: "statement" (str), "verification" (list[str]),
             "waived" (bool), "waiver_reason" (str).
         waivers: List of waived requirement IDs.
+        mode: Read-only classification of the file's usage mode.
+            "full"     — at least one non-waived requirement entry present.
+            "campaign" — all entries are waived, or the file is empty.
     """
     requirements: dict[str, dict] = field(default_factory=dict)
     waivers: list[str] = field(default_factory=list)
+
+    @property
+    def mode(self) -> str:
+        """Classify the .req file as "full" or "campaign" mode.
+
+        Returns:
+            "full" if at least one non-waived entry exists;
+            "campaign" if all entries are waived or no entries are present.
+        """
+        if not self.requirements:
+            return "campaign"
+        if all(entry.get("waived") for entry in self.requirements.values()):
+            return "campaign"
+        return "full"
 
 
 def parse_req(req_file: str) -> ReqParseResult:
