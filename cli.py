@@ -30,6 +30,7 @@
 #   v3c-a 2026-03-29  SB  pssgen.toml config auto-detection, --config flag,
 #                          --coverage-db flag, file resolution verbose reporting
 #   v4a   2026-04-03  SB  Added --reg-map flag; verbose reg-map resolution reporting
+#   v5a   2026-04-07  SB  import-reqs subcommand for .docx requirement extraction
 #
 # ===========================================================
 """cli.py — Command-line entry point for pssgen.
@@ -49,6 +50,44 @@ from config import find_project_config, load_project_config, merge_config_with_a
 from orchestrator import run, JobSpec
 from parser.dispatch import resolve_parser
 from parser.context import resolve_regmap_file
+
+
+def _dispatch_import_reqs() -> None:
+    """Handle the ``import-reqs`` subcommand and exit.
+
+    Parses import-reqs-specific arguments from sys.argv, dispatches to
+    the command handler, and calls sys.exit with the return code.
+    """
+    from commands.import_reqs import run_import_reqs
+
+    sub_parser = argparse.ArgumentParser(
+        prog="pssgen import-reqs",
+        description=(
+            "Extract requirements from a source document and write a .req bootstrap file.\n"
+            "The .req file is never overwritten once it exists."
+        ),
+    )
+    sub_parser.add_argument(
+        "--from",
+        dest="from_format",
+        required=True,
+        metavar="FORMAT",
+        help="Source format. Currently only 'word' (.docx) is supported.",
+    )
+    sub_parser.add_argument(
+        "source",
+        nargs="?",
+        default=None,
+        help="Path to the source document. If omitted, reads from pssgen.toml [requirements] source.",
+    )
+    sub_parser.add_argument(
+        "--output",
+        default=None,
+        metavar="PATH",
+        help="Explicit output .req file path. Defaults to <design_name>.req in the project directory.",
+    )
+    sub_args = sub_parser.parse_args(sys.argv[2:])
+    sys.exit(run_import_reqs(sub_args))
 
 
 def _companion_path(input_file: str, ext: str) -> str | None:
@@ -74,6 +113,14 @@ def main() -> None:
     takes priority), builds a ``JobSpec``, and invokes the orchestrator.
     Exits with status code 0 on success, 1 on failure, and 3 on bad input.
     """
+    # ------------------------------------------------------------------
+    # Subcommand dispatch: check for known subcommands before the main
+    # argument parser runs, so they don't collide with pipeline flags.
+    # ------------------------------------------------------------------
+    if len(sys.argv) > 1 and sys.argv[1] == "import-reqs":
+        _dispatch_import_reqs()
+        return  # unreachable — _dispatch_import_reqs calls sys.exit
+
     # ------------------------------------------------------------------
     # Preliminary parse: discover --input and --config before full parse
     # so we can locate pssgen.toml relative to the input file's directory.

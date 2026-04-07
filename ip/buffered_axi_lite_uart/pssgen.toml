@@ -1,0 +1,15 @@
+[project]
+name = "buffered_axi_lite_uart"
+
+[requirements]
+source = "docs/BALU-RS-001.docx"
+# pssgen import-reqs --from word reads this file
+# to bootstrap buffered_axi_lite_uart.req
+# The .req file is never overwritten once created.
+
+[[sources]]
+hdl = "vhdl/buffered_axi_lite_uart.vhd"
+
+[[register_maps]]
+source = "buffered_axi_lite_uart_regmap.xlsx"
+format = "simple_block"
