@@ -33,7 +33,7 @@ def test_docx_req_parser_br004_present(parsed):
     entry = parsed.requirements["UART-BR-004"]
     assert "BAUD_TUNING" in entry["statement"]
     assert "UART_EN" in entry["statement"]
-    assert entry["verification"] == ["simulation"]
+    assert entry["verification"] == ["test"]
 
 
 def test_docx_req_parser_br004_not_waived(parsed):

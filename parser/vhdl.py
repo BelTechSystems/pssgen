@@ -23,6 +23,11 @@
 #
 # HISTORY:
 #   v1a   2026-03-27  SB  Initial implementation; std_logic and std_logic_vector support
+#   v5a   2026-04-07  SB  Strip VHDL line/block comments from type string before
+#                          fullmatch — enables entities with multiple non-final
+#                          vector ports using comment-separated ';' idiom
+#   v5a   2026-04-07  SB  Strip VHDL line comments from port block before ';' split —
+#                          handles group-header comments and ';' in inline comments
 #
 # ===========================================================
 """parser/vhdl.py — Minimal VHDL entity parser.
@@ -109,7 +114,14 @@ def _width_from_type(port_type: str, port_name: str, parameters: dict[str, str])
     Raises:
         ParseError: If the type is unsupported.
     """
+    # Strip VHDL line comments (--) and block comments (/* */) from the
+    # type string before matching. Comments may appear between the closing
+    # ')' of a vector type and the ';' port separator when the port list
+    # uses the comment-separated ';' idiom for parser-regex compatibility.
     ptype = " ".join(port_type.strip().split())
+    ptype = re.sub(r"\s*--.*$", "", ptype).strip()          # line comment
+    ptype = re.sub(r"/\*.*?\*/", "", ptype, flags=re.DOTALL).strip()  # block comment
+    ptype = " ".join(ptype.split())  # re-normalise after removal
     if ptype.lower() == "std_logic":
         return 1
 
@@ -215,7 +227,13 @@ def parse(source_file: str, top_module: str | None) -> IR:
         raise ParseError(f"No port declaration block found in {source_file}")
 
     ports: list[Port] = []
-    port_block = port_match.group(1)
+    # Strip VHDL line comments from the port block before splitting on ';'.
+    # This prevents two classes of tokenisation errors:
+    #   1. Group-header comment lines (no preceding ';') that merge with the
+    #      first port declaration in a group, producing a non-matching token.
+    #   2. Semicolons embedded in inline comments that create spurious split
+    #      points, scattering the following port across two tokens.
+    port_block = re.sub(r"--[^\n]*", "", port_match.group(1))
     for declaration in port_block.split(";"):
         decl = " ".join(declaration.strip().split())
         if not decl:

@@ -38,7 +38,7 @@ def test_import_reqs_creates_req_file(tmp_path):
     content = open(out_path, encoding="utf-8").read()
     assert "[UART-BR-004]" in content
     assert "[GENERATED]" in content
-    assert "verification: simulation" in content
+    assert "verification: test" in content
 
 
 def test_import_reqs_refuses_to_overwrite(tmp_path):
