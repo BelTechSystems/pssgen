@@ -536,86 +536,42 @@
   verification: simulation
   [GENERATED]
 
-[UART-REG-005–011] 
+[UART-VER-001] UVM RAL model for all 12 registers
   verification: inspection
   [GENERATED]
 
-[UART-REG-012–025] 
+[UART-VER-002] Reset value test for all registers
   verification: simulation
   [GENERATED]
 
-[UART-REG-026–028] 
+[UART-VER-003] SCRATCH walking-ones connectivity test
   verification: simulation
   [GENERATED]
 
-[UART-REG-029–031] 
+[UART-VER-004] All 8 interrupt sources independently
   verification: simulation
   [GENERATED]
 
-[UART-REG-032–034] 
+[UART-VER-005] OVERRUN + RX_FULL simultaneous
   verification: simulation
   [GENERATED]
 
-[UART-REG-035–036] 
+[UART-VER-006] Both AXI write orderings exercised
   verification: simulation
   [GENERATED]
 
-[UART-REG-038–040] 
+[UART-VER-007] BAUD_TUNING write while UART_EN=1
   verification: simulation
   [GENERATED]
 
-[UART-REG-041–043] 
+[UART-VER-008] Timeout with three TIMEOUT_VAL settings
   verification: simulation
   [GENERATED]
 
-[UART-REG-044–046] 
+[UART-VER-009] All parity modes in loopback
   verification: simulation
   [GENERATED]
 
-[UART-REG-047–049] 
-  verification: simulation
-  [GENERATED]
-
-[UART-REG-050–052] 
-  verification: simulation
-  [GENERATED]
-
-[UART-VER-001] 
-  verification: inspection
-  [GENERATED]
-
-[UART-VER-002] 
-  verification: simulation
-  [GENERATED]
-
-[UART-VER-003] 
-  verification: simulation
-  [GENERATED]
-
-[UART-VER-004] 
-  verification: simulation
-  [GENERATED]
-
-[UART-VER-005] 
-  verification: simulation
-  [GENERATED]
-
-[UART-VER-006] 
-  verification: simulation
-  [GENERATED]
-
-[UART-VER-007] 
-  verification: simulation
-  [GENERATED]
-
-[UART-VER-008] 
-  verification: simulation
-  [GENERATED]
-
-[UART-VER-009] 
-  verification: simulation
-  [GENERATED]
-
-[UART-VER-010] 
+[UART-VER-010] RX overrun byte discard verified
   verification: simulation
   [GENERATED]

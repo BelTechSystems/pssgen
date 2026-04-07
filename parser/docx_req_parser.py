@@ -28,6 +28,8 @@
 #
 # HISTORY:
 #   v5a   2026-04-07  SB  Initial implementation; paragraph + VCRM table extraction
+#   v5a   2026-04-07  SB  Fix: use VCRM summary as statement for VCRM-only IDs;
+#                          skip en-dash range entries (D-023)
 #
 # ===========================================================
 """parser/docx_req_parser.py — Word document requirements parser.
@@ -183,10 +185,16 @@ def parse_docx_requirements(docx_path: str) -> DocxReqResult:
                 result.requirements[vcrm_id]["coverage_ref"] = coverage_ref
                 result.requirements[vcrm_id]["summary"] = summary
             else:
-                # VCRM-only entry (e.g. range entries like UART-REG-005–011)
+                # VCRM-only entry — skip range shorthand entries (contain en-dash
+                # U+2013 or em-dash U+2014) because they represent multiple IDs and
+                # cannot be parsed by req_parser.py's ID pattern.
+                if "\u2013" in vcrm_id or "\u2014" in vcrm_id or "–" in vcrm_id or "—" in vcrm_id:
+                    continue
+                # For true VCRM-only IDs (e.g. UART-VER-001), use the Requirement
+                # Summary column as the statement since no paragraph text exists.
                 result.req_ids.append(vcrm_id)
                 result.requirements[vcrm_id] = {
-                    "statement": "",
+                    "statement": summary,
                     "verification": methods,
                     "waived": False,
                     "waiver_reason": "",

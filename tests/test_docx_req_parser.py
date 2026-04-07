@@ -55,3 +55,15 @@ def test_docx_req_parser_source_file_recorded(parsed):
 
 def test_docx_req_parser_ids_in_order(parsed):
     assert parsed.req_ids[0] == "UART-PAR-001"
+
+
+def test_docx_req_parser_ver_statements_populated(parsed):
+    ver_entries = {k: v for k, v in parsed.requirements.items() if "UART-VER-" in k}
+    assert len(ver_entries) == 10, f"Expected 10 UART-VER entries, got {len(ver_entries)}"
+    for req_id, entry in ver_entries.items():
+        assert entry["statement"], f"{req_id} has empty statement"
+
+
+def test_docx_req_parser_no_range_entries(parsed):
+    range_keys = [k for k in parsed.requirements if "\u2013" in k or "\u2014" in k]
+    assert range_keys == [], f"Range entries present: {range_keys}"
