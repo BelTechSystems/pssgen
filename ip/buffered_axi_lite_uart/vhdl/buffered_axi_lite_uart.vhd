@@ -3,7 +3,7 @@
 -- Project    : pssgen Example IP — Buffered AXI-Lite UART
 -- Brief      : AXI-Lite slave UART with NCO baud generator,
 --              16-deep TX/RX FIFOs, and 8 interrupt sources.
--- Document   : BALU-RS-001 Rev 0.2
+-- Document   : BALU-RS-001 Rev 0.4
 -- Standard   : VHDL-2008 (IEEE 1076-2008)
 --
 -- Functional blocks and processes:
@@ -12,7 +12,7 @@
 --   AXI_WRITE_CTRL : AXI_AW_LATCH_p, AXI_W_LATCH_p,
 --                    AXI_WRITE_RESP_p — AXI-Lite write channel
 --   AXI_READ_CTRL  : AXI_READ_p — AXI-Lite read channel
---   REG_BLOCK      : REG_WRITE_p, REG_RESET_p — register file
+--   REG_BLOCK      : REG_WRITE_p — register file (reset + write decode)
 --   TX_FIFO        : TX_FIFO_p — transmit FIFO
 --   RX_FIFO        : RX_FIFO_p — receive FIFO
 --   TX_ENGINE      : TX_ENGINE_p — UART transmit shift register
@@ -27,7 +27,7 @@
 --   ieee.math_real (elaboration only — for baud reset calc)
 --
 -- History:
---   2026-04-07  S. Belvin  Initial entity + architecture stub
+--   2026-04-07  S. Belton  Initial entity + architecture stub
 -- =============================================================
 
 library ieee;
@@ -470,11 +470,15 @@ begin
   end process AXI_READ_p;
 
   -- -------------------------------------------------------------
-  -- Process : REG_RESET_p
+  -- Process : REG_WRITE_p
   -- Block   : REG_BLOCK
-  -- Purpose : Apply reset values to all writable registers
+  -- Purpose : Apply reset values to all writable registers on reset;
+  --           decode AXI write address and update register file otherwise.
+  --           BAUD_TUNING write blocked while ctrl_s(7)=UART_EN.
+  --           Single process owns all register signals to avoid
+  --           multiple-driver conflicts.
   -- -------------------------------------------------------------
-  REG_RESET_p : process(axi_aclk)
+  REG_WRITE_p : process(axi_aclk)
   begin
     if rising_edge(axi_aclk) then
       if axi_aresetn = '0' then
@@ -482,23 +486,6 @@ begin
         -- fifo_ctrl_s <= FIFO_THRESH_RESET_c & FIFO_THRESH_RESET_c;
         -- timeout_val_s <= std_logic_vector(to_unsigned(G_TIMEOUT_DEFAULT,16));
         -- int_enable_s <= x"00"; int_status_s <= x"00"; scratch_s <= (others => '0')
-        null;
-      else
-        null;
-      end if;
-    end if;
-  end process REG_RESET_p;
-
-  -- -------------------------------------------------------------
-  -- Process : REG_WRITE_p
-  -- Block   : REG_BLOCK
-  -- Purpose : Decode AXI write address and update register file;
-  --           BAUD_TUNING write blocked while ctrl_s(0)=UART_EN
-  -- -------------------------------------------------------------
-  REG_WRITE_p : process(axi_aclk)
-  begin
-    if rising_edge(axi_aclk) then
-      if axi_aresetn = '0' then
         null;
       else
         -- Case aw_addr_lat_s: update register; INT_CLEAR uses W1C logic
@@ -628,6 +615,9 @@ begin
   -- Purpose : Combinatorial assembly of the STATUS register from
   --           FIFO flags, engine busy signals, and UART error flags.
   --           Will be process(all) when implemented; clocked stub here.
+  -- NOTE: Change process(axi_aclk) to process(all) and
+  --       remove the clocked structure when implementing.
+  --       STATUS is a combinatorial live read of hardware state.
   -- -------------------------------------------------------------
   STATUS_p : process(axi_aclk)
   begin
