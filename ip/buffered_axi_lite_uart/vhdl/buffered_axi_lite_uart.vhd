@@ -54,40 +54,31 @@ entity buffered_axi_lite_uart is
     -- ---- Group 2: AXI-Lite Write Address Channel ----------
     s_axi_awvalid : in  std_logic;
     s_axi_awready : out std_logic;
-    s_axi_awaddr  : in  std_logic_vector(7 downto 0) -- 8-bit AXI address bus
-    ;
-    s_axi_awprot  : in  std_logic_vector(2 downto 0) -- accepted, not decoded
-    ;
+    s_axi_awaddr  : in  std_logic_vector(7 downto 0); -- 8-bit AXI address bus
+    s_axi_awprot  : in  std_logic_vector(2 downto 0); -- accepted, not decoded
 
     -- ---- Group 3: AXI-Lite Write Data Channel -------------
     s_axi_wvalid  : in  std_logic;
     s_axi_wready  : out std_logic;
-    s_axi_wdata   : in  std_logic_vector(31 downto 0) -- 32-bit write data
-    ;
-    s_axi_wstrb   : in  std_logic_vector(3 downto 0) -- byte enables
-    ;
+    s_axi_wdata   : in  std_logic_vector(31 downto 0); -- 32-bit write data
+    s_axi_wstrb   : in  std_logic_vector(3 downto 0); -- byte enables
 
     -- ---- Group 4: AXI-Lite Write Response Channel ---------
     s_axi_bvalid  : out std_logic;
     s_axi_bready  : in  std_logic;
-    s_axi_bresp   : out std_logic_vector(1 downto 0) -- 00=OKAY 10=SLVERR
-    ;
+    s_axi_bresp   : out std_logic_vector(1 downto 0); -- 00=OKAY 10=SLVERR
 
     -- ---- Group 5: AXI-Lite Read Address Channel -----------
     s_axi_arvalid : in  std_logic;
     s_axi_arready : out std_logic;
-    s_axi_araddr  : in  std_logic_vector(7 downto 0) -- 8-bit read address
-    ;
-    s_axi_arprot  : in  std_logic_vector(2 downto 0) -- accepted, not decoded
-    ;
+    s_axi_araddr  : in  std_logic_vector(7 downto 0); -- 8-bit read address
+    s_axi_arprot  : in  std_logic_vector(2 downto 0); -- accepted, not decoded
 
     -- ---- Group 6: AXI-Lite Read Data Channel --------------
     s_axi_rvalid  : out std_logic;
     s_axi_rready  : in  std_logic;
-    s_axi_rdata   : out std_logic_vector(31 downto 0) -- 32-bit read data
-    ;
-    s_axi_rresp   : out std_logic_vector(1 downto 0) -- 00=OKAY 10=SLVERR
-    ;
+    s_axi_rdata   : out std_logic_vector(31 downto 0); -- 32-bit read data
+    s_axi_rresp   : out std_logic_vector(1 downto 0); -- 00=OKAY 10=SLVERR
 
     -- ---- Group 7: UART Serial Interface -------------------
     uart_tx : out std_logic; -- serial TX idle high
@@ -219,6 +210,8 @@ architecture rtl of buffered_axi_lite_uart is
   -- NCO phase accumulator — wraps on overflow
   signal baud_pulse_s : std_logic;
   -- Single-cycle pulse at the baud rate (carry-out)
+  signal baud_pulse_16x_s : std_logic;
+  -- Single-cycle pulse at 16x baud rate for RX mid-bit sampling
 
   -- ---- TX FIFO ---------------------------------------------
   signal tx_fifo_mem_s : fifo_mem_t;
@@ -381,6 +374,9 @@ begin
   -- Process : NCO_ACCUM_p
   -- Block   : NCO_BAUD
   -- Purpose : NCO phase accumulator; produces baud_pulse_s on carry
+  -- Note    : Implementation must also produce a 16x oversample
+  --           pulse (baud_pulse_16x_s) using NCO MSB-4 for
+  --           mid-bit RX sampling. See UART-BR requirement group.
   -- -------------------------------------------------------------
   NCO_ACCUM_p : process(axi_aclk)
   begin
@@ -556,7 +552,9 @@ begin
   -- Process : RX_ENGINE_p
   -- Block   : RX_ENGINE
   -- Purpose : Two-stage synchronise uart_rx; detect start bit;
-  --           sample data at mid-baud; push to RX FIFO on stop bit
+  --           sample data at mid-baud using baud_pulse_16x_s;
+  --           push to RX FIFO on stop bit. Uses 16x oversampling
+  --           for noise immunity and phase alignment.
   -- -------------------------------------------------------------
   RX_ENGINE_p : process(axi_aclk)
   begin
@@ -614,10 +612,11 @@ begin
   -- Block   : STATUS_MUX
   -- Purpose : Combinatorial assembly of the STATUS register from
   --           FIFO flags, engine busy signals, and UART error flags.
-  --           Will be process(all) when implemented; clocked stub here.
-  -- NOTE: Change process(axi_aclk) to process(all) and
-  --       remove the clocked structure when implementing.
-  --       STATUS is a combinatorial live read of hardware state.
+  -- Note    : STUB ONLY — replace with process(all) at implementation.
+  --           An empty process(all) is not valid VHDL; clocked here.
+  --           No registered state. STATUS reflects current-cycle
+  --           hardware values with zero additional latency when
+  --           implemented correctly as combinatorial.
   -- -------------------------------------------------------------
   STATUS_p : process(axi_aclk)
   begin

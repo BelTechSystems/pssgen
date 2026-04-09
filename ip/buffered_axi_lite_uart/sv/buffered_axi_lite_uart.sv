@@ -133,6 +133,13 @@ module buffered_axi_lite_uart #(
              P_TIMEOUT_DEFAULT);
   end
 
+  // NOTE: s_axi_awprot and s_axi_arprot are accepted but not
+  // decoded. This is standard AXI-Lite slave practice for
+  // peripherals that do not implement security zones.
+  // Vivado lint warning "Input port unconnected" for these
+  // signals is expected and should be waived in the XDC.
+  // No tie-off required — the AXI master drives these signals.
+
   // ===========================================================
   // Signal declarations — all <name>_s suffix
   // The distinction between registered and combinatorial is
@@ -167,6 +174,7 @@ module buffered_axi_lite_uart #(
   // ---- NCO baud generator ----------------------------------
   logic [31:0] nco_accum_s;     // NCO phase accumulator — wraps on overflow
   logic        baud_pulse_s;    // single-cycle pulse at baud rate (carry-out)
+  logic        baud_pulse_16x_s; // 16x baud pulse for RX mid-bit sampling
 
   // ---- FIFO memory -----------------------------------------
   logic [7:0] tx_fifo_mem_s [0:P_FIFO_DEPTH-1];
@@ -263,6 +271,9 @@ module buffered_axi_lite_uart #(
   // Purpose : NCO phase accumulator; produces baud_pulse_s on carry
   //           Reset: nco_accum_s <= LP_BAUD_TUNING_RESET_c
   //           Run:   nco_accum_s <= nco_accum_s + baud_tuning_s
+  // Note    : Must also produce baud_pulse_16x_s (NCO MSB-4)
+  //           for RX mid-bit sampling. 16x oversampling required
+  //           for noise immunity. See UART-BR requirement group.
   always_ff @(posedge axi_aclk) begin : NCO_ACCUM_p
     if (!axi_aresetn) begin
       // nco_accum_s <= LP_BAUD_TUNING_RESET_c;
@@ -385,7 +396,9 @@ module buffered_axi_lite_uart #(
   // -- RX_ENGINE — UART receive shift register ----------------
   // Block   : RX_ENGINE
   // Purpose : Two-stage synchronise uart_rx; detect start bit;
-  //           sample data at mid-baud; push to RX FIFO on stop bit
+  //           sample data at mid-baud using baud_pulse_16x_s;
+  //           push to RX FIFO on stop bit. 16x oversampling for
+  //           noise immunity and phase alignment.
   //           Reset: rx_sync_s <= 2'b11; rx_busy_s <= 0; rx_bit_cnt_s <= 0
   always_ff @(posedge axi_aclk) begin : RX_ENGINE_p
     if (!axi_aresetn) begin
@@ -421,20 +434,27 @@ module buffered_axi_lite_uart #(
     end
   end
 
-  // -- STATUS_MUX — combinatorial STATUS register -------------
+  // -- STATUS_MUX — combinatorial STATUS register assembly ----
   // Block   : STATUS_MUX
-  // Purpose : Combinatorial assembly of STATUS from FIFO flags,
-  //           engine busy signals, and UART error flags.
-  // NOTE: Change always_ff to always_comb and remove the clocked
-  //       structure when implementing. STATUS is a combinatorial
-  //       live read of hardware state. Stubbed as always_ff here.
-  always_ff @(posedge axi_aclk) begin : STATUS_p
-    if (!axi_aresetn) begin
-      // no reset state for combinatorial register
-    end else begin
-      // Assemble STATUS[31:0] from tx_full_s, tx_empty_s, rx_full_s,
-      // rx_empty_s, tx_busy_s, rx_busy_s, parity/frame error flags
-    end
+  // Purpose : Combinatorial assembly of STATUS[31:0] from FIFO
+  //           flags, engine busy signals, and UART error flags.
+  //           Zero latency — software reads current-cycle state.
+  //           No reset required — purely combinatorial.
+  always_comb begin : STATUS_p
+    // STATUS[31:12] reserved — read as zero
+    // STATUS[11]    TIMEOUT_FLAG
+    // STATUS[10]    INT_PENDING (mirrors IRQ output)
+    // STATUS[9]     TX_FULL
+    // STATUS[8]     TX_EMPTY
+    // STATUS[7]     RX_FULL
+    // STATUS[6]     RX_EMPTY
+    // STATUS[5]     TX_BUSY
+    // STATUS[4]     RX_BUSY
+    // STATUS[3]     PARITY_ERR
+    // STATUS[2]     FRAME_ERR
+    // STATUS[1]     OVERRUN
+    // STATUS[0]     reserved — read as zero
+    rdata_s = '0; // stub: full assembly implemented with register file
   end
 
-endmodule
+endmodule : buffered_axi_lite_uart

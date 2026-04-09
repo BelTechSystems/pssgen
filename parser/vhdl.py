@@ -28,6 +28,9 @@
 #                          vector ports using comment-separated ';' idiom
 #   v5a   2026-04-07  SB  Strip VHDL line comments from port block before ';' split —
 #                          handles group-header comments and ';' in inline comments
+#   v5a   2026-04-09  SB  Replace non-greedy port-block regex with depth-aware
+#                          extractor — fixes premature match when port type ');'
+#                          appears inline (e.g. std_logic_vector(...); -- comment)
 #
 # ===========================================================
 """parser/vhdl.py — Minimal VHDL entity parser.
@@ -222,9 +225,31 @@ def parse(source_file: str, top_module: str | None) -> IR:
 
     parameters = _parse_generics(src)
 
-    port_match = re.search(r"\bport\s*\((.*?)\)\s*;", src, re.IGNORECASE | re.DOTALL)
-    if not port_match:
+    # Extract port block with parenthesis-depth tracking so that ')' chars
+    # inside port types (e.g. std_logic_vector(7 downto 0); -- comment) do not
+    # cause a non-greedy regex to terminate prematurely.
+    port_open = re.search(r"\bport\s*\(", src, re.IGNORECASE)
+    if not port_open:
         raise ParseError(f"No port declaration block found in {source_file}")
+    pos = port_open.end()
+    depth = 1
+    while pos < len(src) and depth > 0:
+        ch = src[pos]
+        if ch == "(" :
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+            if depth == 0:
+                break
+        elif ch == "-" and pos + 1 < len(src) and src[pos + 1] == "-":
+            # Skip line comment — do not count parens inside comments
+            while pos < len(src) and src[pos] != "\n":
+                pos += 1
+            continue
+        pos += 1
+    if depth != 0:
+        raise ParseError(f"Unmatched parentheses in port block of {source_file}")
+    port_block_raw = src[port_open.end():pos]
 
     ports: list[Port] = []
     # Strip VHDL line comments from the port block before splitting on ';'.
@@ -233,7 +258,7 @@ def parse(source_file: str, top_module: str | None) -> IR:
     #      first port declaration in a group, producing a non-matching token.
     #   2. Semicolons embedded in inline comments that create spurious split
     #      points, scattering the following port across two tokens.
-    port_block = re.sub(r"--[^\n]*", "", port_match.group(1))
+    port_block = re.sub(r"--[^\n]*", "", port_block_raw)
     for declaration in port_block.split(";"):
         decl = " ".join(declaration.strip().split())
         if not decl:
