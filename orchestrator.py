@@ -27,7 +27,7 @@
 #   Internal:          ir, parser.dispatch, parser.intent_parser, parser.req_parser,
 #                      parser.context, agents.structure_gen, agents.pss_gen,
 #                      agents.scaffold_gen, agents.gap_agent, agents.coverage_reader,
-#                      agents.closure_gen, checkers.verifier,
+#                      agents.closure_gen, agents.datasheet_gen, checkers.verifier,
 #                      emitters.vivado, emitters.questa, emitters.generic_c
 #
 # HISTORY:
@@ -44,6 +44,7 @@
 #   v4b   2026-04-03  SB  Wired generate_ral; RAL artifacts appended to pipeline after regmap load
 #   v4c      2026-04-05  SB  register_maps_list multi-file merge from pssgen.toml
 #   v5a-prep 2026-04-06  SB  .req is optional; inline_requirements flow through intent_result (D-025)
+#   v5a      2026-04-08  SB  Wired generate_datasheet; DATASHEET.md added to output_files (D-026)
 #
 # ===========================================================
 """orchestrator.py — Pipeline coordinator and retry owner.
@@ -72,6 +73,7 @@ from agents.coverage_reader import read_coverage_xml
 from agents.closure_gen import generate_closure_script
 from checkers.verifier import check
 from agents.ral_gen import generate_ral
+from agents.datasheet_gen import generate_datasheet
 from emitters.vivado import emit as emit_vivado
 from emitters.questa import emit as emit_questa
 from emitters.generic_c import emit as emit_generic_c
@@ -139,6 +141,7 @@ class OrchestratorResult:
     gap_report_path: Optional[str] = None
     closure_passes: int = 0
     closure_script_path: Optional[str] = None
+    datasheet_path: Optional[str] = None
 
 
 def _resolve_emitter(sim_target: str):
@@ -549,11 +552,34 @@ def run(job: JobSpec) -> OrchestratorResult:
                 print(f"[orchestrator] Checker passed all tiers; tier-1 structural checks passed")
             emitter = _resolve_emitter(job.sim_target)
             output_files = emitter(ir, artifacts, job.out_dir)
+
+            # --- Data sheet generation (v5a) ---
+            datasheet_path: Optional[str] = None
+            try:
+                datasheet_out = os.path.join(job.out_dir, "DATASHEET.md")
+                input_dir = os.path.dirname(os.path.abspath(job.input_file))
+                existing_ds_candidate = os.path.join(input_dir, "DATASHEET.md")
+                existing_ds = existing_ds_candidate if os.path.isfile(
+                    existing_ds_candidate) else None
+                datasheet_path = generate_datasheet(
+                    ir=ir,
+                    intent_result=intent_result,
+                    req_result=req_result,
+                    out_path=datasheet_out,
+                    existing_path=existing_ds,
+                )
+                output_files.append(datasheet_path)
+                if job.verbose:
+                    print(f"[pssgen] Data sheet written: {datasheet_path}")
+            except Exception as e:
+                print(f"[pssgen] WARNING: datasheet generation failed: {e}")
+
             base_result = OrchestratorResult(
                 success=True,
                 output_files=output_files,
                 attempts=attempt,
                 gap_report_path=gap_report_path,
+                datasheet_path=datasheet_path,
             )
             # --- Coverage closure loop (v3c-b) ---
             if job.coverage_loop is not None and job.coverage_loop > 0:
