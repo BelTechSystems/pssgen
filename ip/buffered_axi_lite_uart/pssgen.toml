@@ -7,6 +7,17 @@ source = "docs/BALU-RS-001.docx"
 # to bootstrap buffered_axi_lite_uart.req
 # The .req file is never overwritten once created.
 
+[input]
+intent = "buffered_axi_lite_uart.intent"
+req    = "buffered_axi_lite_uart.req"
+
+[output]
+dir = "tb"
+# pssgen writes generated testbench, PSS model,
+# RAL model, gap report, and data sheet here.
+# Re-running pssgen regenerates all files in this
+# directory. Do not store hand-authored files here.
+
 [[sources]]
 hdl = "vhdl/buffered_axi_lite_uart.vhd"
 

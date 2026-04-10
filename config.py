@@ -30,6 +30,7 @@
 #   v3c-a  2026-03-29  SB  Initial implementation; TOML project config support
 #   v3c-b  2026-03-29  SB  Resolve TOML file paths relative to TOML directory
 #   v4c    2026-04-05  SB  [[register_maps]] array-of-tables multi-file support
+#   v5b    2026-04-10  SB  Resolve [output] dir relative to TOML directory
 #
 # ===========================================================
 """config.py — pssgen.toml project configuration loader.
@@ -176,7 +177,7 @@ def load_project_config(config_path: str) -> dict:
 
     output_sec = raw.get("output", {})
     if "dir" in output_sec:
-        config["out_dir"] = output_sec["dir"]
+        config["out_dir"] = _resolve(output_sec["dir"])
     if "sim" in output_sec:
         config["sim_target"] = output_sec["sim"]
 

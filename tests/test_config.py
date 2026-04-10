@@ -125,9 +125,10 @@ def test_config_load_reads_input_section() -> None:
 
 
 def test_config_load_reads_output_section() -> None:
-    """load_project_config() returns out_dir and sim_target from [output]."""
+    """load_project_config() resolves out_dir to an absolute path relative to TOML."""
     config = load_project_config(FIXTURE_TOML)
-    assert config["out_dir"] == "./out_toml"
+    assert os.path.isabs(config["out_dir"])
+    assert config["out_dir"].replace("\\", "/").endswith("out_toml")
     assert config["sim_target"] == "vivado"
 
 
