@@ -19,13 +19,21 @@
 //   RX_ENGINE      : RX_ENGINE_p — UART receive shift register
 //   INT_CTRL       : INT_CTRL_p — interrupt sticky flags, IRQ
 //   TIMEOUT_CTRL   : TIMEOUT_p — receive timeout counter
-//   STATUS_MUX     : STATUS_p — combinatorial STATUS register
+//   STATUS_MUX     : STATUS_p — always_comb STATUS register assembly;
+//                    drives status_word_s; AXI_READ_p muxes into rdata_s
 //
 // Dependencies:
 //   None — no imports or packages required
 //
+// Implementation status: partial — reset branches complete, STATUS_p
+//   complete, functional else branches pending implementation
+// Portability: $rtoi/$itor used only in localparam computation;
+//   no simulation/synthesis impact
+//
 // History:
 //   2026-04-08  S. Belton  Initial module + stub (IEEE 1800-2017)
+//   2026-04-10  S. Belton  Reset branches implemented,
+//                          STATUS_p complete, ev_* comments
 // =============================================================
 
 module buffered_axi_lite_uart #(
@@ -157,10 +165,11 @@ module buffered_axi_lite_uart #(
   logic [1:0]  bresp_s;         // write response code — registered
 
   // ---- AXI-Lite read channel internal state ----------------
-  logic        arready_s;       // read address ready — registered
-  logic        rvalid_s;        // read data valid — registered
-  logic [31:0] rdata_s;         // read data — registered
-  logic [1:0]  rresp_s;         // read response code — registered
+  logic        arready_s;        // read address ready — registered
+  logic        rvalid_s;         // read data valid — registered
+  logic [31:0] rdata_s;          // read data — registered
+  logic [1:0]  rresp_s;          // read response code — registered
+  logic [31:0] status_word_s;    // STATUS combinatorial word — assembled by STATUS_p
 
   // ---- Register file ---------------------------------------
   logic [7:0]  ctrl_s;          // CTRL[7:0] — UART_EN, TX_EN, RX_EN, ...
@@ -210,14 +219,14 @@ module buffered_axi_lite_uart #(
   logic        timeout_flag_s;  // TIMEOUT_FLAG — set on expiry
 
   // ---- Interrupt event pulses (single-cycle sources) -------
-  logic ev_tx_thresh_s;
-  logic ev_rx_thresh_s;
-  logic ev_tx_empty_s;
-  logic ev_rx_full_s;
-  logic ev_parity_err_s;
-  logic ev_frame_err_s;
-  logic ev_overrun_s;
-  logic ev_timeout_s;
+  logic ev_tx_thresh_s;   // TX level crossed threshold — TX_ENGINE_p
+  logic ev_rx_thresh_s;   // RX level crossed threshold — RX_ENGINE_p
+  logic ev_tx_empty_s;    // TX FIFO became empty — TX_FIFO_p
+  logic ev_rx_full_s;     // RX FIFO full — RX_FIFO_p
+  logic ev_parity_err_s;  // parity error detected — RX_ENGINE_p
+  logic ev_frame_err_s;   // framing error detected — RX_ENGINE_p
+  logic ev_overrun_s;     // RX overrun (push while full) — RX_FIFO_p
+  logic ev_timeout_s;     // receive timeout expired — TIMEOUT_p
 
   // ===========================================================
   // Concurrent assign statements
@@ -275,61 +284,64 @@ module buffered_axi_lite_uart #(
   assign uart_tx = tx_busy_s ? tx_shift_s[0] : 1'b1;
 
   // ===========================================================
-  // Process stubs — all synchronous to axi_aclk,
+  // Clocked processes — synchronous to axi_aclk,
   // synchronous active-low reset (axi_aresetn).
-  // No asynchronous resets.
+  // No asynchronous resets. Functional else branches pending.
   // ===========================================================
 
   // -- NCO_BAUD — NCO accumulator, baud pulse -----------------
   // Block   : NCO_BAUD
   // Purpose : NCO phase accumulator; produces baud_pulse_s on carry
-  //           Reset: nco_accum_s <= LP_BAUD_TUNING_RESET_c
-  //           Run:   nco_accum_s <= nco_accum_s + baud_tuning_s
-  // Note    : Must also produce baud_pulse_16x_s (NCO MSB-4)
-  //           for RX mid-bit sampling. 16x oversampling required
-  //           for noise immunity. See UART-BR requirement group.
+  //           and baud_pulse_16x_s for 16x RX mid-bit sampling
   always_ff @(posedge axi_aclk) begin : NCO_ACCUM_p
     if (!axi_aresetn) begin
-      // nco_accum_s <= LP_BAUD_TUNING_RESET_c;
+      nco_accum_s <= LP_BAUD_TUNING_RESET_c;
     end else begin
-      // nco_accum_s <= nco_accum_s + baud_tuning_s; carry out = baud_pulse_s
+      // Accumulate: nco_accum_s <= nco_accum_s + baud_tuning_s
+      // baud_pulse_s drives TX engine (carry from bit 31)
+      // baud_pulse_16x_s drives RX oversampling (bit 27)
     end
   end
 
   // -- AXI_WRITE_CTRL — write address latch -------------------
   // Block   : AXI_WRITE_CTRL
   // Purpose : Latch AXI-Lite write address when awvalid & awready
-  //           Reset: aw_valid_lat_s <= 0; aw_addr_lat_s <= 0
   always_ff @(posedge axi_aclk) begin : AXI_AW_LATCH_p
     if (!axi_aresetn) begin
-      // aw_valid_lat_s <= 1'b0; aw_addr_lat_s <= '0;
+      aw_valid_lat_s <= 1'b0;
+      aw_addr_lat_s  <= '0;
     end else begin
-      // Capture s_axi_awaddr when handshake completes
+      // Accept awvalid: latch addr, set aw_valid_lat_s
+      // Clear aw_valid_lat_s when write response accepted
     end
   end
 
   // -- AXI_WRITE_CTRL — write data latch ----------------------
   // Block   : AXI_WRITE_CTRL
   // Purpose : Latch AXI-Lite write data when wvalid & wready
-  //           Reset: w_valid_lat_s <= 0; w_data_lat_s <= 0
   always_ff @(posedge axi_aclk) begin : AXI_W_LATCH_p
     if (!axi_aresetn) begin
-      // w_valid_lat_s <= 1'b0; w_data_lat_s <= '0; w_strb_lat_s <= '0;
+      w_valid_lat_s <= 1'b0;
+      w_data_lat_s  <= '0;
+      w_strb_lat_s  <= '0;
     end else begin
-      // Capture s_axi_wdata/wstrb when handshake completes
+      // Accept wvalid: latch data/strb, set w_valid_lat_s
+      // Clear w_valid_lat_s when write response accepted
     end
   end
 
   // -- AXI_WRITE_CTRL — write response ------------------------
   // Block   : AXI_WRITE_CTRL
   // Purpose : Decode write address, dispatch to register file,
-  //           drive bvalid/bresp (OKAY or SLVERR for undefined addr)
-  //           Reset: bvalid_s <= 0; bresp_s <= LP_AXI_OKAY_c
+  //           drive bvalid/bresp with OKAY or SLVERR
   always_ff @(posedge axi_aclk) begin : AXI_WRITE_RESP_p
     if (!axi_aresetn) begin
-      // bvalid_s <= 1'b0; bresp_s <= LP_AXI_OKAY_c;
+      bvalid_s <= 1'b0;
+      bresp_s  <= LP_AXI_OKAY_c;
     end else begin
-      // When both latches valid, dispatch write; assert bvalid_s
+      // When aw_valid_lat_s && w_valid_lat_s: assert bvalid_s
+      // Set bresp_s = LP_AXI_SLVERR_c for undefined address
+      // Clear bvalid_s when bready accepted
     end
   end
 
@@ -337,12 +349,16 @@ module buffered_axi_lite_uart #(
   // Block   : AXI_READ_CTRL
   // Purpose : Decode read address, mux register data to rdata_s,
   //           drive arready/rvalid/rresp
-  //           Reset: arready_s <= 1; rvalid_s <= 0; rdata_s <= 0
   always_ff @(posedge axi_aclk) begin : AXI_READ_p
     if (!axi_aresetn) begin
-      // arready_s <= 1'b1; rvalid_s <= 1'b0; rdata_s <= '0;
+      arready_s <= 1'b1;
+      rvalid_s  <= 1'b0;
+      rdata_s   <= '0;
+      rresp_s   <= LP_AXI_OKAY_c;
     end else begin
-      // Accept read address; mux register file output to rdata_s
+      // Accept arvalid: decode araddr, mux register to rdata_s
+      // Assert rvalid_s; set rresp_s = SLVERR for undefined addr
+      // arready_s deasserts while rvalid_s pending
     end
   end
 
@@ -351,20 +367,22 @@ module buffered_axi_lite_uart #(
   // Purpose : Apply reset values on reset; decode AXI write address
   //           and update register file otherwise.
   //           BAUD_TUNING write blocked while ctrl_s[7]=UART_EN.
-  //           Single process owns all register signals.
-  //           Reset: ctrl_s<=0; baud_tuning_s<=LP_BAUD_TUNING_RESET_c;
-  //                  fifo_ctrl_s<={LP_FIFO_THRESH_RESET_c,LP_FIFO_THRESH_RESET_c};
-  //                  timeout_val_s<=P_TIMEOUT_DEFAULT; int_enable_s<=0;
-  //                  int_status_s<=0; scratch_s<=0
+  //           Single process owns all register signals except
+  //           int_status_s — owned by INT_CTRL_p. W1C clear for
+  //           INT_CLEAR passed to INT_CTRL_p via w1c_mask_s.
   always_ff @(posedge axi_aclk) begin : REG_WRITE_p
     if (!axi_aresetn) begin
-      // ctrl_s <= 8'h00;
-      // baud_tuning_s <= LP_BAUD_TUNING_RESET_c;
-      // fifo_ctrl_s <= {LP_FIFO_THRESH_RESET_c, LP_FIFO_THRESH_RESET_c};
-      // timeout_val_s <= P_TIMEOUT_DEFAULT[15:0];
-      // int_enable_s <= 8'h00; int_status_s <= 8'h00; scratch_s <= '0;
+      ctrl_s <= 8'h00;
+      baud_tuning_s <= LP_BAUD_TUNING_RESET_c;
+      fifo_ctrl_s   <= {LP_FIFO_THRESH_RESET_c,
+                        LP_FIFO_THRESH_RESET_c};
+      timeout_val_s <= 16'(P_TIMEOUT_DEFAULT);
+      int_enable_s  <= 8'h00;
+      scratch_s     <= '0;
     end else begin
-      // Case aw_addr_lat_s: update register; INT_CLEAR uses W1C logic
+      // Decode aw_addr_lat_s when aw_valid_lat_s && w_valid_lat_s
+      // Write to matching register; BAUD_TUNING blocked if ctrl_s[7]
+      // INT_CLEAR: W1C — int_status_s <= int_status_s & ~w_data_lat_s[7:0]
     end
   end
 
@@ -372,12 +390,15 @@ module buffered_axi_lite_uart #(
   // Block   : TX_FIFO
   // Purpose : Push TX_DATA writes into tx_fifo_mem_s; pop on
   //           TX engine request when not tx_empty_s
-  //           Reset: tx_wr_ptr_s <= 0; tx_rd_ptr_s <= 0
   always_ff @(posedge axi_aclk) begin : TX_FIFO_p
     if (!axi_aresetn) begin
-      // tx_wr_ptr_s <= '0; tx_rd_ptr_s <= '0;
+      tx_wr_ptr_s <= '0;
+      tx_rd_ptr_s <= '0;
     end else begin
-      // Push: increment tx_wr_ptr_s; Pop: increment tx_rd_ptr_s
+      // Push: write w_data_lat_s[7:0] to tx_fifo_mem_s[tx_wr_ptr_s],
+      //       increment tx_wr_ptr_s when TX_DATA written and !tx_full_s
+      // Pop:  read tx_fifo_mem_s[tx_rd_ptr_s] to TX engine,
+      //       increment tx_rd_ptr_s when TX engine requests byte
     end
   end
 
@@ -385,12 +406,14 @@ module buffered_axi_lite_uart #(
   // Block   : RX_FIFO
   // Purpose : Push received bytes from RX engine; pop on RX_DATA read;
   //           set ev_overrun_s if push attempted while rx_full_s
-  //           Reset: rx_wr_ptr_s <= 0; rx_rd_ptr_s <= 0
   always_ff @(posedge axi_aclk) begin : RX_FIFO_p
     if (!axi_aresetn) begin
-      // rx_wr_ptr_s <= '0; rx_rd_ptr_s <= '0;
+      rx_wr_ptr_s <= '0;
+      rx_rd_ptr_s <= '0;
     end else begin
-      // Push on RX engine valid; Pop on RX_DATA AXI read
+      // Push: write received byte to rx_fifo_mem_s[rx_wr_ptr_s],
+      //       increment rx_wr_ptr_s; assert ev_overrun_s if rx_full_s
+      // Pop:  increment rx_rd_ptr_s when RX_DATA register is read
     end
   end
 
@@ -398,12 +421,19 @@ module buffered_axi_lite_uart #(
   // Block   : TX_ENGINE
   // Purpose : Load tx_shift_s from TX FIFO, clock out start/data/stop
   //           at baud_pulse_s rate; drives uart_tx via assign
-  //           Reset: tx_shift_s <= '1; tx_bit_cnt_s <= 0; tx_busy_s <= 0
   always_ff @(posedge axi_aclk) begin : TX_ENGINE_p
     if (!axi_aresetn) begin
-      // tx_shift_s <= '1; tx_bit_cnt_s <= '0; tx_busy_s <= 1'b0;
+      tx_shift_s   <= '1;
+      tx_bit_cnt_s <= '0;
+      tx_busy_s    <= 1'b0;
     end else begin
-      // On baud_pulse_s: shift right; assert tx_busy_s; ev_tx_thresh_s
+      // On baud_pulse_s && !tx_busy_s && !tx_empty_s:
+      //   load {1'b1, tx_fifo_byte, 1'b0} into tx_shift_s
+      //   set tx_busy_s, tx_bit_cnt_s <= 4'd10
+      // On baud_pulse_s && tx_busy_s:
+      //   shift right: tx_shift_s <= {1'b1, tx_shift_s[9:1]}
+      //   decrement tx_bit_cnt_s; clear tx_busy_s when zero
+      //   assert ev_tx_thresh_s when TX level crosses threshold
     end
   end
 
@@ -413,25 +443,34 @@ module buffered_axi_lite_uart #(
   //           sample data at mid-baud using baud_pulse_16x_s;
   //           push to RX FIFO on stop bit. 16x oversampling for
   //           noise immunity and phase alignment.
-  //           Reset: rx_sync_s <= 2'b11; rx_busy_s <= 0; rx_bit_cnt_s <= 0
   always_ff @(posedge axi_aclk) begin : RX_ENGINE_p
     if (!axi_aresetn) begin
-      // rx_sync_s <= 2'b11; rx_busy_s <= 1'b0; rx_bit_cnt_s <= '0;
+      rx_sync_s <= 2'b11;
+      rx_busy_s    <= 1'b0;
+      rx_bit_cnt_s <= '0;
+      rx_shift_s   <= '0;
     end else begin
-      // Synchronise uart_rx; detect falling edge; sample at half-baud
+      // Synchronise: rx_sync_s <= {rx_sync_s[0], uart_rx}
+      // Start detect: falling edge on rx_sync_s[1] when !rx_busy_s
+      //   Start oversampling counter at baud_pulse_16x_s
+      //   Sample at 8th pulse (mid-bit alignment)
+      // Data capture: sample rx_sync_s[1] at mid-bit for 8 data bits
+      // Stop bit: validate high; push byte to RX FIFO
+      //   assert ev_parity_err_s or ev_frame_err_s as appropriate
     end
   end
 
   // -- INT_CTRL — interrupt controller ------------------------
   // Block   : INT_CTRL
   // Purpose : Latch event pulses into int_status_s sticky flags;
-  //           clear on INT_CLEAR write (W1C); irq by assign
-  //           Reset: int_status_s <= 0
+  //           W1C clear via w1c_mask_s from REG_WRITE_p; irq by assign
   always_ff @(posedge axi_aclk) begin : INT_CTRL_p
     if (!axi_aresetn) begin
-      // int_status_s <= 8'h00;
+      int_status_s <= 8'h00;
     end else begin
-      // OR event pulses into sticky flags; mask with W1C clear
+      // OR event pulses into int_status_s sticky flags each cycle
+      // W1C clear handled in REG_WRITE_p via int_status_s masking
+      // int_status_s <= (int_status_s | ev_vector_s) & ~w1c_mask_s
     end
   end
 
@@ -439,36 +478,39 @@ module buffered_axi_lite_uart #(
   // Block   : TIMEOUT_CTRL
   // Purpose : Count baud pulses since last RX byte; assert ev_timeout_s
   //           when timeout_cnt_s reaches timeout_val_s; clear on RX pop
-  //           Reset: timeout_cnt_s <= 0; timeout_flag_s <= 0
   always_ff @(posedge axi_aclk) begin : TIMEOUT_p
     if (!axi_aresetn) begin
-      // timeout_cnt_s <= '0; timeout_flag_s <= 1'b0;
+      timeout_cnt_s  <= '0;
+      timeout_flag_s <= 1'b0;
     end else begin
-      // Increment on baud_pulse_s; reset on RX pop; set flag on expiry
+      // Increment timeout_cnt_s on baud_pulse_s while rx_busy_s=0
+      // Reset timeout_cnt_s on RX FIFO pop (byte read by software)
+      // Set timeout_flag_s when timeout_cnt_s == timeout_val_s
+      //   and timeout_val_s != 0 (0 disables timeout)
+      // Clear timeout_flag_s when RX FIFO becomes empty
     end
   end
 
-  // -- STATUS_MUX — combinatorial STATUS register assembly ----
+  // -- STATUS_MUX — combinatorial STATUS register -------------
   // Block   : STATUS_MUX
-  // Purpose : Combinatorial assembly of STATUS[31:0] from FIFO
-  //           flags, engine busy signals, and UART error flags.
+  // Purpose : Assemble STATUS[31:0] from live hardware signals.
   //           Zero latency — software reads current-cycle state.
-  //           No reset required — purely combinatorial.
+  //           Owns status_word_s only. AXI_READ_p muxes this
+  //           into rdata_s when araddr == LP_REG_STATUS_c.
   always_comb begin : STATUS_p
-    // STATUS[31:12] reserved — read as zero
-    // STATUS[11]    TIMEOUT_FLAG
-    // STATUS[10]    INT_PENDING (mirrors IRQ output)
-    // STATUS[9]     TX_FULL
-    // STATUS[8]     TX_EMPTY
-    // STATUS[7]     RX_FULL
-    // STATUS[6]     RX_EMPTY
-    // STATUS[5]     TX_BUSY
-    // STATUS[4]     RX_BUSY
-    // STATUS[3]     PARITY_ERR
-    // STATUS[2]     FRAME_ERR
-    // STATUS[1]     OVERRUN
-    // STATUS[0]     reserved — read as zero
-    rdata_s = '0; // stub: full assembly implemented with register file
+    status_word_s                = '0;
+    status_word_s[11]            = timeout_flag_s;
+    status_word_s[10]            = |(int_status_s & int_enable_s);
+    status_word_s[9]             = tx_full_s;
+    status_word_s[8]             = tx_empty_s;
+    status_word_s[7]             = rx_full_s;
+    status_word_s[6]             = rx_empty_s;
+    status_word_s[5]             = tx_busy_s;
+    status_word_s[4]             = rx_busy_s;
+    status_word_s[3]             = ev_parity_err_s;
+    status_word_s[2]             = ev_frame_err_s;
+    status_word_s[1]             = ev_overrun_s;
+    // status_word_s[0] reserved — read as zero
   end
 
 endmodule : buffered_axi_lite_uart

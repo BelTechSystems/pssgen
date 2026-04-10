@@ -19,15 +19,22 @@
 --   RX_ENGINE      : RX_ENGINE_p — UART receive shift register
 --   INT_CTRL       : INT_CTRL_p — interrupt sticky flags, IRQ
 --   TIMEOUT_CTRL   : TIMEOUT_p — receive timeout counter
---   STATUS_MUX     : STATUS_p — combinatorial STATUS register
+--   STATUS_MUX     : STATUS_p — process(all) STATUS register assembly;
+--                    drives status_word_s; AXI_READ_p muxes into rdata_s
 --
 -- Dependencies:
 --   ieee.std_logic_1164
 --   ieee.numeric_std
 --   ieee.math_real (elaboration only — for baud reset calc)
 --
+-- Portability:    ieee.math_real used at elaboration only; no synthesis impact
+-- Impl. status:  partial — reset branches complete, STATUS_p complete,
+--                          functional else branches pending implementation
+--
 -- History:
 --   2026-04-07  S. Belton  Initial entity + architecture stub
+--   2026-04-10  S. Belton  Reset branches implemented, STATUS_p complete
+--                          with live hardware signal assembly
 -- =============================================================
 
 library ieee;
@@ -180,14 +187,16 @@ architecture rtl of buffered_axi_lite_uart is
   -- Write response code — registered
 
   -- ---- AXI-Lite read channel internal state ----------------
-  signal arready_s : std_logic;
+  signal arready_s     : std_logic;
   -- Read address ready — registered
-  signal rvalid_s  : std_logic;
+  signal rvalid_s      : std_logic;
   -- Read data valid — registered
-  signal rdata_s   : std_logic_vector(31 downto 0);
+  signal rdata_s       : std_logic_vector(31 downto 0);
   -- Read data — registered
-  signal rresp_s   : std_logic_vector(1 downto 0);
+  signal rresp_s       : std_logic_vector(1 downto 0);
   -- Read response code — registered
+  signal status_word_s : std_logic_vector(31 downto 0);
+  -- STATUS register combinatorial word — assembled by STATUS_p
 
   -- ---- Register file ---------------------------------------
   signal ctrl_s        : std_logic_vector(7 downto 0);
@@ -266,15 +275,14 @@ architecture rtl of buffered_axi_lite_uart is
   -- TIMEOUT_FLAG — set on expiry, cleared when RX FIFO empty
 
   -- ---- Interrupt event pulses (single-cycle sources) -------
-  signal ev_tx_thresh_s : std_logic;
-  signal ev_rx_thresh_s : std_logic;
-  signal ev_tx_empty_s  : std_logic;
-  signal ev_rx_full_s   : std_logic;
-  signal ev_parity_err_s : std_logic;
-  signal ev_frame_err_s  : std_logic;
-  signal ev_overrun_s   : std_logic;
-  signal ev_timeout_s   : std_logic;
-  -- Single-cycle event pulses feeding INT_STATUS sticky flags
+  signal ev_tx_thresh_s  : std_logic;  -- TX level crossed threshold — TX_ENGINE_p
+  signal ev_rx_thresh_s  : std_logic;  -- RX level crossed threshold — RX_ENGINE_p
+  signal ev_tx_empty_s   : std_logic;  -- TX FIFO became empty — TX_FIFO_p
+  signal ev_rx_full_s    : std_logic;  -- RX FIFO full — RX_FIFO_p
+  signal ev_parity_err_s : std_logic;  -- parity error detected — RX_ENGINE_p
+  signal ev_frame_err_s  : std_logic;  -- framing error detected — RX_ENGINE_p
+  signal ev_overrun_s    : std_logic;  -- RX overrun (push while full) — RX_FIFO_p
+  signal ev_timeout_s    : std_logic;  -- receive timeout expired — TIMEOUT_p
 
 begin
 
@@ -380,27 +388,24 @@ begin
   uart_tx <= tx_shift_s(0) when tx_busy_s = '1' else '1';
 
   -- ===========================================================
-  -- Process stubs — all synchronous to axi_aclk,
+  -- Clocked processes — synchronous to axi_aclk,
   -- synchronous active-low reset (axi_aresetn).
-  -- No asynchronous resets.
+  -- No asynchronous resets. Functional else branches pending.
   -- ===========================================================
 
   -- -------------------------------------------------------------
   -- Process : NCO_ACCUM_p
   -- Block   : NCO_BAUD
   -- Purpose : NCO phase accumulator; produces baud_pulse_s on carry
-  -- Note    : Implementation must also produce a 16x oversample
-  --           pulse (baud_pulse_16x_s) using NCO MSB-4 for
-  --           mid-bit RX sampling. See UART-BR requirement group.
+  --           and baud_pulse_16x_s for 16x RX mid-bit sampling
   -- -------------------------------------------------------------
   NCO_ACCUM_p : process(axi_aclk)
   begin
     if rising_edge(axi_aclk) then
       if axi_aresetn = '0' then
-        -- Reset: nco_accum_s <= BAUD_TUNING_RESET_c
-        null;
+        nco_accum_s <= BAUD_TUNING_RESET_c;
       else
-        -- Add baud_tuning_s each cycle; carry out is baud_pulse_s
+        -- Accumulate NCO each cycle; carry-out drives baud_pulse_s and baud_pulse_16x_s
         null;
       end if;
     end if;
@@ -415,8 +420,8 @@ begin
   begin
     if rising_edge(axi_aclk) then
       if axi_aresetn = '0' then
-        -- Reset: aw_valid_lat_s <= '0'; aw_addr_lat_s <= (others => '0')
-        null;
+        aw_valid_lat_s <= '0';
+        aw_addr_lat_s  <= (others => '0');
       else
         -- Capture s_axi_awaddr into aw_addr_lat_s when handshake completes
         null;
@@ -433,8 +438,9 @@ begin
   begin
     if rising_edge(axi_aclk) then
       if axi_aresetn = '0' then
-        -- Reset: w_valid_lat_s <= '0'; w_data_lat_s <= (others => '0')
-        null;
+        w_valid_lat_s <= '0';
+        w_data_lat_s  <= (others => '0');
+        w_strb_lat_s  <= (others => '0');
       else
         -- Capture s_axi_wdata/wstrb into latches when handshake completes
         null;
@@ -446,14 +452,14 @@ begin
   -- Process : AXI_WRITE_RESP_p
   -- Block   : AXI_WRITE_CTRL
   -- Purpose : Decode write address, dispatch to register file,
-  --           drive bvalid/bresp (OKAY or SLVERR for undefined addr)
+  --           drive bvalid/bresp with OKAY or SLVERR
   -- -------------------------------------------------------------
   AXI_WRITE_RESP_p : process(axi_aclk)
   begin
     if rising_edge(axi_aclk) then
       if axi_aresetn = '0' then
-        -- Reset: bvalid_s <= '0'; bresp_s <= AXI_OKAY_c
-        null;
+        bvalid_s <= '0';
+        bresp_s  <= AXI_OKAY_c;
       else
         -- When both latches valid, dispatch write; assert bvalid_s
         null;
@@ -471,8 +477,10 @@ begin
   begin
     if rising_edge(axi_aclk) then
       if axi_aresetn = '0' then
-        -- Reset: arready_s <= '1'; rvalid_s <= '0'; rdata_s <= (others => '0')
-        null;
+        arready_s <= '1';
+        rvalid_s  <= '0';
+        rdata_s   <= (others => '0');
+        rresp_s   <= AXI_OKAY_c;
       else
         -- Accept read address; mux register file output to rdata_s
         null;
@@ -486,20 +494,22 @@ begin
   -- Purpose : Apply reset values to all writable registers on reset;
   --           decode AXI write address and update register file otherwise.
   --           BAUD_TUNING write blocked while ctrl_s(7)=UART_EN.
-  --           Single process owns all register signals to avoid
-  --           multiple-driver conflicts.
+  --           Does not own int_status_s — owned by INT_CTRL_p.
+  --           W1C clear for INT_CLEAR passed via w1c_mask signal.
   -- -------------------------------------------------------------
   REG_WRITE_p : process(axi_aclk)
   begin
     if rising_edge(axi_aclk) then
       if axi_aresetn = '0' then
-        -- ctrl_s <= x"00"; baud_tuning_s <= BAUD_TUNING_RESET_c;
-        -- fifo_ctrl_s <= FIFO_THRESH_RESET_c & FIFO_THRESH_RESET_c;
-        -- timeout_val_s <= std_logic_vector(to_unsigned(G_TIMEOUT_DEFAULT,16));
-        -- int_enable_s <= x"00"; int_status_s <= x"00"; scratch_s <= (others => '0')
-        null;
+        ctrl_s        <= (others => '0');
+        baud_tuning_s <= BAUD_TUNING_RESET_c;
+        fifo_ctrl_s   <= FIFO_THRESH_RESET_c & FIFO_THRESH_RESET_c;
+        timeout_val_s <= std_logic_vector(
+                           to_unsigned(G_TIMEOUT_DEFAULT, 16));
+        int_enable_s  <= (others => '0');
+        scratch_s     <= (others => '0');
       else
-        -- Case aw_addr_lat_s: update register; INT_CLEAR uses W1C logic
+        -- Decode write address and update register file; INT_CLEAR W1C via INT_CTRL_p
         null;
       end if;
     end if;
@@ -515,8 +525,8 @@ begin
   begin
     if rising_edge(axi_aclk) then
       if axi_aresetn = '0' then
-        -- Reset: tx_wr_ptr_s <= (others => '0'); tx_rd_ptr_s <= (others => '0')
-        null;
+        tx_wr_ptr_s <= (others => '0');
+        tx_rd_ptr_s <= (others => '0');
       else
         -- Push: increment tx_wr_ptr_s; Pop: increment tx_rd_ptr_s
         null;
@@ -534,8 +544,8 @@ begin
   begin
     if rising_edge(axi_aclk) then
       if axi_aresetn = '0' then
-        -- Reset: rx_wr_ptr_s <= (others => '0'); rx_rd_ptr_s <= (others => '0')
-        null;
+        rx_wr_ptr_s <= (others => '0');
+        rx_rd_ptr_s <= (others => '0');
       else
         -- Push on RX engine valid; Pop on RX_DATA AXI read
         null;
@@ -553,9 +563,9 @@ begin
   begin
     if rising_edge(axi_aclk) then
       if axi_aresetn = '0' then
-        -- Reset: tx_shift_s <= (others => '1'); tx_bit_cnt_s <= (others => '0')
-        --        tx_busy_s <= '0'
-        null;
+        tx_shift_s   <= (others => '1');
+        tx_bit_cnt_s <= (others => '0');
+        tx_busy_s    <= '0';
       else
         -- On baud_pulse_s: shift right; set tx_busy_s; assert ev_tx_thresh_s
         null;
@@ -575,8 +585,10 @@ begin
   begin
     if rising_edge(axi_aclk) then
       if axi_aresetn = '0' then
-        -- Reset: rx_sync_s <= "11"; rx_busy_s <= '0'; rx_bit_cnt_s <= (others => '0')
-        null;
+        rx_sync_s    <= "11";
+        rx_busy_s    <= '0';
+        rx_bit_cnt_s <= (others => '0');
+        rx_shift_s   <= (others => '0');
       else
         -- Synchronise uart_rx; detect falling edge for start; sample at half-baud
         null;
@@ -588,16 +600,16 @@ begin
   -- Process : INT_CTRL_p
   -- Block   : INT_CTRL
   -- Purpose : Latch event pulses into int_status_s sticky flags;
-  --           clear on INT_CLEAR write (W1C); irq driven by concurrent assign
+  --           W1C clear via w1c_mask signal from REG_WRITE_p;
+  --           irq driven by concurrent assign
   -- -------------------------------------------------------------
   INT_CTRL_p : process(axi_aclk)
   begin
     if rising_edge(axi_aclk) then
       if axi_aresetn = '0' then
-        -- Reset: int_status_s <= x"00"
-        null;
+        int_status_s <= (others => '0');
       else
-        -- OR event pulses into sticky flags; mask with W1C clear from REG_WRITE_p
+        -- OR event pulses into int_status_s; apply W1C mask from REG_WRITE_p w1c_mask signal
         null;
       end if;
     end if;
@@ -613,8 +625,8 @@ begin
   begin
     if rising_edge(axi_aclk) then
       if axi_aresetn = '0' then
-        -- Reset: timeout_cnt_s <= (others => '0'); timeout_flag_s <= '0'
-        null;
+        timeout_cnt_s  <= (others => '0');
+        timeout_flag_s <= '0';
       else
         -- Increment on baud_pulse_s; reset on RX FIFO pop; set flag on expiry
         null;
@@ -625,25 +637,30 @@ begin
   -- -------------------------------------------------------------
   -- Process : STATUS_p
   -- Block   : STATUS_MUX
-  -- Purpose : Combinatorial assembly of the STATUS register from
-  --           FIFO flags, engine busy signals, and UART error flags.
-  -- Note    : STUB ONLY — replace with process(all) at implementation.
-  --           An empty process(all) is not valid VHDL; clocked here.
-  --           No registered state. STATUS reflects current-cycle
-  --           hardware values with zero additional latency when
-  --           implemented correctly as combinatorial.
+  -- Purpose : Combinatorial assembly of STATUS[31:0] from live
+  --           hardware signals. Zero latency — current-cycle state.
+  --           Drives status_word_s only; AXI_READ_p muxes into
+  --           rdata_s on STATUS register reads.
+  -- Note    : VHDL-2008 process(all). The sensitivity list
+  --           covers all signals read in the process body.
   -- -------------------------------------------------------------
-  STATUS_p : process(axi_aclk)
+  STATUS_p : process(all)
   begin
-    if rising_edge(axi_aclk) then
-      if axi_aresetn = '0' then
-        null;
-      else
-        -- Assemble STATUS[31:0] from tx_full_s, tx_empty_s, rx_full_s,
-        -- rx_empty_s, tx_busy_s, rx_busy_s, parity/frame error flags
-        null;
-      end if;
-    end if;
+    status_word_s        <= (others => '0');
+    status_word_s(11)    <= timeout_flag_s;
+    status_word_s(10)    <= '1' when
+                             (int_status_s and int_enable_s)
+                             /= x"00" else '0';
+    status_word_s(9)     <= tx_full_s;
+    status_word_s(8)     <= tx_empty_s;
+    status_word_s(7)     <= rx_full_s;
+    status_word_s(6)     <= rx_empty_s;
+    status_word_s(5)     <= tx_busy_s;
+    status_word_s(4)     <= rx_busy_s;
+    status_word_s(3)     <= ev_parity_err_s;
+    status_word_s(2)     <= ev_frame_err_s;
+    status_word_s(1)     <= ev_overrun_s;
+    -- status_word_s(0) reserved, already zero from default
   end process STATUS_p;
 
 end architecture rtl;
