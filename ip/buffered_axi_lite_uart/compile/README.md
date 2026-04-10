@@ -1,4 +1,5 @@
-Compilation scripts for simulation targets.
-GHDL: ghdl -a --std=08 ../vhdl/buffered_axi_lite_uart.vhd
-Icarus: iverilog -g2012 ../sv/buffered_axi_lite_uart.sv
-Generated scripts from pssgen land here.
+Source file syntax verification — no simulator
+license required.
+VHDL: ghdl -a --std=08 ../vhdl/buffered_axi_lite_uart.vhd
+SV:   iverilog -g2012 -t null ../sv/buffered_axi_lite_uart.sv
+Run these before every commit touching HDL files.

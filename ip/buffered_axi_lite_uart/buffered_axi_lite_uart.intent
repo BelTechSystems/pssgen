@@ -1,0 +1,253 @@
+; ================================================================
+; buffered_axi_lite_uart.intent
+; Verification Intent File — Buffered AXI-Lite UART
+; Companion to BALU-RS-001 and buffered_axi_lite_uart.req
+;
+; This file contains verification-specific intent that does not
+; appear in BALU-RS-001. Requirements are not restated here.
+; Coverage goals, stimulus strategies, scenario priorities, and
+; waiver rationale are the exclusive content of this file.
+;
+; Requirement traceability is maintained in the .req file.
+; Gap analysis is driven by the .req file cross-references.
+; ================================================================
+
+[identity]
+design_name:     buffered_axi_lite_uart
+hdl_source:      vhdl/buffered_axi_lite_uart.vhd
+language:        vhdl
+emission_target: questa
+
+[register_map]
+source: buffered_axi_lite_uart_regmap.xlsx
+format: simple_block
+
+; ================================================================
+; VERIFICATION STRATEGY NOTES
+; These are engineering judgments made by the verification
+; engineer. They do not belong in the requirements document.
+; ================================================================
+
+[strategy]
+
+NOTE-001: Loopback mode (LOOP_EN) is the primary stimulus
+          strategy for all frame format and parity coverage
+          goals. External UART stimulus is not used in the
+          initial verification pass.
+
+NOTE-002: The NCO baud rate generator is verified indirectly
+          via loopback frame integrity at each COV-001 tuning
+          word. Direct accumulator state observation is not
+          required by any requirement.
+
+NOTE-003: FIFO threshold coverage goals COV-004 and COV-005
+          use relative expressions (RX_THRESH +/- 1) rather
+          than absolute values so they remain valid across
+          all G_FIFO_DEPTH instantiations without test
+          modification.
+
+NOTE-004: Interrupt model verification prioritizes isolation
+          first (COV-007 each_bit_independently) then
+          co-occurrence (COV-008, COV-009). A combined
+          all-sources-simultaneously scenario is explicitly
+          not targeted — it adds complexity without
+          additional requirement closure.
+
+NOTE-005: AXI-Lite SLVERR coverage (COV-010, COV-011) is
+          achieved by accessing offset 0x30 which is the
+          first undefined address above the register map.
+
+NOTE-006: The SCRATCH register walking-ones test (COV-014)
+          is always the first test sequence executed before
+          any functional register access, establishing
+          AXI-Lite connectivity as a precondition for all
+          subsequent tests.
+
+NOTE-007: UART-BR-004 is intentionally absent from the
+          [confirmed] section of the .req file in the
+          initial demonstration. This produces a Direction A
+          ERROR in the gap report. Closing the gap by adding
+          the [CONFIRMED] disposition to the .req file is
+          the live demonstration of pssgen traceability.
+          Do not add UART-BR-004 here until after the demo.
+
+; ================================================================
+; COVERAGE GOALS
+; These are verification engineering decisions, not requirements.
+; The values, boundaries, and cross-coverage points here reflect
+; the verification engineer's judgment about what constitutes
+; adequate coverage of the design space.
+; ================================================================
+
+[coverage]
+
+; --- Baud Rate Generator ---
+
+; NCO tuning words covering standard baud rates and boundaries.
+; Values computed for G_CLK_FREQ_HZ = 100 MHz.
+; Boundary values (min, max) exercise accumulator edge behavior.
+COV-001: BAUD_TUNING = {
+           0x00000001,   ; minimum — floor baud rate
+           0x0028F5C2,   ; 9,600 baud
+           0x004FAF84,   ; 19,200 baud
+           0x009F5F08,   ; 38,400 baud
+           0x00EF0EC3,   ; 57,600 baud
+           0x004FA6D5,   ; 115,200 baud — reset value
+           0x009F4DAA,   ; 230,400 baud
+           0x013E9B55,   ; 460,800 baud
+           0x027D36AA,   ; 921,600 baud
+           0x07AE147B,   ; 3.0 Mbaud
+           0x0A3D70A4,   ; 4.0 Mbaud
+           0xFFFFFFFF    ; maximum — accumulator saturation
+         }
+
+; Write to BAUD_TUNING while UART_EN asserted.
+; Verifies silent-ignore behavior required by UART-BR-004.
+; This is the gap demo coverage point — it closes when
+; UART-BR-004 is added to the .req [confirmed] section.
+COV-013: BAUD_TUNING_WRITE_WHILE_ENABLED
+
+; --- Frame Format ---
+
+; All four parity modes exercised independently in loopback.
+; Injected parity error required for modes 01 and 10.
+COV-002: CTRL.PARITY = { 2'b00, 2'b01, 2'b10, 2'b11 }
+
+; Both stop bit configurations exercised in loopback.
+COV-003: CTRL.STOP_BITS = { 1'b0, 1'b1 }
+
+; --- FIFO Behavior ---
+
+; RX FIFO occupancy relative to threshold.
+; Expressions resolve against actual RX_THRESH register value
+; at time of coverage evaluation.
+; G_FIFO_DEPTH used rather than literal 16 for
+; instantiation independence.
+COV-004: FIFO_STATUS.RX_LEVEL = {
+           0,              ; empty — RX_EMPTY asserted
+           RX_THRESH - 1,  ; one below threshold — no interrupt
+           RX_THRESH,      ; at threshold — boundary
+           RX_THRESH + 1,  ; one above — RX_THRESH interrupt fires
+           G_FIFO_DEPTH    ; full — overrun on next receive
+         }
+
+; TX FIFO occupancy relative to threshold.
+; Asymmetric: TX_THRESH fires when occupancy falls BELOW
+; threshold, opposite of RX. This asymmetry is a common
+; source of integration errors and is verified explicitly.
+COV-005: FIFO_STATUS.TX_LEVEL = {
+           0,              ; empty — TX_EMPTY interrupt fires
+           TX_THRESH - 1,  ; one above threshold — no interrupt
+           TX_THRESH,      ; at threshold — boundary
+           TX_THRESH + 1,  ; one below — TX_THRESH interrupt fires
+           G_FIFO_DEPTH    ; full — TX write ignored
+         }
+
+; --- Receive Timeout ---
+
+; Timeout boundary values including the disable case.
+; G_TIMEOUT_DEFAULT used rather than literal 255 for
+; instantiation independence.
+COV-006: TIMEOUT_VAL = {
+           0x0000,            ; disabled — no timeout event
+           0x0001,            ; minimum active timeout
+           G_TIMEOUT_DEFAULT, ; reset value
+           0xFFFE,            ; near-maximum
+           0xFFFF             ; maximum
+         }
+
+; --- Interrupt Model ---
+
+; Each interrupt source shall fire and clear independently.
+; Isolation before co-occurrence — see NOTE-004.
+COV-007: INT_STATUS each_bit_independently = {
+           TIMEOUT, TX_THRESH, RX_THRESH, TX_EMPTY,
+           RX_FULL, PARITY_ERR, FRAME_ERR, OVERRUN
+         }
+
+; Overrun while RX FIFO full — the critical co-occurrence.
+; This is the scenario most likely to expose FIFO pointer
+; corruption bugs in RTL implementations.
+COV-008: INT_STATUS.OVERRUN && INT_STATUS.RX_FULL
+
+; Timeout pending while RX threshold also pending.
+; Verifies IRQ OR reduction logic handles multiple
+; simultaneous sources correctly.
+COV-009: INT_STATUS.TIMEOUT && INT_STATUS.RX_THRESH
+
+; --- AXI-Lite Interface ---
+
+; Both response codes on write channel.
+; SLVERR achieved via access to offset 0x30 — see NOTE-005.
+COV-010: AXI_BRESP = { OKAY, SLVERR }
+
+; Both response codes on read channel.
+COV-011: AXI_RRESP = { OKAY, SLVERR }
+
+; Both AWVALID/WVALID orderings exercised.
+; Many AXI-Lite slave implementations assume AWVALID
+; arrives before WVALID. This coverage point catches that.
+COV-012: AXI_WRITE_ORDER = { AWVALID_FIRST, WVALID_FIRST }
+
+; --- SCRATCH Register ---
+
+; Walking-ones plus all-zeros and all-ones.
+; Executed first in every test sequence — see NOTE-006.
+COV-014: SCRATCH = {
+           0x00000001, 0x00000002, 0x00000004, 0x00000008,
+           0x00000010, 0x00000020, 0x00000040, 0x00000080,
+           0x000000FF, 0xFFFFFFFF, 0x00000000
+         }
+
+; ================================================================
+; WAIVERS
+; These are engineering dispositions made by the verification
+; engineer. Each waiver requires a rationale. Waived items
+; are never counted as gaps in the gap report.
+; ================================================================
+
+[waivers]
+
+; Fractional NCO accumulator not implemented.
+; The integer NCO provides adequate accuracy at all standard
+; baud rates. The verification engineer accepts this limitation.
+WAIVED: INTENT-fractional-baud
+        rationale: NCO error is below 0.0001% for all standard
+                   baud rates at G_CLK_FREQ_HZ = 100 MHz.
+                   Fractional accumulator extension is deferred
+                   to a future revision and is not a verification
+                   gap for this release.
+
+; Mark parity receive checking not verified in simulation.
+; Transmit-side mark parity is verified via loopback.
+; Receive-side checking is implementation-defined behavior
+; for mark parity mode and is not required by UART-FF-008.
+WAIVED: INTENT-mark-parity-rx
+        rationale: UART-FF-008 requires only that the transmitter
+                   asserts the parity bit. Receive behavior in
+                   mark parity mode is implementation-defined
+                   per UART convention. Transmit assertion is
+                   verified via LOOP_EN loopback in COV-002.
+
+; Maximum NCO tuning word behavior verified in simulation only.
+; BAUD_TUNING = 0xFFFFFFFF produces a theoretical baud rate
+; approaching F_clk which exceeds practical UART line rates
+; and is outside the physical layer scope of this IP.
+WAIVED: INTENT-max-rate-silicon
+        rationale: Functional correctness of the NCO accumulator
+                   at maximum tuning word is verified in
+                   simulation. Physical layer behavior at
+                   near-F_clk baud rates is out of scope.
+                   No requirement mandates silicon verification
+                   at this operating point.
+
+; Simultaneous all-sources interrupt scenario not targeted.
+; See NOTE-004. Individual source isolation (COV-007) and
+; selected co-occurrence (COV-008, COV-009) provide adequate
+; coverage of the interrupt OR reduction logic.
+WAIVED: INTENT-all-interrupts-simultaneous
+        rationale: The interrupt enable and status logic is
+                   a simple OR reduction. COV-007 through
+                   COV-009 provide adequate coverage.
+                   All-simultaneous adds test complexity
+                   without closing any additional requirement.
