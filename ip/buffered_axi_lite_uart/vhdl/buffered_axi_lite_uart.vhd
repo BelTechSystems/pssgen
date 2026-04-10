@@ -346,6 +346,21 @@ begin
 
   -- NCO baud pulse — stub: MSB of accumulator (will be carry-out when implemented)
   baud_pulse_s <= nco_accum_s(31);
+  baud_pulse_16x_s <= nco_accum_s(27);
+  -- STUB: bit 27 produces 16x baud pulse from same NCO.
+  -- Replace with carry from dedicated counter in NCO_ACCUM_p.
+
+  -- Event pulse stubs — all inactive until owning
+  -- processes are implemented. Remove these assignments
+  -- and drive from the owning process at implementation.
+  ev_tx_thresh_s  <= '0';  -- TX_ENGINE_p
+  ev_rx_thresh_s  <= '0';  -- RX_ENGINE_p
+  ev_tx_empty_s   <= '0';  -- TX_FIFO_p
+  ev_rx_full_s    <= '0';  -- RX_FIFO_p
+  ev_parity_err_s <= '0';  -- RX_ENGINE_p
+  ev_frame_err_s  <= '0';  -- RX_ENGINE_p
+  ev_overrun_s    <= '0';  -- RX_FIFO_p
+  ev_timeout_s    <= '0';  -- TIMEOUT_p
 
   -- AXI-Lite output port assignments from internal registered signals
   s_axi_awready <= not aw_valid_lat_s;

@@ -243,6 +243,20 @@ module buffered_axi_lite_uart #(
 
   // NCO baud pulse stub: MSB of accumulator (carry-out when implemented)
   assign baud_pulse_s = nco_accum_s[31];
+  assign baud_pulse_16x_s = nco_accum_s[27];
+  // STUB: bit 27 produces 16x baud pulse from same NCO.
+  // Replace with carry from dedicated counter in NCO_ACCUM_p.
+
+  // Event pulse stubs — inactive until owning processes
+  // are implemented. Remove and drive from owning process.
+  assign ev_tx_thresh_s  = 1'b0;  // TX_ENGINE_p
+  assign ev_rx_thresh_s  = 1'b0;  // RX_ENGINE_p
+  assign ev_tx_empty_s   = 1'b0;  // TX_FIFO_p
+  assign ev_rx_full_s    = 1'b0;  // RX_FIFO_p
+  assign ev_parity_err_s = 1'b0;  // RX_ENGINE_p
+  assign ev_frame_err_s  = 1'b0;  // RX_ENGINE_p
+  assign ev_overrun_s    = 1'b0;  // RX_FIFO_p
+  assign ev_timeout_s    = 1'b0;  // TIMEOUT_p
 
   // AXI-Lite output port assignments from internal registered signals
   assign s_axi_awready = ~aw_valid_lat_s;
