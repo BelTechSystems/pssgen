@@ -188,6 +188,7 @@ module buffered_axi_lite_uart #(
   logic        baud_pulse_s;     // single-cycle pulse at baud rate (registered carry)
   logic        baud_pulse_16x_s; // 16x baud pulse for RX mid-bit sampling
   logic [32:0] sum_v;            // 33-bit sum for NCO carry detection
+  logic [28:0] sum16x_v;        // 29-bit sum for 16x baud carry detection
 
   // ---- FIFO memory -----------------------------------------
   logic [7:0] tx_fifo_mem_s [0:P_FIFO_DEPTH-1];
@@ -298,10 +299,10 @@ module buffered_axi_lite_uart #(
       baud_pulse_16x_s <= 1'b0;
     end else begin
       sum_v          = {1'b0, nco_accum_s} + {1'b0, baud_tuning_s};
-      nco_accum_s   <= sum_v[31:0];
-      baud_pulse_s  <= sum_v[32];
-      baud_pulse_16x_s <= ({1'b0, nco_accum_s[27:0]} +
-                            baud_tuning_s[27:0])[28];
+      sum16x_v       = {1'b0, nco_accum_s[27:0]} + {1'b0, baud_tuning_s[27:0]};
+      nco_accum_s      <= sum_v[31:0];
+      baud_pulse_s     <= sum_v[32];
+      baud_pulse_16x_s <= sum16x_v[28];
     end
   end
 
