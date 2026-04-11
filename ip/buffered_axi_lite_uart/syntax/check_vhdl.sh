@@ -4,6 +4,5 @@
 # Tool:   ghdl (must be on PATH)
 set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-VHD_FILE="$(cd "$SCRIPT_DIR/../vhdl" && pwd)/buffered_axi_lite_uart.vhd"
-ghdl -a --std=08 "$VHD_FILE"
+ghdl -a --std=08 "$SCRIPT_DIR/../vhdl/buffered_axi_lite_uart.vhd"
 echo "VHDL syntax OK"

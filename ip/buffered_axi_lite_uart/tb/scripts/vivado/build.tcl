@@ -18,12 +18,15 @@ set SNAPSHOT ${DESIGN}_snapshot
 # Paths relative to this script's location
 set SCRIPT_DIR [file dirname [file normalize [info script]]]
 set TB_DIR     [file join $SCRIPT_DIR ../..]
-set SV_DIR     [file join $TB_DIR ../sv]
+set DUT_DIR    [file join $SCRIPT_DIR ../../..]
 
-# --- Step 1: Compile DUT (SV, no UVM) ---
+# --- Step 1: Compile DUT ---
+# DUT: VHDL-2008 implementation (pssgen.toml [[sources]])
+# To simulate the SV DUT instead: replace xvhdl with
+#   xvlog --sv and change the path to ../../../sv/${DESIGN}.sv
 puts "Compiling DUT..."
-exec xvlog --sv --work work \
-  [file join $SV_DIR ${DESIGN}.sv] \
+exec xvhdl --2008 --work work \
+  [file join $DUT_DIR vhdl/${DESIGN}.vhd] \
   >@stdout 2>@stderr
 
 # --- Step 2: Compile UVM testbench (--uvm links bundled UVM 1.2) ---

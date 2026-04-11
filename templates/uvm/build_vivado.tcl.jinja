@@ -16,13 +16,24 @@ set SNAPSHOT ${DESIGN}_snapshot
 # Paths relative to this script's location
 set SCRIPT_DIR [file dirname [file normalize [info script]]]
 set TB_DIR     [file join $SCRIPT_DIR ../..]
-set SV_DIR     [file join $TB_DIR ../sv]
+set DUT_DIR    [file join $SCRIPT_DIR ../../..]
 
-# --- Step 1: Compile DUT (SV, no UVM) ---
+# --- Step 1: Compile DUT ---
+# DUT compile — language determined from pssgen.toml [[sources]]
 puts "Compiling DUT..."
-exec xvlog --sv --work work \
-  [file join $SV_DIR ${DESIGN}.sv] \
+{% if ir.hdl_language == "vhdl" %}
+exec xvhdl --2008 --work work \
+  [file join $DUT_DIR {{ ir.design_name }}.vhd] \
   >@stdout 2>@stderr
+{% elif ir.hdl_language == "systemverilog" %}
+exec xvlog --sv --work work \
+  [file join $DUT_DIR {{ ir.design_name }}.sv] \
+  >@stdout 2>@stderr
+{% else %}
+exec xvlog --work work \
+  [file join $DUT_DIR {{ ir.design_name }}.v] \
+  >@stdout 2>@stderr
+{% endif %}
 
 # --- Step 2: Compile UVM testbench (--uvm links bundled UVM 1.2) ---
 puts "Compiling UVM testbench..."
