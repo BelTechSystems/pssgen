@@ -692,8 +692,10 @@ module buffered_axi_lite_uart #(
                     // Odd parity: XOR of all 9 bits must be '1'
                     if (!parity_chk_v) ev_parity_err_s <= 1'b1;
                   end else begin
-                    // Mark parity (2'b11): no receive check per UART-FF-008.
-                    // Parity bit is consumed but not evaluated.
+                    // Mark parity (2'b11): check that received parity bit is '1'.
+                    // A '0' indicates line corruption or sender misconfiguration.
+                    // Sets ev_parity_err_s per updated UART-FF-008.
+                    if (!rx_sync_s[1]) ev_parity_err_s <= 1'b1;
                   end
                   rx_bit_cnt_s <= 4'd9;
                 end

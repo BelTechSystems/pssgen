@@ -180,7 +180,7 @@
   verification: test
   [GENERATED]
 
-[UART-FF-008] The Buffered AXI-Lite UART shall assert the parity bit in every transmitted frame when PARITY = 2'b11 (mark parity). Receive parity checking shall not be performed in mark parity mode.
+[UART-FF-008] The Buffered AXI-Lite UART shall assert the parity bit in every transmitted frame when PARITY = 2'b11 (mark parity). On receive, a mark parity bit of logic 0 shall set PARITY_ERR in STATUS and INT_STATUS, as this indicates a line error or sender misconfiguration. This check is retained as a diagnostic in noise-sensitive environments where silent corruption is unacceptable.
   verification: test
   [GENERATED]
 

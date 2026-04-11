@@ -87,6 +87,7 @@ NOTE-007: UART-BR-004 is intentionally absent from the
 ; Values computed for G_CLK_FREQ_HZ = 100 MHz.
 ; Boundary values (min, max) exercise accumulator edge behavior.
 COV-001: BAUD_TUNING = {
+           covers: [UART-BR-001], [UART-BR-002], [UART-BR-003], [UART-BR-005], [UART-BR-006]
            0x00000001,   ; minimum — floor baud rate
            0x0028F5C2,   ; 9,600 baud
            0x004FAF84,   ; 19,200 baud
@@ -112,9 +113,11 @@ COV-013: BAUD_TUNING_WRITE_WHILE_ENABLED
 ; All four parity modes exercised independently in loopback.
 ; Injected parity error required for modes 01 and 10.
 COV-002: CTRL.PARITY = { 2'b00, 2'b01, 2'b10, 2'b11 }
+         covers: [UART-FF-005], [UART-FF-006], [UART-FF-007], [UART-FF-008], [UART-FF-009]
 
 ; Both stop bit configurations exercised in loopback.
 COV-003: CTRL.STOP_BITS = { 1'b0, 1'b1 }
+         covers: [UART-FF-002], [UART-FF-003], [UART-FF-004]
 
 ; --- FIFO Behavior ---
 
@@ -124,6 +127,7 @@ COV-003: CTRL.STOP_BITS = { 1'b0, 1'b1 }
 ; G_FIFO_DEPTH used rather than literal 16 for
 ; instantiation independence.
 COV-004: FIFO_STATUS.RX_LEVEL = {
+           covers: [UART-FIFO-004], [UART-FIFO-005], [UART-FIFO-007], [UART-FIFO-009]
            0,              ; empty — RX_EMPTY asserted
            RX_THRESH - 1,  ; one below threshold — no interrupt
            RX_THRESH,      ; at threshold — boundary
@@ -136,6 +140,7 @@ COV-004: FIFO_STATUS.RX_LEVEL = {
 ; threshold, opposite of RX. This asymmetry is a common
 ; source of integration errors and is verified explicitly.
 COV-005: FIFO_STATUS.TX_LEVEL = {
+           covers: [UART-FIFO-002], [UART-FIFO-003], [UART-FIFO-006], [UART-FIFO-008]
            0,              ; empty — TX_EMPTY interrupt fires
            TX_THRESH - 1,  ; one above threshold — no interrupt
            TX_THRESH,      ; at threshold — boundary
@@ -149,6 +154,7 @@ COV-005: FIFO_STATUS.TX_LEVEL = {
 ; G_TIMEOUT_DEFAULT used rather than literal 255 for
 ; instantiation independence.
 COV-006: TIMEOUT_VAL = {
+           covers: [UART-TO-001], [UART-TO-002], [UART-TO-003], [UART-TO-004], [UART-TO-005], [UART-TO-006]
            0x0000,            ; disabled — no timeout event
            0x0001,            ; minimum active timeout
            G_TIMEOUT_DEFAULT, ; reset value
@@ -161,6 +167,7 @@ COV-006: TIMEOUT_VAL = {
 ; Each interrupt source shall fire and clear independently.
 ; Isolation before co-occurrence — see NOTE-004.
 COV-007: INT_STATUS each_bit_independently = {
+           covers: [UART-INT-001], [UART-INT-002], [UART-INT-003], [UART-INT-004], [UART-INT-005], [UART-INT-006], [UART-INT-007], [UART-INT-008]
            TIMEOUT, TX_THRESH, RX_THRESH, TX_EMPTY,
            RX_FULL, PARITY_ERR, FRAME_ERR, OVERRUN
          }
@@ -169,31 +176,37 @@ COV-007: INT_STATUS each_bit_independently = {
 ; This is the scenario most likely to expose FIFO pointer
 ; corruption bugs in RTL implementations.
 COV-008: INT_STATUS.OVERRUN && INT_STATUS.RX_FULL
+         covers: [UART-FIFO-007], [UART-INT-005], [UART-INT-006]
 
 ; Timeout pending while RX threshold also pending.
 ; Verifies IRQ OR reduction logic handles multiple
 ; simultaneous sources correctly.
 COV-009: INT_STATUS.TIMEOUT && INT_STATUS.RX_THRESH
+         covers: [UART-TO-005], [UART-INT-002], [UART-INT-008]
 
 ; --- AXI-Lite Interface ---
 
 ; Both response codes on write channel.
 ; SLVERR achieved via access to offset 0x30 — see NOTE-005.
 COV-010: AXI_BRESP = { OKAY, SLVERR }
+         covers: [UART-IF-006], [UART-IF-008]
 
 ; Both response codes on read channel.
 COV-011: AXI_RRESP = { OKAY, SLVERR }
+         covers: [UART-IF-007], [UART-IF-009]
 
 ; Both AWVALID/WVALID orderings exercised.
 ; Many AXI-Lite slave implementations assume AWVALID
 ; arrives before WVALID. This coverage point catches that.
 COV-012: AXI_WRITE_ORDER = { AWVALID_FIRST, WVALID_FIRST }
+         covers: [UART-IF-005]
 
 ; --- SCRATCH Register ---
 
 ; Walking-ones plus all-zeros and all-ones.
 ; Executed first in every test sequence — see NOTE-006.
 COV-014: SCRATCH = {
+           covers: [UART-REG-044], [UART-REG-045], [UART-REG-046], [UART-VER-003]
            0x00000001, 0x00000002, 0x00000004, 0x00000008,
            0x00000010, 0x00000020, 0x00000040, 0x00000080,
            0x000000FF, 0xFFFFFFFF, 0x00000000
@@ -218,16 +231,6 @@ WAIVED: INTENT-fractional-baud
                    to a future revision and is not a verification
                    gap for this release.
 
-; Mark parity receive checking not verified in simulation.
-; Transmit-side mark parity is verified via loopback.
-; Receive-side checking is implementation-defined behavior
-; for mark parity mode and is not required by UART-FF-008.
-WAIVED: INTENT-mark-parity-rx
-        rationale: UART-FF-008 requires only that the transmitter
-                   asserts the parity bit. Receive behavior in
-                   mark parity mode is implementation-defined
-                   per UART convention. Transmit assertion is
-                   verified via LOOP_EN loopback in COV-002.
 
 ; Maximum NCO tuning word behavior verified in simulation only.
 ; BAUD_TUNING = 0xFFFFFFFF produces a theoretical baud rate

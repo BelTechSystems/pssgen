@@ -880,9 +880,12 @@ begin
                         ev_parity_err_s <= '1';
                       end if;
                     else
-                      -- Mark parity (2'b11): no receive check per UART-FF-008.
-                      -- Parity bit is consumed but not evaluated.
-                      null;
+                      -- Mark parity (2'b11): check that received parity bit is '1'.
+                      -- A '0' indicates line corruption or sender misconfiguration.
+                      -- Sets ev_parity_err_s per updated UART-FF-008.
+                      if rx_sync_s(1) = '0' then
+                        ev_parity_err_s <= '1';
+                      end if;
                     end if;
                     rx_bit_cnt_s <= to_unsigned(9, 4);
                   end if;
