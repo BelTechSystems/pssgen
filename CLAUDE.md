@@ -122,6 +122,21 @@ def parse(source_file: str, top_module: str | None) -> IR
 def generate(ir: IR, fail_reason: str | None = None) -> list[Artifact]
 # Artifact: filename (str), content (str)
 
+# agents/datasheet_gen.py
+generate_datasheet()
+The datasheet agent is a generator with a preserve-and-merge behavior that must not be confused with the simpler pure-generation pattern.
+The data sheet is generated automatically by pssgen on
+each pipeline run (agents/datasheet_gen.py). Sections
+derived from the IR and artifact set are fully
+regenerated. Sections containing engineer-entered data
+(synthesis results, power estimates, integration notes,
+tested-with versions) are preserved across runs using
+a section-aware merge. The merge strategy mirrors the
+never-overwrite principle of the .req file but allows
+partial regeneration of derived content. A new revision
+history entry is appended automatically on each run
+that produces a changed output.
+
 # checkers/verifier.py
 def check(artifacts: list[Artifact], sim_target: str) -> CheckResult
 # CheckResult: passed (bool), tier (int 1–3), reason (str)
@@ -237,7 +252,53 @@ up_down_counter_test.sv
 build.tcl
 ```
 
-## Code style
+---
+
+## HDL Coding Style
+
+All VHDL and SystemVerilog generated or modified by
+Claude Code must conform to STYLE.md in the project root.
+
+Read STYLE.md before writing any HDL. The rules there
+override any style preference derived from training data.
+
+Key rules that affect generation most often:
+
+  VHDL port semicolons: always on the declaration line
+    before the comment — never on a separate line.
+
+  SV port commas: all ports except the last end with
+    a comma. Last port has no trailing comma.
+
+  Signal naming: _s suffix for all signals, _c for
+    constants, _p for process/always_ff labels,
+    G_ for VHDL generics, P_ for SV parameters,
+    LP_ prefix + _c suffix for SV localparams.
+    No _i or _o port suffixes — direction is declared
+    explicitly in the language.
+
+  Resets: synchronous active-low only. No asynchronous
+    resets. VHDL: rising_edge() only, never clk'event.
+    SV: always_ff @(posedge clk) with if (!resetn).
+
+  Always blocks: SV uses always_ff for clocked logic
+    and always_comb for combinatorial. Never plain always.
+
+After generating any HDL file:
+  VHDL: ghdl -a --std=08 <file.vhd>
+  SV:   verilator --lint-only --sv <file.sv>
+        or: iverilog -g2012 -t null <file.sv>
+These checks must pass before committing.
+
+  A pre-commit hook at .git/hooks/pre-commit enforces these checks
+  automatically on every staged HDL file. It also rejects bare null
+  statements and TODO/FIXME/STUB markers in HDL sources.
+  Do not bypass with --no-verify. If a bypass is genuinely necessary,
+  document the reason in the commit message.
+
+Full rules, rationale, and examples: see STYLE.md.
+
+
 - Docstrings: Google style on all public functions, classes, and modules
 - Module headers: include filename, one-line purpose, phase, and layer
 - Inline comments: explain why, not what
@@ -762,6 +823,9 @@ Done condition:
   System assembly generated when 2+ blocks present.
   All 123 non-e2e tests still pass.
 
+
+---
+
 ## Git policy
 
 Claude Code NEVER runs git push autonomously.
@@ -816,6 +880,153 @@ the system python3. Activate before running any Python
 commands:
     .venv\Scripts\activate
 Then use: python -m pytest (not python3 -m pytest)
+
+---
+
+NAMING CONVENTIONS
+
+  VHDL suffix style (industry-standard suffix conventions):
+    Signals:    <name>_s        e.g. baud_pulse_s, tx_full_s
+    Variables:  <name>_v        e.g. bit_cnt_v
+    Constants:  <NAME>_c        e.g. BAUD_TUNING_RESET_c
+    Processes:  <NAME>_p        e.g. NCO_BAUD_GEN_p  (UPPER_CASE label)
+    Types:      <name>_t        e.g. fifo_mem_t
+    Records:    <name>_r        e.g. axi_bus_r
+    Active low: <name>_n        e.g. axi_aresetn  (unchanged)
+    Generics:   G_<ALL_CAPS>    e.g. G_FIFO_DEPTH
+    Ports:      lowercase_underscore  (no suffix)
+
+  Signal naming note:
+    The distinction between registered and combinatorial signals is
+    conveyed by process structure (clocked vs concurrent), not naming.
+    Use _lat or _reg in the name only where it aids clarity,
+    e.g. aw_addr_lat_s.
+
+  AXI port names retain the s_axi_ prefix — this is AMBA-defined
+  slave interface notation, not a naming convention choice.
+
+  Do NOT use:
+    r_<name>   for signals     →  use <name>_s
+    C_<NAME>   for constants   →  use <NAME>_c
+    p_<name>   for processes   →  use <NAME>_p
+
+  SystemVerilog equivalent suffix style:
+    logic signals:              <name>_s
+    variables in tasks/funcs:   <name>_v
+    localparams:                <NAME>_c  (ALL_CAPS body is conventional)
+    always_ff/always_comb:      labelled <NAME>_p
+    Parameters:                 P_<ALL_CAPS>    e.g. P_FIFO_DEPTH
+    Ports:                      lowercase_underscore  (no suffix)
+
+  Both languages:
+    Enumerations:   ALL_CAPS  (no prefix or suffix)
+	
+---
+
+## ⚠ LATEST DIRECTION — Read This Before Any Intent/Req Work
+
+This section supersedes any earlier understanding of .intent and .req
+roles. It reflects decisions made after v4c and recorded in D-025.
+Read DECISIONS.md D-025 for full rationale.
+
+### Input File Model
+
+pssgen requires two things from the user to do its job:
+  1. Requirements — what the hardware shall do, with verification methods
+  2. Coverage intent — what the verification engineer intends to test and how
+
+These arrive through different files with distinct, non-overlapping roles.
+
+### File Roles (Definitive)
+
+FILE          REQUIRED    PURPOSE
+─────────────────────────────────────────────────────────────────────
+.intent       YES         Coverage intent: goals, strategy notes,
+                          scenario priorities, coverage waivers.
+                          May also carry inline requirements as a
+                          stepping stone for small/early-stage IP.
+                          ONLY file that can waive a coverage item.
+
+.req          NO          Requirements and verification methods.
+                          Two valid modes — engineer chooses:
+                            Full mode:     all requirements +
+                                           verification methods +
+                                           dispositions
+                            Campaign mode: ONLY waived requirements
+                                           (when requirements live
+                                           in a .docx or .xlsx)
+                          ONLY file that can waive a requirement.
+                          Never overwritten by pssgen once it exists.
+
+.docx/.xlsx   NO          External requirements source of truth.
+                          Read by: pssgen import-reqs --from word
+                                   pssgen import-reqs --from xlsx
+                          Produces a .req bootstrap for engineer
+                          review. Never written by pssgen.
+
+
+### Waiver Rules — Never Mix These
+
+WHAT IS BEING WAIVED        WHERE IT LIVES    SYNTAX
+──────────────────────────────────────────────────────────────────
+A requirement (campaign     .req              [WAIVED] rationale text
+scope — out of scope for
+this simulation campaign)
+
+A coverage/intent item      .intent           WAIVED: INTENT-item-name
+(verification engineer      [waivers]         rationale: ...
+decision not to pursue
+this coverage goal)
+
+If you find yourself putting a requirement waiver in .intent or a
+coverage waiver in .req, stop — the split is intentional and must
+be preserved for audit reasons (D-025).
+
+
+### .req Usage Modes
+
+FULL MODE                           CAMPAIGN MODE
+─────────────────────────────────── ──────────────────────────────────
+When to use:                        When to use:
+  No .docx/.xlsx source exists, OR    Requirements live in controlled
+  engineer prefers flat text          .docx or .xlsx source document
+
+Contents:                           Contents:
+  All requirement IDs                 ONLY waived requirements
+  Statement text                      Statement text (brief)
+  Verification methods                [WAIVED] + rationale
+  Dispositions ([GENERATED] /         Nothing else — no duplication
+  [CONFIRMED] / [WAIVED])             of the source document
+
+
+### Inline Requirements in .intent (Stepping Stone)
+
+The .intent [requirements] section is for small or early-stage IP
+where no formal source document exists yet. It is NOT the permanent
+home for requirements in a mature design. The expected migration path:
+
+  .intent inline requirements
+    → .req full mode (dedicated requirements file)
+      → .docx source + .req campaign mode (waivers only)
+
+Do not design parsers or gap logic that assumes .intent requirements
+are equivalent to .req requirements in all contexts. They are
+functionally equivalent for gap analysis but have different
+lifecycle and audit implications.
+
+
+### Gap Report Logic (Updated)
+
+Direction A ERROR:  Requirement ID present in .req (or .docx extraction
+                    or .intent [requirements]) with no corresponding
+                    coverage cross-reference in .intent. Exception:
+                    [WAIVED] requirements are never Direction A errors.
+
+Direction B WARNING: Coverage goal in .intent with no corresponding
+                     requirement ID traceable to .req or source document.
+
+WAIVED items in .intent [waivers]: excluded from Direction B counting.
+WAIVED items in .req:              excluded from Direction A counting.
 
 ---
 

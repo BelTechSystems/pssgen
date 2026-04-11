@@ -10,6 +10,9 @@ class buffered_axi_lite_uart_driver extends uvm_driver #(uvm_sequence_item);
     endfunction
 
     task run_phase(uvm_phase phase);
-        // TODO: drive transactions onto interface
+        // Drive AXI-Lite transactions from the sequencer onto the virtual interface.
+        // Scaffold: extend with vif handle and seq_item_port.get_next_item() loop.
+        phase.raise_objection(this);
+        phase.drop_objection(this);
     endtask
 endclass

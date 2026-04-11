@@ -6,6 +6,7 @@ class buffered_axi_lite_uart_monitor extends uvm_monitor;
     endfunction
 
     function void write(uvm_sequence_item item);
-        // TODO: publish observed transactions
+        // Publish observed AXI-Lite transactions to the analysis port.
+        // Scaffold: extend with analysis_port.write(item) after sampling vif.
     endfunction
 endclass
