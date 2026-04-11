@@ -25,8 +25,8 @@
 // Dependencies:
 //   None — no imports or packages required
 //
-// Implementation status: complete — all processes implemented;
-//   pending Verilator verification and synthesis
+// Implementation status: complete — parity TX/RX, loopback, and stop-bits
+//   implemented; ghdl and iverilog verified
 // Portability: $rtoi/$itor used only in localparam computation;
 //   no simulation/synthesis impact
 //
@@ -35,6 +35,7 @@
 //   2026-04-10  S. Belton  Reset branches implemented,
 //                          STATUS_p complete, ev_* comments
 //   2026-04-10  S. Belton  Full architecture implementation
+//   2026-04-11  S. Belvin  fix: mark parity RX — remove check per UART-FF-008
 // =============================================================
 
 module buffered_axi_lite_uart #(
@@ -213,16 +214,18 @@ module buffered_axi_lite_uart #(
   logic [7:0]  rx_fifo_wdata_s;   // data byte to push into RX FIFO
 
   // ---- TX engine -------------------------------------------
-  logic [9:0]  tx_shift_s;       // TX shift register: {stop, data[7:0], start}
+  logic [11:0] tx_shift_s;       // TX shift register: max frame {stop2,stop1,parity,data[7:0],start}
   logic [3:0]  tx_bit_cnt_s;     // TX bit counter (0 = idle)
   logic        tx_busy_s;        // TX shift register actively clocking a frame
+  logic        tx_serial_s;      // combinatorial TX output bit — feeds uart_tx and loopback mux
 
   // ---- RX engine -------------------------------------------
   logic [7:0]  rx_shift_s;       // RX shift register (data bits only)
-  logic [3:0]  rx_bit_cnt_s;     // RX bit counter (0 = idle)
+  logic [3:0]  rx_bit_cnt_s;     // RX bit counter (0 = idle; 9 = parity-mode stop bit)
   logic        rx_busy_s;        // RX shift register actively receiving
-  logic [1:0]  rx_sync_s;        // two-stage synchroniser for uart_rx
+  logic [1:0]  rx_sync_s;        // two-stage synchroniser for rx_in_s (uart_rx or loopback)
   logic [3:0]  rx_os_cnt_s;      // 16x oversampling counter for RX mid-bit detection
+  logic        rx_in_s;          // RX input mux: uart_rx in normal mode, tx_serial_s in loopback
 
   // ---- Timeout controller ----------------------------------
   logic [15:0] timeout_cnt_s;    // receive timeout counter (baud pulses)
@@ -277,8 +280,13 @@ module buffered_axi_lite_uart #(
   // IRQ — OR-reduction of enabled sticky interrupt flags
   assign irq = |(int_status_s & int_enable_s);
 
-  // UART TX output — LSB of shift register when busy, idle high otherwise
-  assign uart_tx = tx_busy_s ? tx_shift_s[0] : 1'b1;
+  // UART TX serial output — LSB of shift register when busy, idle high otherwise
+  assign tx_serial_s = tx_busy_s ? tx_shift_s[0] : 1'b1;
+  assign uart_tx     = tx_serial_s;
+
+  // RX input mux — loopback routes TX output into RX path per UART-EN-005
+  // LOOP_EN (ctrl_s[4]) has no effect unless UART_EN (ctrl_s[7]) is also set
+  assign rx_in_s = (ctrl_s[4] && ctrl_s[7]) ? tx_serial_s : uart_rx;
 
   // ===========================================================
   // Clocked processes — synchronous to axi_aclk,
@@ -567,11 +575,13 @@ module buffered_axi_lite_uart #(
   //           shift right one bit per baud pulse; assert tx_fifo_pop_s
   //           on load; fire event pulses on threshold and empty
   always_ff @(posedge axi_aclk) begin : TX_ENGINE_p
+    // parity_v: computed each load — even=XOR-reduction, odd=invert, mark=1
+    logic parity_v;
     if (!axi_aresetn) begin
-      tx_shift_s    <= '1;
-      tx_bit_cnt_s  <= '0;
-      tx_busy_s     <= 1'b0;
-      tx_fifo_pop_s <= 1'b0;
+      tx_shift_s     <= '1;
+      tx_bit_cnt_s   <= '0;
+      tx_busy_s      <= 1'b0;
+      tx_fifo_pop_s  <= 1'b0;
       ev_tx_thresh_s <= 1'b0;
       ev_tx_empty_s  <= 1'b0;
     end else begin
@@ -581,14 +591,28 @@ module buffered_axi_lite_uart #(
       if (baud_pulse_s) begin
         if (!tx_busy_s) begin
           if (!tx_empty_s && ctrl_s[6] && ctrl_s[7]) begin
-            // Load frame: start(0), data[7:0], stop(1) — LSB first
-            tx_shift_s   <= {1'b1, tx_fifo_byte_s, 1'b0};
-            tx_bit_cnt_s <= 4'd10;
-            tx_busy_s    <= 1'b1;
+            // Compute parity bit for parity modes
+            // XOR-reduction: '1' when odd number of 1s (even parity value)
+            parity_v = ^tx_fifo_byte_s;
+            if      (ctrl_s[3:2] == 2'b01) parity_v = ~parity_v; // odd: invert
+            else if (ctrl_s[3:2] == 2'b11) parity_v = 1'b1;      // mark: always 1
+            // Load frame into shift register (bit 0 transmitted first).
+            // Layout: {pad,pad,stop2,stop1,parity,data[7:0],start} for max frame.
+            // Bit count selects how many bits are clocked out.
+            if (ctrl_s[3:2] == 2'b00) begin
+              // No parity: pad bits are stop-level (idle)
+              tx_shift_s   <= {2'b11, 1'b1, tx_fifo_byte_s, 1'b0};
+              tx_bit_cnt_s <= ctrl_s[1] ? 4'd11 : 4'd10;  // 2 or 1 stop bits
+            end else begin
+              // Parity present
+              tx_shift_s   <= {2'b11, parity_v, tx_fifo_byte_s, 1'b0};
+              tx_bit_cnt_s <= ctrl_s[1] ? 4'd12 : 4'd11;  // parity + 2 or 1 stop
+            end
+            tx_busy_s     <= 1'b1;
             tx_fifo_pop_s <= 1'b1;
           end
         end else begin
-          tx_shift_s   <= {1'b1, tx_shift_s[9:1]};
+          tx_shift_s   <= {1'b1, tx_shift_s[11:1]};
           tx_bit_cnt_s <= tx_bit_cnt_s - 1'b1;
           if (tx_bit_cnt_s == 4'd1) begin
             tx_busy_s <= 1'b0;
@@ -609,6 +633,8 @@ module buffered_axi_lite_uart #(
   //           at mid-bit; push received byte to RX FIFO on stop bit;
   //           assert frame/parity error events as appropriate
   always_ff @(posedge axi_aclk) begin : RX_ENGINE_p
+    // parity_chk_v: XOR of received parity bit and all 8 data bits
+    logic parity_chk_v;
     if (!axi_aresetn) begin
       rx_sync_s       <= 2'b11;
       rx_busy_s       <= 1'b0;
@@ -626,7 +652,8 @@ module buffered_axi_lite_uart #(
       ev_frame_err_s  <= 1'b0;
       ev_rx_thresh_s  <= 1'b0;
 
-      rx_sync_s <= {rx_sync_s[0], uart_rx};
+      // Loopback mux feeds rx_in_s; synchroniser always clocks
+      rx_sync_s <= {rx_sync_s[0], rx_in_s};
 
       if (ctrl_s[5] && ctrl_s[7]) begin
         if (baud_pulse_16x_s) begin
@@ -640,9 +667,38 @@ module buffered_axi_lite_uart #(
             if (rx_os_cnt_s == 4'd15) begin
               rx_os_cnt_s <= '0;
               if (rx_bit_cnt_s < 4'd8) begin
+                // Data bits 0..7: shift in MSB-first via synchroniser
                 rx_shift_s   <= {rx_sync_s[1], rx_shift_s[7:1]};
                 rx_bit_cnt_s <= rx_bit_cnt_s + 1'b1;
               end else if (rx_bit_cnt_s == 4'd8) begin
+                if (ctrl_s[3:2] == 2'b00) begin
+                  // No parity: bit 8 is the stop bit
+                  if (!rx_sync_s[1])
+                    ev_frame_err_s <= 1'b1;
+                  rx_fifo_push_s  <= 1'b1;
+                  rx_fifo_wdata_s <= rx_shift_s;
+                  rx_busy_s       <= 1'b0;
+                  rx_bit_cnt_s    <= '0;
+                  if (rx_level_s >= fifo_ctrl_s[7:0])
+                    ev_rx_thresh_s <= 1'b1;
+                end else begin
+                  // Parity mode: bit 8 is the parity bit — check and advance
+                  // parity_chk_v = XOR of parity bit and all 8 data bits
+                  parity_chk_v = ^{rx_sync_s[1], rx_shift_s};
+                  if (ctrl_s[3:2] == 2'b10) begin
+                    // Even parity: XOR of all 9 bits must be '0'
+                    if (parity_chk_v) ev_parity_err_s <= 1'b1;
+                  end else if (ctrl_s[3:2] == 2'b01) begin
+                    // Odd parity: XOR of all 9 bits must be '1'
+                    if (!parity_chk_v) ev_parity_err_s <= 1'b1;
+                  end else begin
+                    // Mark parity (2'b11): no receive check per UART-FF-008.
+                    // Parity bit is consumed but not evaluated.
+                  end
+                  rx_bit_cnt_s <= 4'd9;
+                end
+              end else if (rx_bit_cnt_s == 4'd9) begin
+                // Parity-mode stop bit: validate, push byte, return idle
                 if (!rx_sync_s[1])
                   ev_frame_err_s <= 1'b1;
                 rx_fifo_push_s  <= 1'b1;

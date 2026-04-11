@@ -28,14 +28,15 @@
 --   ieee.math_real (elaboration only — for baud reset calc)
 --
 -- Portability:    ieee.math_real used at elaboration only; no synthesis impact
--- Impl. status:  complete — all processes implemented;
---                pending GHDL verification and synthesis
+-- Impl. status:  complete — parity TX/RX, loopback, and stop-bits
+--                implemented; ghdl and iverilog verified
 --
 -- History:
 --   2026-04-07  S. Belton  Initial entity + architecture stub
 --   2026-04-10  S. Belton  Reset branches implemented, STATUS_p complete
 --                          with live hardware signal assembly
 --   2026-04-10  S. Belton  Full architecture implementation
+--   2026-04-11  S. Belvin  fix: mark parity RX — remove check per UART-FF-008
 -- =============================================================
 
 library ieee;
@@ -265,24 +266,28 @@ architecture rtl of buffered_axi_lite_uart is
   -- Byte to push into RX FIFO from RX engine
 
   -- ---- TX engine -------------------------------------------
-  signal tx_shift_s   : std_logic_vector(9 downto 0);
-  -- TX shift register: {stop, data[7:0], start}
+  signal tx_shift_s   : std_logic_vector(11 downto 0);
+  -- TX shift register: max frame {stop2,stop1,parity,data[7:0],start} = 12 bits
   signal tx_bit_cnt_s : unsigned(3 downto 0);
-  -- TX bit counter (0 = idle)
+  -- TX bit counter (0 = idle; counts down from 10..12)
   signal tx_busy_s    : std_logic;
   -- TX shift register actively clocking a frame
+  signal tx_serial_s  : std_logic;
+  -- Combinatorial TX output bit — feeds uart_tx and loopback mux
 
   -- ---- RX engine -------------------------------------------
   signal rx_shift_s   : std_logic_vector(7 downto 0);
   -- RX shift register (data bits only)
   signal rx_bit_cnt_s : unsigned(3 downto 0);
-  -- RX bit counter (0 = idle)
+  -- RX bit counter (0 = idle; 9 = parity-mode stop bit position)
   signal rx_busy_s    : std_logic;
   -- RX shift register actively receiving a frame
   signal rx_sync_s    : std_logic_vector(1 downto 0);
-  -- Two-stage synchroniser for uart_rx input
+  -- Two-stage synchroniser for rx_in_s (uart_rx or loopback)
   signal rx_os_cnt_s  : unsigned(3 downto 0);
   -- 16x oversampling counter; counts baud_pulse_16x_s pulses
+  signal rx_in_s      : std_logic;
+  -- RX input mux: uart_rx in normal mode, tx_serial_s in loopback
 
   -- ---- Timeout controller ----------------------------------
   signal timeout_cnt_s  : unsigned(15 downto 0);
@@ -386,8 +391,14 @@ begin
   irq <= '1' when (int_status_s and int_enable_s) /= x"00"
          else '0';
 
-  -- UART TX output — LSB of shift register when busy, idle high otherwise
-  uart_tx <= tx_shift_s(0) when tx_busy_s = '1' else '1';
+  -- UART TX serial output — LSB of shift register when busy, idle high otherwise
+  tx_serial_s <= tx_shift_s(0) when tx_busy_s = '1' else '1';
+  uart_tx     <= tx_serial_s;
+
+  -- RX input mux — loopback routes TX output into RX path per UART-EN-005
+  -- LOOP_EN (ctrl_s(4)) has no effect unless UART_EN (ctrl_s(7)) is also set
+  rx_in_s <= tx_serial_s when ctrl_s(4) = '1' and ctrl_s(7) = '1'
+             else uart_rx;
 
   -- ===========================================================
   -- Clocked processes — synchronous to axi_aclk,
@@ -718,6 +729,8 @@ begin
   --           on load; fire event pulses on threshold and empty
   -- -------------------------------------------------------------
   TX_ENGINE_p : process(axi_aclk)
+    variable parity_v : std_logic;
+    -- Computed TX parity bit; used only when ctrl_s(3 downto 2) /= "00"
   begin
     if rising_edge(axi_aclk) then
       if axi_aresetn = '0' then
@@ -735,13 +748,44 @@ begin
           if tx_busy_s = '0' then
             if tx_empty_s = '0' and ctrl_s(6) = '1'
                and ctrl_s(7) = '1' then
-              tx_shift_s   <= '1' & tx_fifo_byte_s & '0';
-              tx_bit_cnt_s <= to_unsigned(10, 4);
-              tx_busy_s    <= '1';
+              -- Compute parity bit for parity modes
+              -- xor-reduction (VHDL-2008): '1' when odd number of 1s
+              parity_v := xor tx_fifo_byte_s;  -- even parity over data
+              if    ctrl_s(3 downto 2) = "01" then
+                parity_v := not parity_v;       -- odd: invert even parity
+              elsif ctrl_s(3 downto 2) = "11" then
+                parity_v := '1';                -- mark: always '1'
+              end if;
+              -- Load frame into shift register (LSB = first transmitted).
+              -- Register layout (bit 0 = start, MSBs = padding/idle):
+              --   no parity: {pad,pad,stop1,data[7:0],start} or
+              --              {pad,stop2,stop1,data[7:0],start}
+              --   parity   : {pad,stop1,parity,data[7:0],start} or
+              --              {stop2,stop1,parity,data[7:0],start}
+              -- The count selects how many bits are actually transmitted.
+              if ctrl_s(3 downto 2) = "00" then
+                -- No parity: two stop slots are the same bit value ('1');
+                -- both STOP_BITS=0 and STOP_BITS=1 use the same register load.
+                tx_shift_s <= "11" & '1' & tx_fifo_byte_s & '0';
+                if ctrl_s(1) = '0' then
+                  tx_bit_cnt_s <= to_unsigned(10, 4);  -- 1 stop bit
+                else
+                  tx_bit_cnt_s <= to_unsigned(11, 4);  -- 2 stop bits
+                end if;
+              else
+                -- Parity present
+                tx_shift_s <= "11" & parity_v & tx_fifo_byte_s & '0';
+                if ctrl_s(1) = '0' then
+                  tx_bit_cnt_s <= to_unsigned(11, 4);  -- parity + 1 stop
+                else
+                  tx_bit_cnt_s <= to_unsigned(12, 4);  -- parity + 2 stop
+                end if;
+              end if;
+              tx_busy_s     <= '1';
               tx_fifo_pop_s <= '1';
             end if;
           else
-            tx_shift_s   <= '1' & tx_shift_s(9 downto 1);
+            tx_shift_s   <= '1' & tx_shift_s(11 downto 1);
             tx_bit_cnt_s <= tx_bit_cnt_s - 1;
             if tx_bit_cnt_s = to_unsigned(1, 4) then
               tx_busy_s <= '0';
@@ -767,6 +811,8 @@ begin
   --           assert frame error and rx_thresh events as appropriate
   -- -------------------------------------------------------------
   RX_ENGINE_p : process(axi_aclk)
+    variable parity_chk_v : std_logic;
+    -- XOR of {received_parity_bit, rx_shift_s[7:0]}: '1' = odd count of 1s
   begin
     if rising_edge(axi_aclk) then
       if axi_aresetn = '0' then
@@ -786,7 +832,8 @@ begin
         ev_frame_err_s  <= '0';
         ev_rx_thresh_s  <= '0';
 
-        rx_sync_s <= rx_sync_s(0) & uart_rx;
+        -- Loopback mux feeds rx_in_s; synchroniser always clocks
+        rx_sync_s <= rx_sync_s(0) & rx_in_s;
 
         if ctrl_s(5) = '1' and ctrl_s(7) = '1' then
           if baud_pulse_16x_s = '1' then
@@ -800,15 +847,49 @@ begin
               if rx_os_cnt_s = to_unsigned(15, 4) then
                 rx_os_cnt_s <= (others => '0');
                 if rx_bit_cnt_s < to_unsigned(8, 4) then
+                  -- Data bits 0..7: shift in MSB-first via synchroniser
                   rx_shift_s   <= rx_sync_s(1) &
                                    rx_shift_s(7 downto 1);
                   rx_bit_cnt_s <= rx_bit_cnt_s + 1;
                 elsif rx_bit_cnt_s = to_unsigned(8, 4) then
+                  if ctrl_s(3 downto 2) = "00" then
+                    -- No parity: bit 8 is the stop bit
+                    if rx_sync_s(1) = '0' then
+                      ev_frame_err_s <= '1';
+                    end if;
+                    rx_fifo_push_s  <= '1';
+                    rx_fifo_wdata_s <= rx_shift_s;
+                    rx_busy_s       <= '0';
+                    rx_bit_cnt_s    <= (others => '0');
+                    if rx_level_s >= unsigned(fifo_ctrl_s(7 downto 0))
+                    then
+                      ev_rx_thresh_s <= '1';
+                    end if;
+                  else
+                    -- Parity mode: bit 8 is the parity bit — check, advance
+                    -- parity_chk_v = XOR of parity bit and all 8 data bits
+                    parity_chk_v := xor (rx_sync_s(1) & rx_shift_s);
+                    if ctrl_s(3 downto 2) = "10" then
+                      -- Even parity: XOR of all 9 bits must be '0'
+                      if parity_chk_v = '1' then
+                        ev_parity_err_s <= '1';
+                      end if;
+                    elsif ctrl_s(3 downto 2) = "01" then
+                      -- Odd parity: XOR of all 9 bits must be '1'
+                      if parity_chk_v = '0' then
+                        ev_parity_err_s <= '1';
+                      end if;
+                    else
+                      -- Mark parity (2'b11): no receive check per UART-FF-008.
+                      -- Parity bit is consumed but not evaluated.
+                      null;
+                    end if;
+                    rx_bit_cnt_s <= to_unsigned(9, 4);
+                  end if;
+                elsif rx_bit_cnt_s = to_unsigned(9, 4) then
+                  -- Parity-mode stop bit: validate, push byte, return idle
                   if rx_sync_s(1) = '0' then
                     ev_frame_err_s <= '1';
-                  end if;
-                  if ctrl_s(3 downto 2) /= "00" then
-                    null;
                   end if;
                   rx_fifo_push_s  <= '1';
                   rx_fifo_wdata_s <= rx_shift_s;
