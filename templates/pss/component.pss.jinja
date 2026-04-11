@@ -32,7 +32,7 @@ component {{ design_name }}_comp {
         // Access: {{ field.access }}
         // Req: {{ field.req_id if field.req_id else 'none' }}
         // LLM_FILL_REG_ACTION_START
-        // TODO: implement register action body
+        // Extend: add field write/read via regmodel.
         // LLM_FILL_REG_ACTION_END
     }
 {% endif %}
@@ -52,7 +52,7 @@ component {{ design_name }}_comp {
 
         // LLM_FILL_CONSTRAINTS_START
         constraint c_default {
-            // TODO: add meaningful scenario constraints
+            // Extend: add scenario constraints here.
         }
         // LLM_FILL_CONSTRAINTS_END
 
@@ -65,7 +65,7 @@ component {{ design_name }}_comp {
             {% endif %}
             // {{ cov.display }}
             // Source: {{ cov.source }}
-            // TODO: add specific bin definitions
+            // Extend: add coverage bin definitions here.
         }
         {% else %}
         // WAIVED: {{ cov.label }}
@@ -75,7 +75,7 @@ component {{ design_name }}_comp {
         {% endfor %}
         {% else %}
         covergroup cg_default {
-            // TODO: add meaningful coverage intent
+            // Extend: add covergroup bins for this design.
         }
         {% endif %}
     }

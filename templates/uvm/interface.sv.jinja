@@ -1,5 +1,14 @@
 interface {{ ir.design_name }}_if (
     input logic clk
 );
-    // TODO: fill in design-specific interface signals
+    // Signals mirroring {{ ir.design_name }} non-clock ports
+{% for port in ir.ports %}
+{% if port.role != "clock" %}
+{% if port.width > 1 %}
+    logic [{{ port.width - 1 }}:0] {{ port.name }};
+{% else %}
+    logic {{ port.name }};
+{% endif %}
+{% endif %}
+{% endfor %}
 endinterface

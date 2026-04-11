@@ -6,14 +6,20 @@
 #          Checks syntax, forbidden patterns, and unread-signal warnings.
 #
 # USAGE:   scripts/hdl_check.sh [file ...]
-#          With no arguments, scans all .vhd and .sv files under ip/.
+#          With no arguments, delegates syntax checking to each
+#          ip/<block>/syntax/ directory and scans all HDL files
+#          under ip/ for pattern and signal checks.
+#          With file arguments (pre-commit hook mode), checks those
+#          files directly: ghdl/iverilog for DUT files, patterns
+#          and warnings for all files.
 #
 # EXIT:    0 if all checks pass, 1 if any failure is detected.
 #
-# NOTE:    UVM testbench .sv files (those containing `uvm_ macros or
-#          'extends uvm_') require the UVM library to parse and are
-#          skipped from iverilog syntax checking.  Pattern and
-#          unread-signal checks still run on those files.
+# NOTE:    UVM testbench .sv files are excluded from pre-commit
+#          syntax checking. Their syntax is verified by the full
+#          simulation flow in tb/scripts/<tool>/ (xvlog --uvm,
+#          vlog, etc.) which requires a simulator license. Pattern
+#          and unread-signal checks still run on UVM files.
 # ===========================================================
 
 set -euo pipefail
@@ -22,11 +28,19 @@ FAIL=0
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-# ── Collect files ────────────────────────────────────────────────────────────
+# ── Helper: is this a UVM-dependent SV file? ────────────────────────────────
+# Detection: file contains a backtick-uvm_ macro or 'extends uvm_'.
+is_uvm_file() {
+    grep -qE '`uvm_|extends[[:space:]]+uvm_|import[[:space:]]+uvm_pkg' "$1" 2>/dev/null
+}
+
+# ── Collect files for pattern and warning checks ─────────────────────────────
 if [ "$#" -gt 0 ]; then
     FILES=("$@")
+    FILE_MODE=1
 else
     mapfile -t FILES < <(find "$REPO_ROOT/ip" -type f \( -name "*.vhd" -o -name "*.sv" \))
+    FILE_MODE=0
 fi
 
 if [ "${#FILES[@]}" -eq 0 ]; then
@@ -34,36 +48,56 @@ if [ "${#FILES[@]}" -eq 0 ]; then
     exit 0
 fi
 
-# ── Helper: is this a UVM-dependent SV file? ────────────────────────────────
-# UVM files use macros/packages that require the UVM library to parse.
-# Detection: file contains a backtick-uvm_ macro or 'extends uvm_'.
-is_uvm_file() {
-    grep -qE '`uvm_|extends[[:space:]]+uvm_|import[[:space:]]+uvm_pkg' "$1" 2>/dev/null
-}
-
 # ── A. SYNTAX ────────────────────────────────────────────────────────────────
-for f in "${FILES[@]}"; do
-    case "$f" in
-        *.vhd)
-            if ! ghdl -a --std=08 "$f" 2>/dev/null; then
-                echo "SYNTAX ERROR: $f"
+if [ "$FILE_MODE" -eq 0 ]; then
+    # Scan mode: delegate to each IP block's own syntax/ scripts.
+    # Each script is self-contained and knows which DUT file to check.
+    # This makes hdl_check.sh language-agnostic — new IP blocks with
+    # different DUT languages add their own syntax/ scripts.
+    for syntax_dir in "$REPO_ROOT"/ip/*/syntax/; do
+        [ -d "$syntax_dir" ] || continue
+        block=$(basename "$(dirname "$syntax_dir")")
+
+        if [ -x "${syntax_dir}check_vhdl.sh" ]; then
+            if ! bash "${syntax_dir}check_vhdl.sh" 2>&1; then
+                echo "SYNTAX ERROR: $block check_vhdl.sh failed"
                 FAIL=1
             fi
-            ;;
-        *.sv)
-            if is_uvm_file "$f"; then
-                # Cannot syntax-check without UVM library — skip silently.
-                # Pattern and unread-signal checks below still apply.
-                true
-            else
-                if ! iverilog -g2012 -t null "$f" 2>/dev/null; then
-                    echo "SYNTAX ERROR: $f"
-                    FAIL=1
-                fi
+        fi
+
+        if [ -x "${syntax_dir}check_sv.sh" ]; then
+            if ! bash "${syntax_dir}check_sv.sh" 2>&1; then
+                echo "SYNTAX ERROR: $block check_sv.sh failed"
+                FAIL=1
             fi
-            ;;
-    esac
-done
+        fi
+    done
+else
+    # File mode (pre-commit hook): check DUT files directly.
+    # UVM testbench files are skipped — they require a full simulator
+    # environment and are verified by tb/scripts/<tool>/ flows.
+    for f in "${FILES[@]}"; do
+        if is_uvm_file "$f"; then
+            # Pattern and warning checks still run below — skip syntax only.
+            true
+        else
+            case "$f" in
+                *.vhd)
+                    if ! ghdl -a --std=08 "$f" 2>/dev/null; then
+                        echo "SYNTAX ERROR: $f"
+                        FAIL=1
+                    fi
+                    ;;
+                *.sv)
+                    if ! iverilog -g2012 -t null "$f" 2>/dev/null; then
+                        echo "SYNTAX ERROR: $f"
+                        FAIL=1
+                    fi
+                    ;;
+            esac
+        fi
+    done
+fi
 
 # ── B. FORBIDDEN PATTERNS ────────────────────────────────────────────────────
 for f in "${FILES[@]}"; do
@@ -101,8 +135,7 @@ done
 
 # ── C. UNREAD WRITE WARNING (stderr, not a failure) ─────────────────────────
 # For each *_s signal: warn if it appears on the left-hand side of <= or =
-# inside a clocked process/always_ff block but never on the right-hand side
-# or inside an if/case condition anywhere in the same file.
+# but never on the right-hand side or in a condition anywhere in the same file.
 # Uses a single-pass Python scan — not a full HDL parser.
 
 python3 - "${FILES[@]}" <<'PYEOF'

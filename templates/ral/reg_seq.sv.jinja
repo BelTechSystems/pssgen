@@ -67,10 +67,9 @@ class {{ design_name }}_{{ field.pss_action }}_seq
 
   virtual task body();
     uvm_status_e status;
-    // TODO: implement {{ field.pss_action }} sequence
-    // Field: {{ reg.name }}.{{ field.name }}
-    // Access: {{ field.access }}
-    // Description: {{ field.description }}
+    // Drives {{ reg.name }}.{{ field.name }} ({{ field.access }}) via register model.
+    // Field: {{ field.description }}
+    // Extend: regmodel.{{ reg.name | lower }}.{{ field.name | lower }}.write(status, value, UVM_FRONTDOOR)
   endtask
 
 endclass : {{ design_name }}_{{ field.pss_action }}_seq

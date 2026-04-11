@@ -497,7 +497,7 @@ regardless of the --no-llm flag. The no_llm
 parameter is accepted for interface consistency
 but has no effect.
 
-Author: S. Belton, BelTech Systems LLC
+Author: S. Belvin, BelTech Systems LLC
 
 Domain knowledge required: UVM RAL model structure
 is highly constrained — a uvm_reg_block has
@@ -519,55 +519,55 @@ is harmful).
 
 ---
 
-  ## D-019: Simple block spreadsheet format
+## D-019: Simple block spreadsheet format
 
-  Decision: pssgen accepts a single-sheet 15-18
-  column spreadsheet as its minimum viable block
-  register map format. The first 15 columns match
-  what designers already produce without any pssgen
-  knowledge. Columns 16-18 (base_address, req_id,
-  pss_action) are optional and extend an existing
-  file without restructuring. Base address is
-  inherited row-to-row from the most recently
-  provided value, default 0x0000_0000 when absent.
+Decision: pssgen accepts a single-sheet 15-18
+column spreadsheet as its minimum viable block
+register map format. The first 15 columns match
+what designers already produce without any pssgen
+knowledge. Columns 16-18 (base_address, req_id,
+pss_action) are optional and extend an existing
+file without restructuring. Base address is
+inherited row-to-row from the most recently
+provided value, default 0x0000_0000 when absent.
 
-  Author: S. Belton, BelTech Systems LLC
+Author: S. Belvin, BelTech Systems LLC
 
-  Domain knowledge required: Direct UVMF verification
-  experience receiving register maps as per-block
-  spreadsheets from designers. Understanding that
-  requiring engineers to adopt a new spreadsheet
-  format is an adoption barrier, and that accepting
-  their existing format with minimal extension is
-  the correct tradeoff between tooling convenience
-  and user friction.
+Domain knowledge required: Direct UVMF verification
+experience receiving register maps as per-block
+spreadsheets from designers. Understanding that
+requiring engineers to adopt a new spreadsheet
+format is an adoption barrier, and that accepting
+their existing format with minimal extension is
+the correct tradeoff between tooling convenience
+and user friction.
 
-  Why AI could not have made this decision alone:
-  The choice to match the engineer's existing format
-  rather than define a canonical pssgen-first format
-  reflects professional experience with how tooling
-  adoption fails in engineering organizations.
-  Engineers will not restructure working documents
-  to satisfy a tool. The tool must meet them where
-  they are.
+Why AI could not have made this decision alone:
+The choice to match the engineer's existing format
+rather than define a canonical pssgen-first format
+reflects professional experience with how tooling
+adoption fails in engineering organizations.
+Engineers will not restructure working documents
+to satisfy a tool. The tool must meet them where
+they are.
   
-  The format was validated against six real-world block
-  spreadsheets (GPIO, I2C, PWM, SPI, TIMER, UART) created
-  independently by an engineer with RAL generation in mind.
-  All six passed validation with no structural issues,
-  confirming that the 15-column baseline matches actual
-  engineering practice.
+The format was validated against six real-world block
+spreadsheets (GPIO, I2C, PWM, SPI, TIMER, UART) created
+independently by an engineer with RAL generation in mind.
+All six passed validation with no structural issues,
+confirming that the 15-column baseline matches actual
+engineering practice.
   
-  ---
+ ---
   
-  ## D-020: One _reg_block.sv per block rather than
-          one monolithic RAL file
+ ## D-020: One _reg_block.sv per block rather than
+           one monolithic RAL file
 
 Decision: pssgen generates one SystemVerilog file per
 design block (_reg_block.sv) rather than combining all
 blocks into a single monolithic RAL file.
 
-Author: S. Belton, BelTech Systems LLC
+Author: S. Belvin, BelTech Systems LLC
 
 Domain knowledge required: Experience with IP library
 management in aerospace programs where individual blocks
@@ -591,6 +591,14 @@ for implementation simplicity would have produced a
 single file. The per-block decision reflects
 configuration management discipline from real program
 experience.
+
+This decision is further validated by direct observation
+that in real aerospace and defense programs, register
+maps are almost always developed and maintained as
+individual per-block spreadsheets rather than as a
+single unified system file. The per-block generation
+approach matches the natural unit of work in these
+programs.
 
 Alternatives considered:
   Option A (chosen): One _reg_block.sv per block.
@@ -616,7 +624,7 @@ add_submap() rather than flattening all registers
 into a single uvm_reg_map with individual add_reg()
 calls.
 
-Author: S. Belton, BelTech Systems LLC
+Author: S. Belvin, BelTech Systems LLC
 
 Domain knowledge required: UVM RAL architecture
 experience, specifically the distinction between
@@ -661,3 +669,675 @@ Alternatives considered:
     if not carefully namespaced. Inconsistent with
     how enterprise RAL tools generate system maps.
   
+---
+  
+## D-022: import-reqs as a subcommand not a flag
+
+Decision: Requirements document ingestion is a
+separate subcommand (pssgen import-reqs) rather
+than a flag on the main pipeline. The import is
+a one-time operation that produces a .req file
+for engineer review. The main pipeline then uses
+that .req file exactly as it does today.
+
+Author: S. Belvin, BelTech Systems LLC
+
+Domain knowledge required: Understanding that
+requirements ingestion and verification generation
+are categorically different operations with
+different error modes, different review requirements,
+and different cadences. The import runs once when
+the specification changes. The pipeline runs many
+times during verification. Coupling them as flags
+on one command conflates two distinct workflows.
+
+Why AI could not have made this decision alone:
+Reflects professional experience with how engineers
+actually work with requirements documents — they
+import once, review carefully, then iterate many
+times on verification. The subcommand boundary
+makes the review step explicit and mandatory.
+
+## D-023: shall as the requirement discriminator
+
+Decision: The Word document extractor uses "shall"
+as the primary discriminator for requirement
+statements. "Should" and "will" are not extracted
+as requirements. Verification method statements
+following the requirement are extracted and
+associated with it.
+
+Author: S. Belvin, BelTech Systems LLC
+
+Domain knowledge required: Knowledge of MIL-STD-490,
+DO-254, DO-178, and related defense and aerospace
+standards that define "shall" as mandatory
+requirement language. Ten years of systems
+engineering experience writing and reviewing
+requirements documents in these standards.
+Understanding that "should" identifies a goal
+(desirable but not mandatory) and "will" identifies
+a statement of fact or future action rather than
+a requirement.
+
+Why AI could not have made this decision alone:
+The distinction between "shall", "should", and
+"will" in requirements language is a domain-specific
+convention not derivable from general language
+understanding. An AI without aerospace standards
+experience would likely extract all three as
+requirements, producing false positives that
+contaminate the traceability chain.
+
+---
+
+## D-024: .req file represents verification cross-reference,
+          not requirements document content
+
+Decision: The pssgen .req file is a verification
+cross-reference artifact maintained by the verification
+engineer. It maps requirement IDs to verification methods
+and closure status. It is NOT a copy of or replacement
+for the requirements specification document. The
+requirements specification (SRS, DRS) is a controlled
+document that pssgen reads but never writes.
+
+The import-reqs command extracts requirement IDs from
+external sources to populate the .req skeleton. For
+Word SRS documents, only requirement IDs and statement
+text are extracted — verification method assignments
+are left for the verification engineer to complete,
+because verification methods are determined by the
+verification engineer, not specified in the SRS.
+
+Author: S. Belvin, BelTech Systems LLC
+
+Domain knowledge required: Ten years of systems
+engineering experience in aerospace programs operating
+under NASA GSFC procedures (500-PG-8700.2) and ECSS
+standards (ECSS-E-ST-20-40, ECSS-Q-ST-60-02C).
+Direct experience with the document hierarchy:
+requirements specification → verification plan →
+verification cross-reference matrix → closure evidence.
+Understanding that these are separate controlled
+artifacts with separate authors, separate lifecycles,
+and separate review obligations.
+
+Why AI could not have made this decision alone:
+Required knowledge of how aerospace verification
+programs are actually structured under formal standards.
+An AI without this background would conflate the
+requirements document with the verification plan and
+design a tool that conflates them too — producing
+artifacts that do not match any real program's
+document hierarchy and cannot be used in a compliant
+program without rework.
+
+---
+
+## D-025: .req file is optional; waivers split by
+          what is being waived, not by file type
+
+Decision: The .req file is not required for pssgen
+to run. The .intent file is the only required input
+beyond the HDL source. The .req file has two valid
+usage modes chosen by the engineer:
+
+  Full mode — all requirements with verification
+    methods and dispositions. Used when no external
+    source document exists or when the engineer
+    prefers a single flat text artifact.
+
+  Campaign mode — only waived requirements. Used
+    when requirements live in a controlled source
+    document (.docx or .xlsx) and the engineer
+    needs only to record which requirements are
+    out of scope for the current simulation
+    campaign.
+
+Waivers are split by what is being waived:
+
+  Waiver on a REQUIREMENT → lives in .req
+    Records that a requirement is out of scope
+    for this verification campaign. Carries a
+    rationale. Does not remove the requirement
+    from the source document.
+    Example: [WAIVED] Cannot verify sub-cycle
+             timing pre-silicon.
+
+  Waiver on a COVERAGE ITEM → lives in .intent
+    Records that the verification engineer has
+    decided not to pursue a coverage goal.
+    Carries a rationale. The item is excluded
+    from gap counting.
+    Example: WAIVED: INTENT-max-rate-silicon
+             rationale: Physical layer out of scope.
+
+Inline requirements in .intent are a stepping stone
+for smaller designs or early-stage IP. The expected
+migration path as a design matures is:
+  .intent inline requirements
+    → dedicated .req file (full mode)
+      → controlled .docx source + .req campaign waivers
+
+Author: S. Belvin, BelTech Systems LLC
+
+Domain knowledge required: Experience with
+verification campaign management in real aerospace
+programs. Understanding that waiver documentation
+serves two distinct purposes — excluding items from
+the current campaign scope versus excluding items
+from coverage tracking — and that conflating these
+produces audit artifacts that satisfy neither
+purpose. Direct experience with DO-254 compliance
+reviews where the distinction between "not verified
+in this campaign" and "coverage goal not pursued"
+carries different implications for certification
+credit.
+
+Why AI could not have made this decision alone:
+An AI optimizing for simplicity would put all
+waivers in one place. The split reflects professional
+judgment that requirement campaign waivers and
+coverage intent waivers have different owners,
+different review obligations, and different
+implications for certification evidence. A
+verification engineer owns coverage waivers.
+The program verification plan owns requirement
+campaign waivers. These must be separately auditable
+artifacts. The split also reflects experience with
+how the .req file role evolves across a design
+lifecycle — a tool that requires a full .req file
+from day one imposes ceremony that blocks adoption
+on small IP blocks and early-stage designs.
+
+Alternatives considered:
+  Option A (chosen): .req optional; waivers split
+    by subject. Engineer chooses full or campaign
+    mode. Coverage waivers always in .intent.
+    Requirement waivers always in .req.
+    Clean ownership. Separately auditable.
+  Option B (rejected): All waivers in .intent.
+    Simpler for the engineer. Conflates requirement
+    campaign scope decisions with coverage intent
+    decisions. Produces a single artifact that
+    mixes two distinct verification concerns.
+    Cannot satisfy a DO-254 audit that treats
+    these separately.
+  Option C (rejected): .req required always.
+    Forces ceremony on small designs. Blocks
+    adoption. Contradicts the stepping-stone
+    philosophy that makes pssgen accessible
+    to engineers who are not already operating
+    in formal verification programs.
+	
+---
+
+## D-026: IP data sheet contains only information not
+          available in any other artifact
+
+Decision: The DATASHEET.md for each IP block is kept
+deliberately short and contains only information that
+has no other home in the artifact set:
+
+  - Identity and maturity status at a glance
+  - A copy-paste-ready instantiation example in both
+    HDL languages — the only place this exists in
+    runnable form
+  - Known limitations and integration gotchas —
+    engineering judgment accumulated from real use,
+    not derivable from the specification
+  - Synthesis results and power estimates across
+    target devices and tool versions — not captured
+    anywhere else in the artifact set
+  - Tested-with versions — records what tool versions
+    were actually validated, not aspirational support
+
+The data sheet explicitly does not repeat:
+  - Register map (lives in the spec and .xlsx)
+  - Port list (lives in the VHDL/SV entity)
+  - Functional block descriptions (live in the HDL
+    file header)
+  - Generic/parameter tables (live in the spec)
+  - Interrupt source descriptions (live in the spec)
+  - Requirements metrics (live in the gap report)
+  - Coverage goals (live in the .intent file)
+  - File inventory (lives in the git repository)
+
+The resource utilization and power tables start empty.
+Rows are added by the engineer after each synthesis
+run. Target device and tool are left blank until an
+actual run has been performed — pre-populated rows
+with dashes imply the design has been validated on
+that target when it has not.
+
+Author: S. Belvin, BelTech Systems LLC
+
+Domain knowledge required: Experience maintaining IP
+libraries across multiple aerospace programs where
+data sheets were routinely out of sync with the
+actual implementation. The failure mode is always
+the same: engineers copy the spec into the data sheet,
+then the spec evolves and the data sheet does not.
+Readers lose trust in the data sheet entirely.
+Understanding that a short, non-redundant data sheet
+that is always accurate is more valuable than a
+comprehensive one that may be stale. Experience
+with IP handoff between programs where the
+instantiation example was the single most useful
+artifact — engineers do not read specifications
+before instantiating IP, they copy the example.
+
+Why AI could not have made this decision alone:
+The natural AI response to "create an IP data sheet"
+is to produce a comprehensive document that
+summarises all available information. That is what
+most IP data sheets look like and what training data
+reflects. The decision to actively remove information
+that exists elsewhere — and to leave synthesis tables
+empty rather than pre-populating them with dashes —
+requires professional judgment about how engineers
+actually use data sheets in practice and how
+documentation rot happens in real IP libraries.
+The insight that a copy-paste instantiation example
+is the highest-value single artifact came from
+direct observation of how engineers approach new IP
+in program environments, not from documentation
+theory.
+
+Alternatives considered:
+  Option A (chosen): Non-redundant data sheet.
+    Contains only what is not elsewhere. Short,
+    accurate, always current. Synthesis tables
+    grow as real runs are completed.
+  Option B (rejected): Comprehensive summary data
+    sheet that reproduces key content from the spec,
+    entity, and register map in condensed form.
+    Immediately useful but immediately at risk of
+    staleness. Every spec revision requires a
+    corresponding data sheet update. Experience
+    shows this discipline is not maintained under
+    program schedule pressure.
+  Option C (rejected): No data sheet — rely entirely
+    on the spec and HDL artifacts. Loses the
+    instantiation example and the synthesis results
+    which have no other natural home. Makes IP
+    adoption harder for engineers who need a quick
+    reference without reading a full specification.
+	
+The data sheet is generated automatically by pssgen on
+each pipeline run (agents/datasheet_gen.py). Sections
+derived from the IR and artifact set are fully
+regenerated. Sections containing engineer-entered data
+(synthesis results, power estimates, integration notes,
+tested-with versions) are preserved across runs using
+a section-aware merge. The merge strategy mirrors the
+never-overwrite principle of the .req file but allows
+partial regeneration of derived content. A new revision
+history entry is appended automatically on each run
+that produces a changed output.
+
+---
+
+## D-027: VHDL and SystemVerilog implementations share
+          a fixed interface contract but are free to
+          diverge internally
+
+Decision: When both a VHDL and SystemVerilog
+implementation exist for the same IP block, the two
+files are bound by a fixed interface contract and
+are otherwise independent.
+
+The interface contract — which is non-negotiable —
+consists of:
+  - Identical port names, directions, and widths
+  - Identical parameter semantics and default values.
+    The naming prefix differs by language convention
+    (G_ for VHDL generics, P_ for SV parameters) but
+    the logical parameter is the same: G_FIFO_DEPTH
+    and P_FIFO_DEPTH describe the same design intent.
+  - Identical register map behavior: same offsets,
+    same reset values, same access types, same field
+    semantics
+  - Identical elaboration assertion boundaries: the
+    same out-of-range conditions that cause the VHDL
+    implementation to fail elaboration must also
+    cause the SV implementation to fail
+  - Identical failure conditions
+
+The internal implementation — which is unrestricted —
+includes:
+  - Signal decomposition and naming (both use _s
+    suffix but may structure internal logic differently)
+  - Process and always_ff block organization
+  - Type usage (VHDL unsigned vs SV logic [N:0])
+  - Language-specific idioms (VHDL if-generate vs SV
+    initial begin with $fatal)
+  - Internal optimizations that exploit language
+    strengths (SV packed arrays, VHDL record types)
+
+This means the two files are drop-in compatible at the
+system integration level — a system integrator can
+choose either implementation and connect it to the
+same AXI-Lite fabric with no change to the surrounding
+design. The choice between VHDL and SV is a toolchain
+and preference decision, not an interface decision.
+
+The pssgen.toml points at one canonical HDL source per
+project. Running pssgen against either file produces
+equivalent IR, equivalent verification artifacts, and
+equivalent gap reports. The data sheet instantiation
+example covers both languages.
+
+Author: S. Belvin, BelTech Systems LLC
+
+Domain knowledge required: Experience with IP library
+management across mixed-language programs where the
+same IP block must be available in both VHDL and
+SystemVerilog for different downstream consumers.
+Direct experience with the failure mode of diverging
+interfaces — a VHDL team changes a port width and
+the SV team is not notified, breaking system
+integration months later. Understanding that port
+names and widths are the contract that system
+integrators depend on, and that this contract must
+be enforced explicitly rather than assumed. Knowledge
+that the language-convention difference between G_
+and P_ prefixes is well understood in the industry
+and does not break drop-in compatibility in practice
+because no synthesis or simulation tool compares
+generic names across languages.
+
+Why AI could not have made this decision alone:
+The natural AI response is either to require
+identical implementations in both languages (too
+restrictive — loses the benefit of language-specific
+optimization) or to allow complete independence (too
+permissive — breaks system-level interchangeability).
+The boundary drawn here — fixed interface, free
+internals — reflects professional judgment from IP
+library management experience about where the
+contractual obligation actually lies. It also
+reflects practical knowledge that the G_/P_ naming
+difference is a non-issue in practice, which an AI
+without industry experience would likely flag as a
+compatibility concern and attempt to resolve by
+imposing identical naming across both languages.
+
+Alternatives considered:
+  Option A (chosen): Fixed interface contract,
+    free internals. Drop-in compatible. Language-
+    optimized implementations. Interface enforced
+    by pssgen parser verification (both must produce
+    IR with identical port count, names, and widths).
+  Option B (rejected): Identical implementations
+    in both languages — direct mechanical translation.
+    Loses the benefit of language-specific idioms.
+    Produces SV that reads like translated VHDL,
+    which is harder to maintain and does not take
+    advantage of SV strengths (interfaces, packages,
+    $clog2, assertions).
+  Option C (rejected): Fully independent files with
+    no enforced contract. Maximally flexible but
+    creates a maintenance risk. Interface divergence
+    is undetectable until system integration fails.
+    Incompatible with the pssgen single-source model
+    where either file must produce equivalent IR.
+	
+---
+
+## D-028: All IP artifacts co-located under a single
+          IP project directory
+
+Decision: Every artifact belonging to an IP block —
+source HDL, requirements, verification intent, register
+map, documentation, generated testbench, compilation
+scripts, and synthesis scripts — is located under a
+single root directory named for the IP block.
+
+The canonical structure is:
+
+  ip/<block_name>/
+    <block_name>.intent       — verification coverage intent
+    <block_name>.req          — requirements and dispositions
+    <block_name>_regmap.xlsx  — register map spreadsheet
+    pssgen.toml               — pssgen project configuration
+    DATASHEET.md              — IP data sheet (auto-generated)
+    docs/                     — specification documents
+    vhdl/                     — VHDL implementation
+    sv/                       — SystemVerilog implementation
+    tb/                       — generated testbench artifacts
+    syntax/                   — DUT source syntax checks (ghdl, iverilog)
+    synth/                    — synthesis scripts and reports
+
+The pssgen.toml [output] section directs all generated
+artifacts (PSS model, UVM testbench, RAL model, gap report,
+data sheet) to the tb/ subdirectory rather than the
+tool-default ./out directory.
+
+Tool-default output directories (./out, ./build, etc.)
+are not used for IP artifacts. They may exist temporarily
+during development but are not committed and are not
+the canonical location for any deliverable.
+
+Author: S. Belvin, BelTech Systems LLC
+
+Domain knowledge required: Experience managing IP libraries
+across multiple programs and organisations where IP blocks
+are handed off as complete, self-contained deliverables.
+The failure mode of scattered artifacts is consistent and
+predictable: the HDL is present, the testbench is missing,
+the register map is in a shared drive no one can access,
+and the synthesis results are in a colleague's home
+directory. The receiving program starts from scratch.
+Understanding that an IP block is only as portable as
+its least accessible artifact — and that the natural
+human instinct is to leave tool outputs in tool-default
+locations — requires deliberate policy rather than
+convention. Direct experience with DO-254 IP reuse
+packages where the checklist item "all artifacts present
+and accessible" is routinely the longest to close.
+
+Why AI could not have made this decision alone:
+An AI tool generating HDL naturally uses its own output
+directory. The insight that generated artifacts should
+travel with the IP rather than with the tool requires
+understanding how IP is actually transferred between
+programs and organisations — as a directory, a zip
+file, or a git submodule — and that the recipient has
+no access to the generating tool's working directory.
+It also requires experience with the specific failure
+mode of tool-scattered artifacts in program handoff
+situations. An AI optimizing for simplicity would
+use tool defaults. An AI optimizing for the IP library
+use case puts everything in one place.
+
+Alternatives considered:
+  Option A (chosen): Single IP root directory. All
+    artifacts co-located. pssgen.toml [output] overrides
+    tool default. tb/, syntax/, synth/ subdirectories
+    separate generated from hand-authored content.
+    Self-contained — the directory is the deliverable.
+  Option B (rejected): Tool-default output directories.
+    ./out for pssgen, Vivado project directory elsewhere,
+    scripts in repo root. Simpler for initial development.
+    Breaks IP portability — artifacts scattered across
+    the repo and tool working directories. A git clone
+    does not produce a usable IP package without running
+    all tools in sequence.
+  Option C (rejected): Flat IP directory with no
+    subdirectories. All files at the same level.
+    Portable but becomes unnavigable beyond a handful
+    of files. A fully implemented IP block with docs,
+    HDL, testbench, synthesis reports, and scripts
+    easily exceeds 30 files. Flat structure makes
+    the distinction between hand-authored and generated
+    content invisible.
+
+---
+
+## D-029: Testbench script organization under
+          tb/scripts/<tool>/
+
+Decision: Simulator-specific scripts that execute the
+UVM testbench are located under tb/scripts/<tool>/
+where <tool> is the lowercase simulator name. Each
+tool directory is self-contained — it contains
+everything needed to run the testbench on that
+simulator without modifying any other directory.
+
+Current and planned tool directories:
+
+  tb/scripts/vivado/    — XSIM via Vivado batch mode
+  tb/scripts/questa/    — Questa (future)
+  tb/scripts/icarus/    — Icarus + UVM library (future)
+  tb/scripts/modelsim/  — Modelsim (future)
+
+Simulation compilation (xvlog, vlog, iverilog+UVM),
+elaboration, and simulation are an indivisible
+per-tool flow. All three steps live together in
+tb/scripts/<tool>/ because separating them would
+mean tool-specific knowledge leaking into multiple
+locations. Each tool directory owns its complete
+compile → elaborate → simulate sequence.
+
+The syntax/ directory at the IP root is distinct
+from tb/scripts/. syntax/ contains only DUT source
+syntax checks (ghdl -a for VHDL, iverilog -t null
+for SV). These require no UVM library and no
+simulator license. They run on every commit as a
+pre-commit gate. UVM testbench syntax is verified
+by the full simulation flow in tb/scripts/<tool>/,
+not by the pre-commit hook.
+
+The utils/ directory at the IP root is reserved for
+utilities shared across tool targets — Python helpers,
+constraint generators, common shell functions. It
+remains empty until a genuine shared utility exists.
+Creating it empty with a README establishes the
+location without creating noise.
+
+The UVM testbench itself (tb/*.sv) is simulator-
+agnostic. The tool-specific scripts in tb/scripts/
+adapt it to each simulator's invocation model. This
+separation means a new simulator target is added by
+creating a new tb/scripts/<tool>/ directory without
+touching the testbench source files.
+
+pssgen generates tb/scripts/vivado/build.tcl as the
+primary simulation target. Additional script targets
+may be added as pssgen emission targets in future
+phases. EDA Playground is identified as a long-term
+target because it enables zero-install browser-based
+simulation, which lowers the barrier for IP evaluation
+and is consistent with pssgen's open-access mission.
+
+Author: S. Belton, BelTech Systems LLC
+
+Domain knowledge required: Experience managing IP
+verification environments across programs with
+different simulator licenses. The per-tool directory
+structure reflects the real constraint that different
+teams have different simulation tools and a single
+IP package needs to work with all of them without
+modification. The distinction between source syntax
+checks (syntax/) and simulation runs (tb/scripts/)
+reflects experience with CI pipelines where syntax
+checks run on every commit but full simulation runs
+are gated — they require licenses and take time.
+Understanding EDA Playground as a viable simulation
+target requires awareness of the open-source FPGA
+verification ecosystem and the market of engineers
+who cannot justify simulator licenses for evaluation.
+
+Why AI could not have made this decision alone:
+The tb/scripts/<tool>/ structure reflects a specific
+professional judgment about the granularity of tool
+isolation. An AI might use a flat scripts/ directory
+or put tool scripts alongside the testbench source.
+The separation of DUT syntax checks (syntax/) from
+simulation runs (tb/scripts/) reflects operational
+experience with CI systems where these two activities
+have different cost, frequency, and license requirements. The EDA Playground
+identification reflects awareness of the open-source
+FPGA community that is not captured in standard
+training data about EDA workflows.
+
+Alternatives considered:
+  Option A (chosen): tb/scripts/<tool>/ per simulator.
+    Testbench source is simulator-agnostic. Tool scripts
+    are isolated. New simulators added without touching
+    existing structure. syntax/ is separate for
+    license-free DUT syntax checks.
+  Option B (rejected): Single build script with
+    tool selection flags. build.sh --tool vivado.
+    Simpler for one tool. Becomes complex as tools
+    multiply. Mixes simulator-specific logic.
+    Harder to maintain when tool invocations diverge.
+  Option C (rejected): Tool scripts alongside
+    testbench source in tb/. Flat structure obscures
+    which files are hand-authored versus tool-specific.
+    Makes it harder to identify what needs updating
+    when a simulator version changes.
+---
+
+## D-030: ModelSim as a named simulator target
+
+Decision: ModelSim is recognised as a fourth named
+simulator target alongside the three in D-015
+(vivado, questa, icarus). It has its own directory:
+tb/scripts/modelsim/ in every IP block.
+
+Author: S. Belton, BelTech Systems LLC
+
+Rationale: ModelSim is the OEM simulation engine
+bundled by three major FPGA vendors under different
+product names:
+  - ModelSim-Intel FPGA Edition (Quartus Lite/Prime)
+  - ModelSim-Lattice Edition (Diamond, Radiant)
+  - ModelSim-Microchip Edition (Libero SoC)
+  - Siemens ModelSim (standalone commercial)
+
+All four share the same vlog/vsim invocation and
+do-file syntax. Covering ModelSim as a named target
+reaches engineers on Intel, Lattice, and Microchip
+FPGA platforms without requiring a separate Questa
+license. An engineer using Quartus Lite on an Intel
+FPGA has ModelSim at no additional cost; without a
+named ModelSim target, pssgen would be effectively
+unusable for that significant portion of the FPGA
+user base.
+
+The key distinction between this decision and D-015
+is operational: D-015 chose icarus as the open-source
+option. ModelSim fills a different niche — it is the
+zero-marginal-cost commercial simulator that ships
+with every FPGA IDE regardless of vendor. Engineers
+using these tools are not choosing a simulator;
+ModelSim was chosen for them by their toolchain.
+
+Domain knowledge required: Awareness that FPGA vendors
+bundle specific versions of ModelSim/Questa under their
+own product names and that the resulting user population
+is substantial. Most engineers on Intel FPGA platforms
+have ModelSim-Intel as their only available simulator.
+This is not apparent from public EDA market data and
+requires familiarity with the end-user toolchain
+landscape across different FPGA ecosystems.
+
+Why AI could not have made this decision alone:
+Requires knowledge that ModelSim-Intel FPGA Edition,
+ModelSim-Lattice Edition, and ModelSim-Microchip
+Edition are the same simulator under vendor-specific
+licenses, and that reaching these users requires
+a single named target rather than three. Also requires
+the judgment that this population is large enough to
+justify a first-class target rather than deferral.
+
+Relationship to D-015:
+D-015 chose four closure script targets: vivado, questa,
+icarus, none. D-030 adds modelsim as a fifth named
+target for tb/scripts/ directories. The closure script
+targets and tb/scripts/ targets are managed separately
+— the former is a pssgen emission option, the latter
+is the IP block directory structure.

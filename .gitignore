@@ -27,6 +27,8 @@ htmlcov/
 # ── pssgen runtime output ─────────────────────────────────────────────
 # Generated testbench files — these are tool output, not source
 out/
+out_smoke/
+out_toml/
 *.ucdb
 
 # IR snapshots produced by --dump-ir
