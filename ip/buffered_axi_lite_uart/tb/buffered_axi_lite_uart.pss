@@ -90,6 +90,7 @@
  * ; Values computed for G_CLK_FREQ_HZ = 100 MHz.
  * ; Boundary values (min, max) exercise accumulator edge behavior.
  * COV-001: BAUD_TUNING = {
+ *            covers: [UART-BR-001], [UART-BR-002], [UART-BR-003], [UART-BR-005], [UART-BR-006]
  *            0x00000001,   ; minimum — floor baud rate
  *            0x0028F5C2,   ; 9,600 baud
  *            0x004FAF84,   ; 19,200 baud
@@ -115,9 +116,11 @@
  * ; All four parity modes exercised independently in loopback.
  * ; Injected parity error required for modes 01 and 10.
  * COV-002: CTRL.PARITY = { 2'b00, 2'b01, 2'b10, 2'b11 }
+ *          covers: [UART-FF-005], [UART-FF-006], [UART-FF-007], [UART-FF-008], [UART-FF-009]
  * 
  * ; Both stop bit configurations exercised in loopback.
  * COV-003: CTRL.STOP_BITS = { 1'b0, 1'b1 }
+ *          covers: [UART-FF-002], [UART-FF-003], [UART-FF-004]
  * 
  * ; --- FIFO Behavior ---
  * 
@@ -127,6 +130,7 @@
  * ; G_FIFO_DEPTH used rather than literal 16 for
  * ; instantiation independence.
  * COV-004: FIFO_STATUS.RX_LEVEL = {
+ *            covers: [UART-FIFO-004], [UART-FIFO-005], [UART-FIFO-007], [UART-FIFO-009]
  *            0,              ; empty — RX_EMPTY asserted
  *            RX_THRESH - 1,  ; one below threshold — no interrupt
  *            RX_THRESH,      ; at threshold — boundary
@@ -139,6 +143,7 @@
  * ; threshold, opposite of RX. This asymmetry is a common
  * ; source of integration errors and is verified explicitly.
  * COV-005: FIFO_STATUS.TX_LEVEL = {
+ *            covers: [UART-FIFO-002], [UART-FIFO-003], [UART-FIFO-006], [UART-FIFO-008]
  *            0,              ; empty — TX_EMPTY interrupt fires
  *            TX_THRESH - 1,  ; one above threshold — no interrupt
  *            TX_THRESH,      ; at threshold — boundary
@@ -152,6 +157,7 @@
  * ; G_TIMEOUT_DEFAULT used rather than literal 255 for
  * ; instantiation independence.
  * COV-006: TIMEOUT_VAL = {
+ *            covers: [UART-TO-001], [UART-TO-002], [UART-TO-003], [UART-TO-004], [UART-TO-005], [UART-TO-006]
  *            0x0000,            ; disabled — no timeout event
  *            0x0001,            ; minimum active timeout
  *            G_TIMEOUT_DEFAULT, ; reset value
@@ -164,6 +170,7 @@
  * ; Each interrupt source shall fire and clear independently.
  * ; Isolation before co-occurrence — see NOTE-004.
  * COV-007: INT_STATUS each_bit_independently = {
+ *            covers: [UART-INT-001], [UART-INT-002], [UART-INT-003], [UART-INT-004], [UART-INT-005], [UART-INT-006], [UART-INT-007], [UART-INT-008]
  *            TIMEOUT, TX_THRESH, RX_THRESH, TX_EMPTY,
  *            RX_FULL, PARITY_ERR, FRAME_ERR, OVERRUN
  *          }
@@ -172,31 +179,37 @@
  * ; This is the scenario most likely to expose FIFO pointer
  * ; corruption bugs in RTL implementations.
  * COV-008: INT_STATUS.OVERRUN && INT_STATUS.RX_FULL
+ *          covers: [UART-FIFO-007], [UART-INT-005], [UART-INT-006]
  * 
  * ; Timeout pending while RX threshold also pending.
  * ; Verifies IRQ OR reduction logic handles multiple
  * ; simultaneous sources correctly.
  * COV-009: INT_STATUS.TIMEOUT && INT_STATUS.RX_THRESH
+ *          covers: [UART-TO-005], [UART-INT-002], [UART-INT-008]
  * 
  * ; --- AXI-Lite Interface ---
  * 
  * ; Both response codes on write channel.
  * ; SLVERR achieved via access to offset 0x30 — see NOTE-005.
  * COV-010: AXI_BRESP = { OKAY, SLVERR }
+ *          covers: [UART-IF-006], [UART-IF-008]
  * 
  * ; Both response codes on read channel.
  * COV-011: AXI_RRESP = { OKAY, SLVERR }
+ *          covers: [UART-IF-007], [UART-IF-009]
  * 
  * ; Both AWVALID/WVALID orderings exercised.
  * ; Many AXI-Lite slave implementations assume AWVALID
  * ; arrives before WVALID. This coverage point catches that.
  * COV-012: AXI_WRITE_ORDER = { AWVALID_FIRST, WVALID_FIRST }
+ *          covers: [UART-IF-005]
  * 
  * ; --- SCRATCH Register ---
  * 
  * ; Walking-ones plus all-zeros and all-ones.
  * ; Executed first in every test sequence — see NOTE-006.
  * COV-014: SCRATCH = {
+ *            covers: [UART-REG-044], [UART-REG-045], [UART-REG-046], [UART-VER-003]
  *            0x00000001, 0x00000002, 0x00000004, 0x00000008,
  *            0x00000010, 0x00000020, 0x00000040, 0x00000080,
  *            0x000000FF, 0xFFFFFFFF, 0x00000000
@@ -221,16 +234,6 @@
  *                    to a future revision and is not a verification
  *                    gap for this release.
  * 
- * ; Mark parity receive checking not verified in simulation.
- * ; Transmit-side mark parity is verified via loopback.
- * ; Receive-side checking is implementation-defined behavior
- * ; for mark parity mode and is not required by UART-FF-008.
- * WAIVED: INTENT-mark-parity-rx
- *         rationale: UART-FF-008 requires only that the transmitter
- *                    asserts the parity bit. Receive behavior in
- *                    mark parity mode is implementation-defined
- *                    per UART convention. Transmit assertion is
- *                    verified via LOOP_EN loopback in COV-002.
  * 
  * ; Maximum NCO tuning word behavior verified in simulation only.
  * ; BAUD_TUNING = 0xFFFFFFFF produces a theoretical baud rate
@@ -413,10 +416,494 @@ component buffered_axi_lite_uart_comp {
 
         // LLM_FILL_CONSTRAINTS_START
         constraint c_default {
-            // TODO: add meaningful scenario constraints
+            // Extend: add scenario constraints here.
         }
         // LLM_FILL_CONSTRAINTS_END
 
+        
+        
+        
+        covergroup cg_UART_BR_001 {
+            
+            // Traces to: UART-BR-001
+            
+            // UART-BR-001
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_BR_002 {
+            
+            // Traces to: UART-BR-002
+            
+            // UART-BR-002
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_BR_003 {
+            
+            // Traces to: UART-BR-003
+            
+            // UART-BR-003
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_BR_005 {
+            
+            // Traces to: UART-BR-005
+            
+            // UART-BR-005
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_BR_006 {
+            
+            // Traces to: UART-BR-006
+            
+            // UART-BR-006
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_FF_005 {
+            
+            // Traces to: UART-FF-005
+            
+            // UART-FF-005
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_FF_006 {
+            
+            // Traces to: UART-FF-006
+            
+            // UART-FF-006
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_FF_007 {
+            
+            // Traces to: UART-FF-007
+            
+            // UART-FF-007
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_FF_008 {
+            
+            // Traces to: UART-FF-008
+            
+            // UART-FF-008
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_FF_009 {
+            
+            // Traces to: UART-FF-009
+            
+            // UART-FF-009
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_FF_002 {
+            
+            // Traces to: UART-FF-002
+            
+            // UART-FF-002
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_FF_003 {
+            
+            // Traces to: UART-FF-003
+            
+            // UART-FF-003
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_FF_004 {
+            
+            // Traces to: UART-FF-004
+            
+            // UART-FF-004
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_FIFO_004 {
+            
+            // Traces to: UART-FIFO-004
+            
+            // UART-FIFO-004
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_FIFO_005 {
+            
+            // Traces to: UART-FIFO-005
+            
+            // UART-FIFO-005
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_FIFO_007 {
+            
+            // Traces to: UART-FIFO-007
+            
+            // UART-FIFO-007
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_FIFO_009 {
+            
+            // Traces to: UART-FIFO-009
+            
+            // UART-FIFO-009
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_FIFO_002 {
+            
+            // Traces to: UART-FIFO-002
+            
+            // UART-FIFO-002
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_FIFO_003 {
+            
+            // Traces to: UART-FIFO-003
+            
+            // UART-FIFO-003
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_FIFO_006 {
+            
+            // Traces to: UART-FIFO-006
+            
+            // UART-FIFO-006
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_FIFO_008 {
+            
+            // Traces to: UART-FIFO-008
+            
+            // UART-FIFO-008
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_TO_001 {
+            
+            // Traces to: UART-TO-001
+            
+            // UART-TO-001
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_TO_002 {
+            
+            // Traces to: UART-TO-002
+            
+            // UART-TO-002
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_TO_003 {
+            
+            // Traces to: UART-TO-003
+            
+            // UART-TO-003
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_TO_004 {
+            
+            // Traces to: UART-TO-004
+            
+            // UART-TO-004
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_TO_005 {
+            
+            // Traces to: UART-TO-005
+            
+            // UART-TO-005
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_TO_006 {
+            
+            // Traces to: UART-TO-006
+            
+            // UART-TO-006
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_INT_001 {
+            
+            // Traces to: UART-INT-001
+            
+            // UART-INT-001
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_INT_002 {
+            
+            // Traces to: UART-INT-002
+            
+            // UART-INT-002
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_INT_003 {
+            
+            // Traces to: UART-INT-003
+            
+            // UART-INT-003
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_INT_004 {
+            
+            // Traces to: UART-INT-004
+            
+            // UART-INT-004
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_INT_005 {
+            
+            // Traces to: UART-INT-005
+            
+            // UART-INT-005
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_INT_006 {
+            
+            // Traces to: UART-INT-006
+            
+            // UART-INT-006
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_INT_007 {
+            
+            // Traces to: UART-INT-007
+            
+            // UART-INT-007
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_INT_008 {
+            
+            // Traces to: UART-INT-008
+            
+            // UART-INT-008
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_IF_006 {
+            
+            // Traces to: UART-IF-006
+            
+            // UART-IF-006
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_IF_008 {
+            
+            // Traces to: UART-IF-008
+            
+            // UART-IF-008
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_IF_007 {
+            
+            // Traces to: UART-IF-007
+            
+            // UART-IF-007
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_IF_009 {
+            
+            // Traces to: UART-IF-009
+            
+            // UART-IF-009
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_IF_005 {
+            
+            // Traces to: UART-IF-005
+            
+            // UART-IF-005
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_044 {
+            
+            // Traces to: UART-REG-044
+            
+            // UART-REG-044
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_045 {
+            
+            // Traces to: UART-REG-045
+            
+            // UART-REG-045
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_046 {
+            
+            // Traces to: UART-REG-046
+            
+            // UART-REG-046
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_VER_003 {
+            
+            // Traces to: UART-VER-003
+            
+            // UART-VER-003
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
         
         
         
@@ -424,7 +911,7 @@ component buffered_axi_lite_uart_comp {
             
             // s_axi_awready
             // Source: inferred
-            // TODO: add specific bin definitions
+            // Extend: add coverage bin definitions here.
         }
         
         
@@ -433,7 +920,7 @@ component buffered_axi_lite_uart_comp {
             
             // s_axi_wready
             // Source: inferred
-            // TODO: add specific bin definitions
+            // Extend: add coverage bin definitions here.
         }
         
         
@@ -442,7 +929,7 @@ component buffered_axi_lite_uart_comp {
             
             // s_axi_bvalid
             // Source: inferred
-            // TODO: add specific bin definitions
+            // Extend: add coverage bin definitions here.
         }
         
         
@@ -451,7 +938,7 @@ component buffered_axi_lite_uart_comp {
             
             // s_axi_bresp
             // Source: inferred
-            // TODO: add specific bin definitions
+            // Extend: add coverage bin definitions here.
         }
         
         
@@ -460,7 +947,7 @@ component buffered_axi_lite_uart_comp {
             
             // s_axi_arready
             // Source: inferred
-            // TODO: add specific bin definitions
+            // Extend: add coverage bin definitions here.
         }
         
         
@@ -469,7 +956,7 @@ component buffered_axi_lite_uart_comp {
             
             // s_axi_rvalid
             // Source: inferred
-            // TODO: add specific bin definitions
+            // Extend: add coverage bin definitions here.
         }
         
         
@@ -478,7 +965,7 @@ component buffered_axi_lite_uart_comp {
             
             // s_axi_rdata
             // Source: inferred
-            // TODO: add specific bin definitions
+            // Extend: add coverage bin definitions here.
         }
         
         
@@ -487,7 +974,7 @@ component buffered_axi_lite_uart_comp {
             
             // s_axi_rresp
             // Source: inferred
-            // TODO: add specific bin definitions
+            // Extend: add coverage bin definitions here.
         }
         
         
@@ -496,7 +983,7 @@ component buffered_axi_lite_uart_comp {
             
             // uart_tx
             // Source: inferred
-            // TODO: add specific bin definitions
+            // Extend: add coverage bin definitions here.
         }
         
         
@@ -505,7 +992,7 @@ component buffered_axi_lite_uart_comp {
             
             // irq
             // Source: inferred
-            // TODO: add specific bin definitions
+            // Extend: add coverage bin definitions here.
         }
         
         

@@ -1232,7 +1232,7 @@ target because it enables zero-install browser-based
 simulation, which lowers the barrier for IP evaluation
 and is consistent with pssgen's open-access mission.
 
-Author: S. Belton, BelTech Systems LLC
+Author: S. Belvin, BelTech Systems LLC
 
 Domain knowledge required: Experience managing IP
 verification environments across programs with
@@ -1288,7 +1288,7 @@ simulator target alongside the three in D-015
 (vivado, questa, icarus). It has its own directory:
 tb/scripts/modelsim/ in every IP block.
 
-Author: S. Belton, BelTech Systems LLC
+Author: S. Belvin, BelTech Systems LLC
 
 Rationale: ModelSim is the OEM simulation engine
 bundled by three major FPGA vendors under different
