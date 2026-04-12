@@ -30,6 +30,10 @@ out/
 out_smoke/
 out_toml/
 *.ucdb
+node_modules/
+work-obj08.cf
+*.zip
+package*.json
 
 # IR snapshots produced by --dump-ir
 ir.json
