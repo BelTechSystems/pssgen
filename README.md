@@ -1,30 +1,93 @@
 # pssgen
 
-> Give pssgen your HDL and your register map.  
-> Get a PSS model, UVM testbench, UVM RAL model, C test cases, and a requirement-traced gap report out.  
+> **Four steps from HDL to verified IP:**
+> 1. Point pssgen at your RTL and register map.
+> 2. Import requirements from your Word SRS or Excel source document.
+> 3. Populate the VPR — assign coverage methods, test names, and verification status.
+> 4. Run pssgen. Get a PSS model, UVM testbench, UVM RAL model, gap report, and closure scripts.
+>
 > Runs free with AMD Vivado/XSIM. Works with Siemens Questa and Icarus. No license required.
 
 ---
 
 ## What pssgen Does
 
-`pssgen` is an open-source, AI-driven command-line tool for FPGA and ASIC verification engineers. It takes your existing design files and produces working verification artifacts — without requiring you to write boilerplate UVM or maintain a separate register model by hand.
+`pssgen` is an open-source, AI-driven command-line tool for FPGA and ASIC verification engineers. It connects your existing design files to a requirement-traced verification record — without requiring you to write boilerplate UVM or maintain a separate register model by hand.
 
-**Give pssgen:**
-- Your HDL source file (Verilog, SystemVerilog, or VHDL)
-- Your register map spreadsheet (the one your designer already maintains)
-- Optional: a plain English intent file describing what to verify
-- Optional: a requirements file for traceability
+### Step 1 — Parse your HDL and register map
 
-**Get back:**
-- A **PSS v3.0 model** — portable, simulator-independent verification intent
-- A **UVM 1.2 testbench** — interface, driver, monitor, sequencer, agent, test
-- A **UVM RAL model** — one `uvm_reg_block` per block, register sequences, system assembly
-- **C test cases** for post-silicon bringup
-- A **requirement-traced gap report** showing which requirements have no coverage
-- A **coverage closure script** for your simulator
+```bash
+pssgen --input uart.vhd --reg-map uart_regmap.xlsx --no-llm
+```
 
-The register map travels with the IP. When your block moves to the next program, the next verification engineer inherits the RAL model and sequences — not just the RTL.
+pssgen reads your ports and register map, classifies signal roles, and generates a UVM scaffold with a complete RAL model. No other files required.
+
+### Step 2 — Import your requirements
+
+Bootstrap a Verification Planning and Results (VPR) spreadsheet directly from your Word SRS or Excel requirements document:
+
+```bash
+pssgen import-reqs --from word docs/UART-RS-001.docx --out uart_vplan.xlsx
+pssgen import-reqs --from xlsx requirements/uart_reqs.xlsx --out uart_vplan.xlsx
+```
+
+Or start from the VPR template manually:
+
+```
+docs/pssgen_vpr_template.xlsx  ←  copy, rename, populate
+```
+
+The VPR is your single authoritative verification record: requirements, coverage methods, test assignments, and status in one spreadsheet. It replaces separate `.intent` and `.req` files for new designs.
+
+### Step 3 — Populate the VPR
+
+Open the generated VPR and fill in:
+- **Covered_By** — which coverage item satisfies each requirement
+- **Test_Name** — the test or sequence that exercises it
+- **Verification_Category** — Functional / Structural / Protocol_Compliance / etc.
+- **RTL_Status** — PASS / FAIL / BLOCKED as simulation results arrive
+
+Leave **UART-BR-004** blank to see a Direction A gap fire on the next run.
+
+### Step 4 — Run pssgen with the VPR
+
+```toml
+# pssgen.toml
+[input]
+vplan = "uart_vplan.xlsx"
+```
+
+```bash
+pssgen   # reads pssgen.toml, VPR, and HDL — generates everything
+```
+
+**Output in `./out/`:**
+- PSS v3.0 model — portable, simulator-independent verification intent
+- UVM 1.2 testbench — interface, driver, monitor, sequencer, agent, test
+- UVM RAL model — one `uvm_reg_block` per block, register sequences, system assembly
+- C test cases for post-silicon bringup
+- Requirement-traced gap report — Direction A errors (req with no coverage), Direction B warnings (coverage with no req)
+- Coverage closure script for your simulator
+
+The register map and VPR travel with the IP. When your block moves to the next program, the next verification engineer inherits the RAL model, sequences, and traceability record — not just the RTL.
+
+---
+
+### Input Levels
+
+| Level | What you provide | What you get |
+|---|---|---|
+| 1 | HDL only | UVM scaffold, inferred PSS model, C test cases |
+| 2 | HDL + register map | + UVM RAL model, register sequences, system assembly |
+| 3 | HDL + register map + VPR | + requirement-traced gap report, coverage closure scripts |
+
+---
+
+What pssgen is:
+A PSS model generator and verification artifact bootstrapper. It reads what the engineer has and produces portable verification intent plus the simulator-specific artifacts to execute it on a chosen target.
+
+What pssgen is not:
+A verification engine, a UVM framework, a simulator integration layer, or a protocol VIP generator. It generates the scaffolding and the intent model. The simulator and the UVM library execute the result.
 
 ---
 
@@ -52,7 +115,35 @@ pssgen makes PSS accessible without an enterprise EDA license.
 python --version          # requires >= 3.11
 pip install -e ".[dev]"   # installs jinja2, anthropic, openpyxl, pytest
 export ANTHROPIC_API_KEY=your_key_here
+
 ```
+### Environment Setup
+
+pssgen calls the Anthropic API to generate PSS models and UVM
+artifacts. You need an API key before running the main pipeline.
+
+Create a `.env` file in the project root:
+ANTHROPIC_API_KEY=your-key-here
+
+pssgen loads this file automatically at startup. You can also
+export the key directly in your shell:
+```bash
+# Windows (PowerShell)
+$env:ANTHROPIC_API_KEY = "your-key-here"
+
+# Windows (Command Prompt)
+set ANTHROPIC_API_KEY=your-key-here
+
+# Linux / macOS
+export ANTHROPIC_API_KEY="your-key-here"
+```
+
+Get an API key at https://console.anthropic.com
+
+**Note:** The `--no-llm` flag bypasses the API entirely and
+renders templates only. This mode requires no API key and is
+used for testing, CI, and verifying the pipeline structure
+before committing to API calls.
 
 ### Try the canonical counter example
 
@@ -297,17 +388,6 @@ pssgen  ← generates all block RALs + soc_reg_map.sv
 
 ---
 
-## Three Output Levels
-
-| Level | What you provide | What you get |
-|---|---|---|
-| 1 | HDL only | UVM scaffold, inferred PSS model, C test cases |
-| 2 | HDL + .intent | Richer PSS with specific sequences and corner cases |
-| 3 | HDL + .intent + .req | Full traceability, gap report, closure scripts |
-| + | Any level + .xlsx | UVM RAL model, register sequences, system assembly |
-
----
-
 ## CLI Reference
 
 ```
@@ -332,6 +412,7 @@ When `pssgen.toml` is present, all settings load automatically. `--input` is opt
 | `--scaffold` | off | Generate `_generated.intent` and `_generated.req` |
 | `--coverage-loop <n>` | 0 | Maximum closure iterations (0 = disabled) |
 | `--coverage-db <file>` | from toml | Vivado XML coverage database |
+| `--collect-results <file>` | off | Read simulator results and update VPR RTL_Status column |
 | `--config <file>` | auto | Explicit pssgen.toml path |
 | `--dump-ir` | off | Write IR snapshot to `<out>/ir.json` |
 | `--verbose` | off | Print file resolution and pipeline steps |
@@ -349,40 +430,70 @@ When `pssgen.toml` is present, all settings load automatically. `--input` is opt
 
 ## Working with Requirements
 
-### Full requirements set (DO-254 / compliance programs)
+### Import from a Word or Excel source document
 
-Populate a `.req` file with your complete requirements:
-
-```
-[FUNC-REQ-113]
-  Verification: simulation, post-silicon
-
-[SYS-REQ-047]
-  Verification: simulation
-```
-
-Tag every entry in your `.intent` file. The gap report becomes a compliance-ready verification closure argument.
-
-### Selective tagging
-
-Tag only the entries that matter:
-
-```
-coverage goals:
-  Count reaches maximum value and rolls over. [FUNC-REQ-113]
-  Enable deasserted mid-sequence.
-    (untagged — informal coverage, not a requirement)
-```
-
-Tagged items get requirement-traced covergroups and appear in the gap report. Untagged items still generate coverage. Any item can be promoted to formal by adding an ID — no other changes needed.
-
-### Scaffold mode — generate starting points
+If your requirements live in a controlled Word SRS or Excel workbook, bootstrap the VPR in one command:
 
 ```bash
-pssgen --input uart.vhd --scaffold --no-llm
+# From Word (.docx) — extracts requirement IDs and statement text
+pssgen import-reqs --from word docs/UART-RS-001.docx --out ip/uart/uart_vplan.xlsx
+
+# From Excel (.xlsx) — expects ID and description columns
+pssgen import-reqs --from xlsx requirements/uart_reqs.xlsx --out ip/uart/uart_vplan.xlsx
 ```
 
-Produces `uart_generated.intent` and `uart_generated.req` as editable starting points. The `[GENERATED]` markers show what the tool inferred. Review, confirm or edit, then run pssgen again with your reviewed files.
+The generated VPR is a starting point. Review it, fill in the `Covered_By` and `Test_Name` columns, and set `Disposition` for any requirement that is out of scope for simulation (`WAIVED`). pssgen never overwrites a VPR that already exists.
+
+### Manual VPR path
+
+Copy `docs/pssgen_vpr_template.xlsx`, rename it to match your IP (`uart_vplan.xlsx`), and populate it directly. The template includes column headers, dropdowns, conditional formatting, and a Summary sheet with status counters.
+
+Key columns to populate for gap analysis:
+
+| Column | Purpose |
+|---|---|
+| `Req_ID` | Requirement identifier (e.g. `UART-BR-001`) |
+| `Requirement` | Requirement statement text |
+| `Covered_By` | Coverage item ID cross-reference (e.g. `COV-001`) |
+| `Verification_Method` | sim / post-silicon / inspection / analysis |
+| `Disposition` | blank = open, `WAIVED` = out of scope |
+
+A blank `Covered_By` on a non-waived requirement fires a **Direction A ERROR** in the gap report. Fill it to close the gap.
+
+### Configure pssgen.toml
+
+```toml
+[project]
+name = "uart"
+
+[input]
+vplan = "uart_vplan.xlsx"
+
+[output]
+dir = "tb"
+
+[[sources]]
+hdl = "vhdl/uart.vhd"
+
+[[register_maps]]
+source = "uart_regmap.xlsx"
+format = "simple_block"
+```
+
+Then:
+
+```bash
+pssgen   # reads toml, VPR, and HDL — generates all artifacts
+```
+
+### Gap report
+
+The gap report (`<design>_gap_report.txt`) records two directions:
+
+- **Direction A ERROR** — requirement in VPR with no `Covered_By` entry and `Disposition` ≠ WAIVED
+- **Direction B WARNING** — coverage item in VPR with no traceable requirement
+
+Waived items appear in the report with their rationale but are not counted as gaps. The report is suitable as a verification closure argument for DO-254 Level C/D and similar compliance programs.
 
 ---
 
@@ -418,7 +529,7 @@ Two sheets: System (project globals) and Blocks (file references with base addre
 ## Architecture Overview
 
 ```
-HDL source + .intent + .req + .xlsx
+HDL source + register map / requirements doc / VPR
             │
             ▼
     ┌────────────────────────────────────┐
@@ -540,8 +651,9 @@ Key deferred features tracked in the SDS (OI list):
 | OI-12 | Questa UCDB binary reading (requires vcover or pyucis) |
 | OI-23 | IP-XACT XML register map input |
 | OI-24 | Full RAL integration into UVM test and scoreboard |
-| OI-28 | Verification cross-reference spreadsheet importer |
-| OI-29 | Word SRS requirement ID extractor |
+| OI-28 | VPR `--collect-results` back-annotation: write simulator pass/fail into VPR RTL_Status column |
+| OI-29 | Word SRS importer: `import-reqs --from word` CLI command and .docx paragraph parser |
+| OI-30 | VPR diff/merge: detect added/removed requirements across runs without overwriting engineer data |
 
 ---
 
