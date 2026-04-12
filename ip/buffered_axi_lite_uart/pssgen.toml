@@ -8,8 +8,10 @@ source = "docs/BALU-RS-001.docx"
 # The .req file is never overwritten once created.
 
 [input]
-intent = "buffered_axi_lite_uart.intent"
-req    = "buffered_axi_lite_uart.req"
+vplan  = "buffered_axi_lite_uart_vplan.xlsx"
+# legacy — superseded by vplan; retained for reference
+# intent = "buffered_axi_lite_uart.intent"
+# req    = "buffered_axi_lite_uart.req"
 
 [output]
 dir = "tb"
