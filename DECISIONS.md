@@ -1341,3 +1341,147 @@ target for tb/scripts/ directories. The closure script
 targets and tb/scripts/ targets are managed separately
 — the former is a pssgen emission option, the latter
 is the IP block directory structure.
+
+---
+
+## D-031: VPR spreadsheet replaces .req / .intent as the
+          requirements and verification intent source of truth
+
+Decision: Retire the .req and .intent plain-text sidecar
+files. The VPR spreadsheet (.xlsx, five-tab schema) is
+the single source of truth for all requirements and
+verification intent, effective with the BALU block.
+All new IP blocks use the VPR-first workflow. No .req
+or .intent files are created for any block going forward.
+
+Author: S. Belvin, BelTech Systems LLC
+
+Context: pssgen originally tracked IP requirements and
+verification intent in two plain-text sidecar files per
+block. The .req file held one requirement per line in
+free-form prose. The .intent file held one verification
+intent statement per line, loosely coupled to .req entries.
+This was sufficient for early development but created four
+operational problems as BALU verification matured to 141
+requirements.
+
+First, there was no machine-readable structure. Requirements
+had no stable IDs, priority fields, disposition codes, or
+coverage status. Gap analysis and reporting required fragile
+string-matching against free-form text.
+
+Second, there was no Grafana integration path. Dashboarding
+verification progress required a separate extraction step
+with no defined schema and no stable column contract.
+
+Third, the source of truth was split across three locations.
+Requirements lived in .req, coverage mapping lived in
+.intent, and execution results lived in simulation logs.
+Keeping these consistent required manual coordination that
+did not scale.
+
+Fourth, there was no formal waiver or anomaly workflow.
+There was no defined place to record WAIVED, BLOCKED, or
+AT_RISK dispositions with rationale — a requirement in
+any program approaching DO-254 closure.
+
+Rationale: The VPR schema was designed to eliminate all
+four problems in a single file that serves three audiences
+simultaneously. The engineer reads and edits it directly
+in Excel or a compatible tool. The orchestrator reads it
+programmatically through vplan_parser.py (OI-30). Grafana
+reads the Summary tab through the --collect-results pipeline
+(OI-29). No intermediate extraction layer is required for
+any of these uses.
+
+Stable requirement IDs (e.g., UART-FC-001) persist across
+edits and enable reliable cross-references in coverage
+mapping, anomaly records, and gap reports. This was
+impossible with free-form .req entries.
+
+The Overall_Status column is a formula-driven enum:
+WAIVED / OPEN / COVERED / AT_RISK / PASSING / CLOSED /
+FAILING / BLOCKED. Dispositions are auditable and
+version-controlled in the spreadsheet itself. Waivers
+carry rationale in adjacent columns — the audit artifact
+is the cell, not a separate document.
+
+The five tabs of the VPR schema are:
+
+  VPR — requirement rows (141 for BALU) with 34 columns
+    spanning identity, planning, implementation, execution,
+    and closure fields.
+  Coverage_Goals — 19 COV items (COV-001..COV-019) with
+    Linked_Requirements back-references to VPR rows.
+  Strategy_Notes — 7 freeform notes (NOTE-001..NOTE-007)
+    capturing verification strategy decisions.
+  Summary — COUNTIFS pivot by requirement family, used
+    as the Grafana data source tab.
+  Anomalies — defect records referenced by Anomaly_ID
+    in the VPR tab, supporting a full defect lifecycle
+    without requiring an external tracker for
+    verification-specific issues.
+
+Two import paths are supported for bootstrapping a VPR
+from existing documentation: pssgen --from word accepts
+a Word requirements document and generates a VPR scaffold.
+pssgen --from vcrm accepts a VCRM-format spreadsheet and
+maps its columns to the VPR schema. pssgen.toml references
+the VPR via vplan = "<block>_vplan.xlsx". The master
+template lives at docs/pssgen_vpr_template.xlsx.
+
+Domain knowledge required: Ten years of systems engineering
+experience with requirements management tools including
+IBM DOORS, combined with direct experience closing
+verification programs under DO-254. Understanding that
+waiver documentation is a required artifact in certification
+programs and that it must be co-located with the requirement
+it waives to be usable in an audit. Experience with Grafana
+as a program-level dashboard tool and the specific schema
+constraints that make a spreadsheet directly usable as a
+Grafana data source without ETL. Familiarity with the
+failure mode of split source-of-truth artifacts in
+long-running programs: the .req file says one thing,
+the .intent file says another, and neither matches the
+simulation log.
+
+Why AI could not have made this decision alone: The
+decision reflects a professional judgment that the right
+response to the split source-of-truth problem is a
+single structured file rather than a richer text format
+or a database. An AI optimizing for engineering simplicity
+would have proposed YAML or JSON. An AI optimizing for
+tool integration would have proposed a database. The VPR
+spreadsheet was chosen because it is the format that
+aerospace verification engineers already use for this
+class of artifact — the decision required knowing that
+and knowing why. The five-tab schema reflects specific
+experience with what program managers, lead engineers,
+and auditors each need to see and where they expect to
+find it. The decision to retire .req and .intent rather
+than maintain both formats in parallel reflects judgment
+about the cost of maintaining a dual-path architecture
+during active development.
+
+Consequences: req_parser.py and intent_parser.py are
+superseded by vplan_parser.py (OI-30, not yet
+implemented). They remain in the repository until OI-30
+is closed and all tests are migrated. Test fixtures in
+tests/fixtures/ that use .req and .intent format
+(counter.req, counter.intent) must be replaced with
+counter_vplan.xlsx before OI-30 tests are written. The
+BALU VPR at ip/buffered_axi_lite_uart/buffered_axi_
+lite_uart_vplan.xlsx is the reference implementation
+of the schema. Block 2 (AXI-Lite SPI Master) uses the
+VPR-first workflow from day one. Engineers accustomed
+to editing plain-text .req files must use Excel or a
+compatible spreadsheet tool. This is an accepted
+trade-off for the gains in structure, auditability,
+and Grafana integration.
+
+D-005 is superseded by this decision. D-005 chose
+structured natural language intent files as the
+verification intent format. That choice is retired.
+The VPR Coverage_Goals tab replaces the .intent file's
+function, and the VPR tab's requirement rows replace
+the .req file's function.
