@@ -19,7 +19,7 @@ run_cmd [list xvhdl --2008 --work work \
     [file join $DUT_DIR vhdl/${DESIGN}.vhd]]
 
 puts "--- Compiling UVM TB ---"
-run_cmd [list xvlog --sv --uvm_version 1.2 --work work \
+run_cmd [list xvlog --sv --uvm_version 1.2 -L uvm --work work \
     --include $TB_DIR \
     [file join $TB_DIR ${DESIGN}_if.sv] \
     [file join $TB_DIR ${DESIGN}_pkg.sv] \
