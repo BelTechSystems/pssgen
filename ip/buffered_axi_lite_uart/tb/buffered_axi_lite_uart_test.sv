@@ -1,5 +1,7 @@
-class buffered_axi_lite_uart_test extends uvm_test;
-    `uvm_component_utils(buffered_axi_lite_uart_test)
+// Base test: owns the agent and provides the raise/drop objection wrapper.
+// Subclasses override run_sequences() to supply stimulus.
+class buffered_axi_lite_uart_base_test extends uvm_test;
+    `uvm_component_utils(buffered_axi_lite_uart_base_test)
 
     buffered_axi_lite_uart_agent agent_h;
 
@@ -11,4 +13,33 @@ class buffered_axi_lite_uart_test extends uvm_test;
         super.build_phase(phase);
         agent_h = buffered_axi_lite_uart_agent::type_id::create("agent_h", this);
     endfunction
+
+    task run_phase(uvm_phase phase);
+        phase.raise_objection(this);
+        run_sequences(phase);
+        phase.drop_objection(this);
+    endtask
+
+    // Override in subclass to run sequences. Base does nothing.
+    virtual task run_sequences(uvm_phase phase);
+    endtask
+
+endclass
+
+
+// Smoke test: runs buffered_axi_lite_uart_smoke_seq end-to-end.
+// Start with: +UVM_TESTNAME=buffered_axi_lite_uart_smoke_test
+class buffered_axi_lite_uart_smoke_test extends buffered_axi_lite_uart_base_test;
+    `uvm_component_utils(buffered_axi_lite_uart_smoke_test)
+
+    function new(string name, uvm_component parent);
+        super.new(name, parent);
+    endfunction
+
+    virtual task run_sequences(uvm_phase phase);
+        buffered_axi_lite_uart_smoke_seq seq;
+        seq = buffered_axi_lite_uart_smoke_seq::type_id::create("seq");
+        seq.start(agent_h.seqr);
+    endtask
+
 endclass

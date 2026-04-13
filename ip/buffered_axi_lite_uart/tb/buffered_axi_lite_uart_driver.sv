@@ -1,20 +1,99 @@
 class buffered_axi_lite_uart_driver extends uvm_driver #(buffered_axi_lite_uart_seq_item);
     `uvm_component_utils(buffered_axi_lite_uart_driver)
 
+    virtual buffered_axi_lite_uart_if vif;
+
     function new(string name, uvm_component parent);
         super.new(name, parent);
     endfunction
 
     function void build_phase(uvm_phase phase);
         super.build_phase(phase);
+        if (!uvm_config_db #(virtual buffered_axi_lite_uart_if)::get(
+                this, "", "vif", vif))
+            `uvm_fatal("NO_VIF",
+                "buffered_axi_lite_uart_driver: vif not found in config_db")
     endfunction
 
     task run_phase(uvm_phase phase);
         buffered_axi_lite_uart_seq_item req;
+        // Deassert all driven signals before waiting for reset
+        vif.s_axi_awvalid <= 1'b0;
+        vif.s_axi_awaddr  <= '0;
+        vif.s_axi_awprot  <= '0;
+        vif.s_axi_wvalid  <= 1'b0;
+        vif.s_axi_wdata   <= '0;
+        vif.s_axi_wstrb   <= '0;
+        vif.s_axi_bready  <= 1'b0;
+        vif.s_axi_arvalid <= 1'b0;
+        vif.s_axi_araddr  <= '0;
+        vif.s_axi_arprot  <= '0;
+        vif.s_axi_rready  <= 1'b0;
+        // Wait for reset to deassert before driving any transactions
+        @(posedge vif.axi_aclk iff vif.axi_aresetn === 1'b1);
         forever begin
             seq_item_port.get_next_item(req);
-            // Extend: drive req fields onto vif — add vif handle in build_phase
+            if (req.cmd === buffered_axi_lite_uart_seq_item::AXI_WRITE)
+                drive_write(req);
+            else
+                drive_read(req);
             seq_item_port.item_done();
         end
     endtask
+
+    // Drive one AXI-Lite write transaction: AW → W → B
+    task drive_write(buffered_axi_lite_uart_seq_item req);
+        // Optional pre-delay
+        repeat (req.pre_delay_cycles) @(posedge vif.axi_aclk);
+
+        // AW channel: assert awvalid, hold until awready
+        @(posedge vif.axi_aclk);
+        vif.s_axi_awvalid <= 1'b1;
+        vif.s_axi_awaddr  <= req.addr[7:0];
+        vif.s_axi_awprot  <= 3'b000;
+        @(posedge vif.axi_aclk iff vif.s_axi_awready === 1'b1);
+        vif.s_axi_awvalid <= 1'b0;
+        vif.s_axi_awaddr  <= '0;
+
+        // W channel: assert wvalid, hold until wready
+        @(posedge vif.axi_aclk);
+        vif.s_axi_wvalid <= 1'b1;
+        vif.s_axi_wdata  <= req.wdata;
+        vif.s_axi_wstrb  <= req.wstrb;
+        @(posedge vif.axi_aclk iff vif.s_axi_wready === 1'b1);
+        vif.s_axi_wvalid <= 1'b0;
+        vif.s_axi_wdata  <= '0;
+        vif.s_axi_wstrb  <= '0;
+
+        // B channel: assert bready, wait for bvalid, capture bresp
+        vif.s_axi_bready <= 1'b1;
+        @(posedge vif.axi_aclk iff vif.s_axi_bvalid === 1'b1);
+        req.resp = vif.s_axi_bresp;
+        @(posedge vif.axi_aclk);
+        vif.s_axi_bready <= 1'b0;
+    endtask
+
+    // Drive one AXI-Lite read transaction: AR → R
+    task drive_read(buffered_axi_lite_uart_seq_item req);
+        // Optional pre-delay
+        repeat (req.pre_delay_cycles) @(posedge vif.axi_aclk);
+
+        // AR channel: assert arvalid, hold until arready
+        @(posedge vif.axi_aclk);
+        vif.s_axi_arvalid <= 1'b1;
+        vif.s_axi_araddr  <= req.addr[7:0];
+        vif.s_axi_arprot  <= 3'b000;
+        @(posedge vif.axi_aclk iff vif.s_axi_arready === 1'b1);
+        vif.s_axi_arvalid <= 1'b0;
+        vif.s_axi_araddr  <= '0;
+
+        // R channel: assert rready, wait for rvalid, capture rdata and rresp
+        vif.s_axi_rready <= 1'b1;
+        @(posedge vif.axi_aclk iff vif.s_axi_rvalid === 1'b1);
+        req.rdata = vif.s_axi_rdata;
+        req.resp  = vif.s_axi_rresp;
+        @(posedge vif.axi_aclk);
+        vif.s_axi_rready <= 1'b0;
+    endtask
+
 endclass

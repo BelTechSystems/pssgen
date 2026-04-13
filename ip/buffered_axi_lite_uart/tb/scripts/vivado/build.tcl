@@ -34,7 +34,7 @@ run_cmd [list xelab -L uvm \
 
 puts "--- Simulating ---"
 run_cmd [list xsim $SNAPSHOT \
-    -testplusarg UVM_TESTNAME=${DESIGN}_test \
+    -testplusarg UVM_TESTNAME=${DESIGN}_smoke_test \
     -runall \
     -log xsim.log]
 

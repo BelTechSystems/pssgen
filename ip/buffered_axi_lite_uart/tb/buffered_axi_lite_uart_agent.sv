@@ -1,9 +1,9 @@
 class buffered_axi_lite_uart_agent extends uvm_agent;
     `uvm_component_utils(buffered_axi_lite_uart_agent)
 
-    buffered_axi_lite_uart_driver drv;
-    buffered_axi_lite_uart_monitor mon;
-    buffered_axi_lite_uart_sequencer seqr;
+    buffered_axi_lite_uart_driver     drv;
+    buffered_axi_lite_uart_monitor    mon;
+    buffered_axi_lite_uart_sequencer  seqr;
 
     function new(string name, uvm_component parent);
         super.new(name, parent);
@@ -11,8 +11,15 @@ class buffered_axi_lite_uart_agent extends uvm_agent;
 
     function void build_phase(uvm_phase phase);
         super.build_phase(phase);
-        drv = buffered_axi_lite_uart_driver::type_id::create("drv", this);
-        mon = buffered_axi_lite_uart_monitor::type_id::create("mon", this);
+        drv  = buffered_axi_lite_uart_driver::type_id::create("drv",  this);
+        mon  = buffered_axi_lite_uart_monitor::type_id::create("mon", this);
         seqr = buffered_axi_lite_uart_sequencer::type_id::create("seqr", this);
     endfunction
+
+    function void connect_phase(uvm_phase phase);
+        drv.seq_item_port.connect(seqr.seq_item_export);
+        // mon.ap is left unconnected — wire to scoreboard/coverage
+        // subscriber in a later step when those components are added.
+    endfunction
+
 endclass

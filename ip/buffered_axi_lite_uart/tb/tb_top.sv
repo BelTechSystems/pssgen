@@ -66,8 +66,8 @@ module tb_top;
     // Default signal initialization
     // -------------------------------------------------------------------------
     initial begin
-        // Hook the interface clock/reset to the local TB clock
-        intf.axi_aclk    = 1'b0;
+        // Hook the interface reset to the local TB clock
+        // axi_aclk is driven solely by the always_comb block below
         intf.axi_aresetn = 1'b0;
 
         // AXI write address channel
