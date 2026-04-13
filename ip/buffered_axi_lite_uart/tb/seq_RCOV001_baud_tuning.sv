@@ -14,6 +14,9 @@
 //
 // BAUD_TUNING register: offset 0x08 per register map.
 // Write to BAUD_TUNING requires UART_EN=0 (reset default). Req: UART-BR-004.
+//
+// Readback checking has moved to buffered_axi_lite_uart_scoreboard.
+// The axi_read call is retained so the monitor observes the transaction.
 // =============================================================================
 
 class seq_RCOV001_baud_tuning extends buffered_axi_lite_uart_base_seq;
@@ -63,20 +66,13 @@ class seq_RCOV001_baud_tuning extends buffered_axi_lite_uart_base_seq;
             // Write tuning word
             axi_write(32'h00000008, tuning_words[i], 4'hF, "BAUD_TUNING");
 
-            // Read back and verify
+            // Read back — scoreboard performs the comparison check
             axi_read(32'h00000008, rdata, "BAUD_TUNING");
 
             `uvm_info("RCOV001",
                 $sformatf("BAUD_TUNING [%s] write=0x%08h readback=0x%08h",
                     baud_names[i], tuning_words[i], rdata),
                 UVM_MEDIUM)
-
-            if (rdata !== tuning_words[i]) begin
-                `uvm_error("RCOV001",
-                    $sformatf(
-                        "UART-REG-027 VIOLATION: BAUD_TUNING [%s] wrote 0x%08h read 0x%08h — register readback mismatch",
-                        baud_names[i], tuning_words[i], rdata))
-            end
         end
     endtask
 

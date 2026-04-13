@@ -18,8 +18,7 @@ class buffered_axi_lite_uart_agent extends uvm_agent;
 
     function void connect_phase(uvm_phase phase);
         drv.seq_item_port.connect(seqr.seq_item_export);
-        // mon.ap is left unconnected — wire to scoreboard/coverage
-        // subscriber in a later step when those components are added.
+        // mon.ap is connected to sb and cov in env.sv connect_phase
     endfunction
 
 endclass

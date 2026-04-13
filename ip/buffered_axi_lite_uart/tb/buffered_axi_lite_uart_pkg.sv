@@ -4,13 +4,17 @@ package buffered_axi_lite_uart_pkg;
     `include "uvm_macros.svh"
 
     // Include the class files in strict dependency order
-    `include "buffered_axi_lite_uart_seq_item.sv"   // no dependencies
-    `include "buffered_axi_lite_uart_seqr.sv"       // depends on seq_item
-    `include "buffered_axi_lite_uart_driver.sv"     // depends on seq_item
-    `include "buffered_axi_lite_uart_monitor.sv"    // depends on seq_item
-    `include "buffered_axi_lite_uart_base_seq.sv"   // depends on seq_item
-    `include "buffered_axi_lite_uart_smoke_seq.sv"  // depends on base_seq
-    `include "seq_RCOV001_baud_tuning.sv"           // depends on base_seq
-    `include "buffered_axi_lite_uart_agent.sv"      // depends on drv/mon/seqr
-    `include "buffered_axi_lite_uart_test.sv"       // depends on agent, seqs
+    `include "buffered_axi_lite_uart_seq_item.sv"            // no dependencies
+    `include "buffered_axi_lite_uart_seqr.sv"                // depends on seq_item
+    `include "buffered_axi_lite_uart_driver.sv"              // depends on seq_item
+    `include "buffered_axi_lite_uart_monitor.sv"             // depends on seq_item
+    `include "buffered_axi_lite_uart_scoreboard.sv"          // depends on seq_item
+    `include "buffered_axi_lite_uart_coverage_subscriber.sv" // depends on seq_item
+    `include "buffered_axi_lite_uart_base_seq.sv"            // depends on seq_item
+    `include "buffered_axi_lite_uart_smoke_seq.sv"           // depends on base_seq
+    `include "seq_RCOV001_baud_tuning.sv"                    // depends on base_seq
+    `include "buffered_axi_lite_uart_agent.sv"               // depends on drv/mon/seqr
+    `include "buffered_axi_lite_uart_env.sv"                 // depends on agent/sb/cov
+    `include "buffered_axi_lite_uart_test.sv"                // depends on env
+    `include "buffered_axi_lite_uart_regression_test.sv"     // depends on test + seqs
 endpackage

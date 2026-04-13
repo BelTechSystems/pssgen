@@ -1,0 +1,149 @@
+class buffered_axi_lite_uart_scoreboard extends uvm_scoreboard;
+    `uvm_component_utils(buffered_axi_lite_uart_scoreboard)
+
+    uvm_analysis_imp #(buffered_axi_lite_uart_seq_item,
+                       buffered_axi_lite_uart_scoreboard) analysis_export;
+
+    // Shadow register model — RW registers only.
+    // RO and WO registers are not predicted here.
+    local bit [31:0] shadow [bit [31:0]];
+
+    // Running error count reported in check_phase.
+    local int error_count;
+
+    function new(string name, uvm_component parent);
+        super.new(name, parent);
+        error_count = 0;
+    endfunction
+
+    function void build_phase(uvm_phase phase);
+        super.build_phase(phase);
+        analysis_export = new("analysis_export", this);
+        _init_shadow();
+    endfunction
+
+    // Pre-load RW register reset values.
+    // STATUS reset = 0x00000140 (TX_EMPTY[8]=1, RX_EMPTY[6]=1 — confirmed
+    // against VHDL STATUS_p process; regmap context value 0x300 is incorrect).
+    // RO and side-effect registers (STATUS, FIFO_STATUS, INT_STATUS,
+    // INT_CLEAR, TX_DATA, RX_DATA) are omitted from the shadow.
+    local function void _init_shadow();
+        shadow[32'h00] = 32'h00000000;   // CTRL
+        shadow[32'h08] = 32'h004FA6D5;   // BAUD_TUNING
+        shadow[32'h0C] = 32'h00000808;   // FIFO_CTRL (TX_THRESH=8, RX_THRESH=8)
+        shadow[32'h14] = 32'h000000FF;   // TIMEOUT_VAL
+        shadow[32'h18] = 32'h00000000;   // INT_ENABLE
+        shadow[32'h24] = 32'h00000000;   // SCRATCH
+    endfunction
+
+    // Apply a write to the shadow, honouring wstrb byte-enable masking.
+    local function void _apply_write(
+        bit [31:0] addr,
+        bit [31:0] wdata,
+        bit [3:0]  wstrb
+    );
+        for (int b = 0; b < 4; b++) begin
+            if (wstrb[b])
+                shadow[addr][b*8 +: 8] = wdata[b*8 +: 8];
+        end
+    endfunction
+
+    function void write(buffered_axi_lite_uart_seq_item item);
+        bit [7:0] reg_offset = item.addr[7:0];
+
+        if (item.cmd === buffered_axi_lite_uart_seq_item::AXI_WRITE) begin
+
+            if (item.resp !== 2'b00) begin
+                error_count++;
+                `uvm_error("SB", $sformatf(
+                    "UART-IF-006: write response not OKAY — addr=0x%08h resp=%02b",
+                    item.addr, item.resp))
+            end
+
+            case (reg_offset)
+                8'h00, 8'h0C, 8'h14, 8'h18, 8'h24: begin
+                    // RW register — update shadow with wstrb masking
+                    _apply_write(item.addr, item.wdata, item.wstrb);
+                end
+                8'h08: begin
+                    // BAUD_TUNING — write ignored while UART_EN (CTRL[7]) is set
+                    if (shadow[32'h00][7] === 1'b1) begin
+                        `uvm_info("SB", $sformatf(
+                            "BAUD_TUNING write ignored — UART_EN=1, per UART-BR-004 (wdata=0x%08h)",
+                            item.wdata), UVM_MEDIUM)
+                    end else begin
+                        _apply_write(item.addr, item.wdata, item.wstrb);
+                    end
+                end
+                8'h20: begin
+                    // INT_CLEAR: W1C side-effect register — shadow not updated
+                end
+                8'h28: begin
+                    // TX_DATA: WO — no shadow entry
+                end
+                8'h04, 8'h10, 8'h1C, 8'h2C: begin
+                    `uvm_warning("SB", $sformatf(
+                        "Write to read-only register addr=0x%08h wdata=0x%08h",
+                        item.addr, item.wdata))
+                end
+                default: begin
+                    `uvm_warning("SB", $sformatf(
+                        "Write to unknown register addr=0x%08h wdata=0x%08h",
+                        item.addr, item.wdata))
+                end
+            endcase
+
+        end else begin  // AXI_READ
+
+            if (item.resp !== 2'b00) begin
+                error_count++;
+                `uvm_error("SB", $sformatf(
+                    "UART-IF-007: read response not OKAY — addr=0x%08h resp=%02b",
+                    item.addr, item.resp))
+            end
+
+            case (reg_offset)
+                8'h00, 8'h0C, 8'h14, 8'h18, 8'h24: begin
+                    if (item.rdata !== shadow[item.addr]) begin
+                        error_count++;
+                        `uvm_error("SB", $sformatf(
+                            "UART-REG: register readback mismatch — addr=0x%08h expected=0x%08h actual=0x%08h",
+                            item.addr, shadow[item.addr], item.rdata))
+                    end
+                end
+                8'h08: begin
+                    if (item.rdata !== shadow[item.addr]) begin
+                        error_count++;
+                        `uvm_error("SB", $sformatf(
+                            "UART-REG-027: BAUD_TUNING readback mismatch — expected=0x%08h actual=0x%08h",
+                            shadow[item.addr], item.rdata))
+                    end
+                end
+                8'h20: begin
+                    if (item.rdata !== 32'h00000000) begin
+                        error_count++;
+                        `uvm_error("SB", $sformatf(
+                            "INT_CLEAR reads non-zero — expected=0x00000000 actual=0x%08h",
+                            item.rdata))
+                    end
+                end
+                8'h04, 8'h10, 8'h1C, 8'h2C: begin
+                    `uvm_info("SB", $sformatf(
+                        "RO register read — addr=0x%08h rdata=0x%08h",
+                        item.addr, item.rdata), UVM_HIGH)
+                end
+                default: begin
+                    `uvm_warning("SB", $sformatf(
+                        "Read from unknown register addr=0x%08h rdata=0x%08h",
+                        item.addr, item.rdata))
+                end
+            endcase
+        end
+    endfunction
+
+    function void check_phase(uvm_phase phase);
+        `uvm_info("SB", $sformatf(
+            "Scoreboard check_phase: %0d error(s)", error_count), UVM_MEDIUM)
+    endfunction
+
+endclass

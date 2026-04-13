@@ -1,9 +1,9 @@
-// Base test: owns the agent and provides the raise/drop objection wrapper.
+// Base test: owns the env and provides the raise/drop objection wrapper.
 // Subclasses override run_sequences() to supply stimulus.
 class buffered_axi_lite_uart_base_test extends uvm_test;
     `uvm_component_utils(buffered_axi_lite_uart_base_test)
 
-    buffered_axi_lite_uart_agent agent_h;
+    buffered_axi_lite_uart_env env_h;
 
     function new(string name, uvm_component parent);
         super.new(name, parent);
@@ -11,7 +11,7 @@ class buffered_axi_lite_uart_base_test extends uvm_test;
 
     function void build_phase(uvm_phase phase);
         super.build_phase(phase);
-        agent_h = buffered_axi_lite_uart_agent::type_id::create("agent_h", this);
+        env_h = buffered_axi_lite_uart_env::type_id::create("env_h", this);
     endfunction
 
     task run_phase(uvm_phase phase);
@@ -39,7 +39,7 @@ class buffered_axi_lite_uart_smoke_test extends buffered_axi_lite_uart_base_test
     virtual task run_sequences(uvm_phase phase);
         buffered_axi_lite_uart_smoke_seq seq;
         seq = buffered_axi_lite_uart_smoke_seq::type_id::create("seq");
-        seq.start(agent_h.seqr);
+        seq.start(env_h.agent.seqr);
     endtask
 
 endclass
