@@ -24,7 +24,7 @@
 #
 # DEPENDENCIES:
 #   Standard library:  dataclasses, typing, json, os
-#   Internal:          ir, parser.dispatch, parser.intent_parser, parser.req_parser,
+#   Internal:          ir, parser.dispatch, parser.intent_parser, parser.req_parser, parser.vplan_parser,
 #                      parser.context, agents.structure_gen, agents.pss_gen,
 #                      agents.scaffold_gen, agents.gap_agent, agents.coverage_reader,
 #                      agents.closure_gen, agents.datasheet_gen, checkers.verifier,
@@ -45,6 +45,7 @@
 #   v4c      2026-04-05  SB  register_maps_list multi-file merge from pssgen.toml
 #   v5a-prep 2026-04-06  SB  .req is optional; inline_requirements flow through intent_result (D-025)
 #   v5a      2026-04-08  SB  Wired generate_datasheet; DATASHEET.md added to output_files (D-026)
+#   v6a      2026-04-12  SB  Replaced parse_req + parse_intent with parse_vplan (OI-30, D-031)
 #
 # ===========================================================
 """orchestrator.py — Pipeline coordinator and retry owner.
@@ -63,6 +64,7 @@ from ir import IR
 from parser.dispatch import parse_source
 from parser.intent_parser import parse_intent
 from parser.req_parser import parse_req
+from parser.vplan_parser import parse_vplan
 from parser.context import resolve_context_files, resolve_regmap_file
 from parser.regmap_parser import parse_regmap
 from agents.structure_gen import Artifact, generate
@@ -348,50 +350,75 @@ def run(job: JobSpec) -> OrchestratorResult:
         no_req=job.no_req,
     )
 
-    # Determine how intent was located for verbose reporting
+    # Determine how intent/vplan was located for verbose reporting
     if intent_path is not None:
         intent_source = "explicit" if job.intent_file else "auto-detected"
     else:
         intent_source = "none"
 
-    # Determine how req was located for verbose reporting
+    # VPR path (.xlsx) takes precedence; fall back to legacy .intent / .req
+    vplan_result = None
     intent_result = None
-    if intent_path:
-        intent_result = parse_intent(intent_path)
-        ir.pss_intent = open(intent_path, "r", encoding="utf-8").read()
-        ir.requirement_ids = intent_result.req_ids
-        ir.requirement_schemes = intent_result.req_schemes
-        ir.intent_waivers = intent_result.waivers
-
     req_result = None
     req_source = "none"
-    if req_path:
-        req_result = parse_req(req_path)
-        req_source = "explicit" if job.req_file else "auto-detected"
-    elif should_extract and intent_result is not None and intent_result.req_ids:
-        # Auto-extract: write a .req skeleton next to the input file, never overwrite
-        stem = os.path.splitext(os.path.basename(job.input_file))[0]
-        extracted_req_path = os.path.join(
-            os.path.dirname(os.path.abspath(job.input_file)),
-            f"{stem}.req"
-        )
-        if not os.path.exists(extracted_req_path):
-            _write_req_skeleton(extracted_req_path, ir, intent_result)
-        req_source = "extracted"
+
+    vplan_path = intent_path  # resolve_context_files returns vplan via intent slot
+    if vplan_path and vplan_path.endswith(".xlsx"):
+        vplan_result = parse_vplan(vplan_path)
+        intent_result = vplan_result
+        req_result = vplan_result
+        ir.requirement_ids = vplan_result.req_ids
+        ir.requirement_schemes = vplan_result.req_schemes
+        ir.intent_waivers = vplan_result.intent_waivers
+        req_source = "explicit" if job.intent_file else "auto-detected"
+    else:
+        # Legacy .intent / .req path
+        if intent_path:
+            intent_result = parse_intent(intent_path)
+            ir.pss_intent = open(intent_path, "r", encoding="utf-8").read()
+            ir.requirement_ids = intent_result.req_ids
+            ir.requirement_schemes = intent_result.req_schemes
+            ir.intent_waivers = intent_result.waivers
+
+        if req_path:
+            req_result = parse_req(req_path)
+            req_source = "explicit" if job.req_file else "auto-detected"
+        elif should_extract and intent_result is not None and intent_result.req_ids:
+            # Auto-extract: write a .req skeleton next to the input file, never overwrite
+            stem = os.path.splitext(os.path.basename(job.input_file))[0]
+            extracted_req_path = os.path.join(
+                os.path.dirname(os.path.abspath(job.input_file)),
+                f"{stem}.req"
+            )
+            if not os.path.exists(extracted_req_path):
+                _write_req_skeleton(extracted_req_path, ir, intent_result)
+            req_source = "extracted"
 
     if job.verbose:
-        print(f"[orchestrator] Intent: {intent_path} ({intent_source})")
-        print(f"[orchestrator] Req: {req_path} ({req_source})")
-        if intent_result:
+        if vplan_result is not None:
+            print(f"[orchestrator] VPR: {vplan_path} ({intent_source})")
             print(
                 f"[orchestrator] Detected schemes: "
-                f"{', '.join(intent_result.req_schemes) or 'none'}"
+                f"{', '.join(vplan_result.req_schemes) or 'none'}"
             )
             print(
                 f"[orchestrator] Requirement IDs found: "
-                f"{len(intent_result.req_ids)}"
+                f"{len(vplan_result.req_ids)}"
             )
-            print(f"[orchestrator] Waivers: {len(intent_result.waivers)}")
+            print(f"[orchestrator] Waivers: {len(vplan_result.waivers)}")
+        else:
+            print(f"[orchestrator] Intent: {intent_path} ({intent_source})")
+            print(f"[orchestrator] Req: {req_path} ({req_source})")
+            if intent_result:
+                print(
+                    f"[orchestrator] Detected schemes: "
+                    f"{', '.join(intent_result.req_schemes) or 'none'}"
+                )
+                print(
+                    f"[orchestrator] Requirement IDs found: "
+                    f"{len(intent_result.req_ids)}"
+                )
+                print(f"[orchestrator] Waivers: {len(intent_result.waivers)}")
 
     # --- Register map loading (v4a) ---
     regmap_path = resolve_regmap_file(job.input_file, job.reg_map_file)
@@ -487,10 +514,6 @@ def run(job: JobSpec) -> OrchestratorResult:
                     f"[orchestrator] Req scaffold already exists, "
                     f"skipping: {req_scaffold_path}"
                 )
-
-    # Legacy verbose log for intent (kept for test compatibility)
-    if job.verbose and intent_path:
-        print(f"[orchestrator] Loaded intent file: {intent_path}")
 
     if job.dump_ir:
         os.makedirs(job.out_dir, exist_ok=True)
