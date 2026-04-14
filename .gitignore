@@ -81,3 +81,5 @@ xsim.covdb/
 # Orphaned files (see Task 1 cleanup)
 gen_sds.js
 hdl_style_old.md
+
+.claude/
