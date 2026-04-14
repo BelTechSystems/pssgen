@@ -1,4 +1,4 @@
-BelTech STD-003B
+BelTech STD-003
 AI Generation Specification for SystemVerilog UVM Testbenches
 Profile: Small-to-Medium FPGA IP Projects
 1. Purpose
