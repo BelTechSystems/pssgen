@@ -1485,3 +1485,205 @@ verification intent format. That choice is retired.
 The VPR Coverage_Goals tab replaces the .intent file's
 function, and the VPR tab's requirement rows replace
 the .req file's function.
+
+---
+
+## D-032: Retire Jinja2 template-based UVM generation;
+          replace with Python string generation in
+          scaffold_gen.py; establish BALU tb/ as the
+          reference implementation
+
+Decision: Retire Jinja2 template-based UVM generation.
+Replace with Python string generation functions in
+scaffold_gen.py. The BALU tb/ directory is the reference
+implementation for all future UVM testbench generation.
+STD-003B (docs/BelTech-STD-003_UVM-Testbench_Style.md)
+is the required file set and compliance target.
+structure_gen.py is superseded for UVM artifact
+generation.
+
+Author: S. Belvin, BelTech Systems LLC
+
+Context: pssgen originally used Jinja2 templates in
+templates/uvm/ to generate seven UVM files: interface,
+driver, monitor, sequencer, agent, test, and
+build_vivado.tcl. This was the minimal file set
+established in the v0 walking skeleton and reflected
+the architecture at the time: the LLM filled dynamic
+content into a rendered template, and the checker
+verified structural completeness against that seven-file
+set. For v0 purposes the approach was adequate.
+
+The BALU verification effort — Steps 1 through 3 of the
+UVM testbench build-out documented in STD-003B — produced
+a complete, simulation-proven testbench. That testbench
+compiles clean under Vivado/XSIM, elaborates without
+error, and passes regression with zero UVM errors or
+fatal messages. It consists of fifteen files: tb_top.sv,
+dut_if.sv, dut_pkg.sv, dut_seq_item.sv, dut_base_seq.sv,
+dut_sequencer.sv, dut_driver.sv, dut_monitor.sv,
+dut_agent.sv, dut_env.sv, dut_scoreboard.sv,
+dut_coverage_subscriber.sv, dut_base_test.sv,
+dut_smoke_test.sv, and build.tcl. This is the STD-003B
+§4 required file set.
+
+The gap between the seven-file Jinja2 set and the
+fifteen-file STD-003B set cannot be closed by adding
+templates. The eight files added in Steps 2 and 3 of
+the BALU build-out contain protocol-specific logic that
+cannot be expressed as variable substitution: AXI-Lite
+handshaking in the driver, a register shadow model in
+the scoreboard, and a typed covergroup in the coverage
+subscriber. Each of these requires Python decision-making
+based on the IR and VPR. The scoreboard's shadow
+initialization depends on the register map data structure
+that the orchestrator holds in memory; the covergroup's
+bin declarations depend on the COV item list extracted
+from the VPR by vplan_parser.py. Neither of these inputs
+is a template variable.
+
+Jinja2 also imposes structural costs that were acceptable
+in v0 but become significant as the generator matures.
+It adds a runtime dependency. It splits generation logic
+across Python and template files, requiring a developer
+to hold both in mind when reading or modifying a
+generator. It makes unit testing harder: testing a Jinja2
+template requires rendering it and inspecting the output,
+whereas testing a Python string generation function
+requires only calling the function with a fixture IR and
+asserting on the returned string. The VPR integration
+that drives COV sequence stub generation is Python logic
+by nature; placing it in a template would require
+embedding Python expressions in Jinja2 blocks, which is
+the failure mode that template-based code generators
+commonly reach when the problem outgrows the template
+model.
+
+Rationale: Python string generation in scaffold_gen.py
+concentrates all UVM generation logic in a single module
+in the agents layer. That module is testable with
+standard pytest fixtures, readable without switching
+between Python and Jinja2 syntax, and straightforwardly
+extended when new artifacts or register-aware generation
+logic are required. The register shadow scoreboard and
+typed covergroup are the most complex generated
+artifacts; both require knowledge of the register map
+that is natural to express in Python and awkward in
+Jinja2. Python generation makes that logic a first-class
+part of the agents layer rather than a workaround inside
+a template.
+
+The BALU tb/ files are the reference implementation
+because they are proven correct by simulation. A
+generator that produces output matching the BALU pattern
+is correct by construction. This is a stronger
+correctness criterion than template coverage or static
+analysis: it means the generated testbench compiles,
+elaborates, and executes against the target DUT with
+zero fatal messages. That bar is achievable precisely
+because the reference exists and is stable.
+
+STD-003B compliance is verifiable in the same terms: a
+generated testbench either compiles and passes the smoke
+test or it does not. The UVM package-based compile model
+required by STD-003B §8 makes the include order in
+dut_pkg.sv a correctness constraint, not a style
+preference. Python generation can enforce that constraint
+programmatically in the function that generates
+dut_pkg.sv; Jinja2 cannot enforce it without embedding
+Python logic in the template.
+
+Domain knowledge required: Experience with the failure
+modes of template-based code generation at scale.
+Templates work well for simple substitution but become
+unmaintainable when generation logic requires conditionals
+based on parsed input structure. The BALU scoreboard's
+register shadow initialization is a concrete example:
+the shadow values depend on the reset_value column of
+the VPR register map, which is a Python list of dicts
+available in scaffold_gen.py but not expressible as a
+Jinja2 context variable without first flattening it in
+a way that loses the structural relationships. Familiarity
+with the proven Vivado/XSIM compile model: xvhdl for
+the VHDL DUT, xvlog with -L uvm for the three-file TB
+compile unit (if/pkg/top in that order), xelab targeting
+work.tb_top only. This model was established through
+iterative debugging during the BALU Steps 1 and 2
+build-out and is now encoded in the reference build.tcl.
+Understanding that the UVM package-based compile model
+makes include order a correctness constraint rather than
+a convention, and that enforcing it requires programmatic
+knowledge of what each file declares and what it depends
+on.
+
+Why AI could not have made this decision alone: The
+decision to retire Jinja2 reflects professional judgment
+that the complexity threshold for template-based
+generation had been crossed. An AI optimizing for
+consistency with the existing architecture would have
+extended the Jinja2 approach by adding templates for
+the eight new files. The judgment that Python generation
+produces a more maintainable and testable system required
+recognizing that the scoreboard and coverage subscriber
+are categorically different from the interface and
+sequencer: they contain verification logic, not structural
+boilerplate. That categorical distinction does not emerge
+from reading the code; it emerges from understanding the
+purpose of each component in the UVM methodology and
+the verification campaign. The identification of the
+BALU tb/ as the reference implementation reflects the
+decision to ground the generator in a proven artifact
+rather than in a theoretical template. That decision
+required confidence that the BALU testbench was correct,
+which came from running it against the DUT and observing
+zero errors — an empirical result, not an architectural
+inference.
+
+Consequences: The templates/uvm/ directory and all
+.jinja files therein are retired. They remain in the
+repository history but are removed from the working tree
+in the commit that implements D-032. scaffold_gen.py is
+rewritten to produce the fifteen-file STD-003B §4 required
+file set as Python string generation functions.
+structure_gen.py generate() no longer calls Jinja2; it
+delegates UVM artifact generation to scaffold_gen.py.
+The seven old UVM artifacts (interface.sv, driver.sv,
+monitor.sv, sequencer.sv, agent.sv, test.sv,
+build_vivado.tcl) are superseded by the fifteen-file
+STD-003B set. Existing tests that reference the old file
+names must be updated to reference the new names before
+D-032 implementation is considered complete.
+emitters/vivado.py build.tcl generation is updated to
+emit the proven three-file compile model established
+during the BALU build-out. All new IP blocks use
+scaffold_gen.py as the UVM generation entry point. The
+BALU tb/ is the validation target: a pssgen run against
+buffered_axi_lite_uart must produce output that matches
+the BALU tb/ structure.
+
+Alternatives considered:
+  Option A (rejected): Extend the Jinja2 template set
+    from seven to fifteen files. Add templates for
+    scoreboard, coverage subscriber, env, base_seq,
+    and regression_test. Write Jinja2 conditionals for
+    the register shadow initialization. Maintain separate
+    template and Python layers. Rejected because
+    register-aware generation logic in Jinja2 is
+    unreadable and untestable, and adding eight templates
+    does not solve the fundamental mismatch between
+    template substitution and protocol-specific logic
+    generation.
+  Option B (chosen): Retire Jinja2. Python string
+    generation in scaffold_gen.py. BALU tb/ as reference.
+    STD-003B as compliance target. All generation logic
+    in one testable Python module.
+  Option C (rejected): Keep Jinja2 for structural files
+    (if, pkg, seqr, agent) and add Python generation for
+    logic-bearing files (scoreboard, coverage subscriber).
+    Rejected because the split creates two generation
+    paths that must be kept consistent, and the package
+    include order enforcement spans both paths. A
+    developer modifying the package include order must
+    edit both the Jinja2 template and the Python
+    generator; that coordination requirement is the
+    failure mode this decision is intended to eliminate.
