@@ -73,3 +73,11 @@ desktop.ini
 
 # ── Windows ───────────────────────────────────────────────────────────
 *.lnk
+# Vivado simulation artifacts
+*.vcd
+dfx_runtime.txt
+xsim.covdb/
+
+# Orphaned files (see Task 1 cleanup)
+gen_sds.js
+hdl_style_old.md
