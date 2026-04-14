@@ -1687,3 +1687,140 @@ Alternatives considered:
     edit both the Jinja2 template and the Python
     generator; that coordination requirement is the
     failure mode this decision is intended to eliminate.
+
+---
+
+## D-033: scaffold_gen.generate_uvm_tb() implementation decisions —
+          VPR-driven shadow, verbatim stub headers, never-overwrite,
+          programmatic pkg include order
+
+Decision: scaffold_gen.generate_uvm_tb() uses Python string
+generation to produce the STD-003B required file set.
+Register shadow initialization in the scoreboard is driven
+by the VPR register map when available. COV sequence stubs
+are generated one per COV item in the VPR Coverage_Goals tab,
+named per the STD-003B seq_R<COV_ID>_<name>.sv convention,
+with header comments populated from the VPR Stimulus_Strategy
+and Boundary_Values columns.
+
+Author: S. Belvin, BelTech Systems LLC
+
+Context: D-032 established Python string generation over
+Jinja2. D-033 records specific implementation decisions
+within that approach that reflect domain knowledge and
+organizational judgment, not merely technical choices.
+
+The register shadow scoreboard requires knowledge of RW
+registers, reset values, and write guards such as the
+BAUD_TUNING write-while-UART_EN constraint specific to the
+BALU block. This information lives in the VPR register map,
+not HDL source. The generator reads vplan_result to populate
+shadow initialization from the register map structure,
+producing a scoreboard that is immediately useful on first
+generation without manual editing.
+
+When vplan_result is None, the scoreboard degrades gracefully
+to an empty shadow with a UVM_WARNING message. This preserves
+utility for blocks without a VPR while making the absence
+visible at simulation time rather than silently suppressing
+scoreboard checks.
+
+COV sequence stubs follow the STD-003B seq_R<REQ_ID>_<name>
+naming convention with the COV item ID in the REQ_ID position.
+The stub body contains only a uvm_info message; it compiles
+and runs without error but exercises no stimulus until the
+engineer fills in the body. The header comment block is
+populated verbatim from the VPR Stimulus_Strategy and
+Boundary_Values columns so that the engineer who opens the
+file for implementation sees the specification without
+opening the spreadsheet.
+
+The pkg.sv include order is enforced programmatically:
+seq_item first, COV stubs between base_seq and agent, agent
+last. This order reflects UVM compile-time class resolution
+requirements and cannot be varied. During the BALU Step 1
+build-out, incorrect include order produced xvlog errors that
+were traced to this constraint. The generator encodes the
+correct order once, eliminating that error category for all
+future blocks.
+
+The never-overwrite contract means generate_uvm_tb() skips
+any file that already exists at the target path, logging a
+warning but continuing. This allows engineers to customize
+generated files without losing work when pssgen is re-run
+with an updated VPR.
+
+Rationale: VPR-driven shadow initialization means the
+generated scoreboard is correct for the specific block from
+day one. A scoreboard with empty shadow provides no
+verification value on first use; an engineer must manually
+populate it before any meaningful checking occurs. Reading
+reset values directly from the VPR register map eliminates
+that manual step.
+
+Verbatim VPR content in stub headers closes the loop between
+the requirements document and the test implementation. The
+engineer opening a stub sees the requirement, COV item ID,
+stimulus strategy, and boundary values without opening the
+spreadsheet. This reduces the friction of the first edit and
+ensures the implementation reflects the specification rather
+than the engineer's memory of it.
+
+The never-overwrite contract respects the engineer's
+contribution. Generated files are starting points; once an
+engineer has customized a file it belongs to them. Overwriting
+on re-run would destroy work in progress.
+
+Domain knowledge required: UVM package compile order is a
+correctness constraint, not a style preference. A class that
+references another must be included after it in the package.
+In Vivado/XSIM this produces a fatal elaboration error rather
+than a warning, so incorrect order is not recoverable at
+runtime. Programmatic enforcement in the generator eliminates
+a category of error that would otherwise require manual
+debugging of the generated pkg.sv on every new block.
+Engineers open the file, read the header, and start filling
+in the body. VPR content in the header reduces the round-trip
+to the spreadsheet that would otherwise be required on every
+stub implementation session.
+
+Why AI could not have made this decision alone: The decision
+to populate shadow from VPR rather than leave empty required
+knowing that an empty shadow provides no verification value
+on day one. An AI optimizing for simplicity would generate
+an empty shadow with TODO comments. The judgment that register
+map data was worth the additional complexity of reading
+vplan_result in the generator came from professional
+experience with scoreboards that were never filled in because
+the first edit was too costly. Verbatim VPR content in stub
+headers reflects an organizational judgment: the engineer
+filling in a stub is often not the person who wrote the VPR.
+Putting the specification in the file reduces the round-trip
+to the spreadsheet. This is not a technical decision; it is
+an organizational one about how verification knowledge flows
+through a team.
+
+Consequences: Every new IP block gets a scoreboard with
+populated shadow on first generation, assuming a VPR is
+provided. The scoreboard is immediately useful without manual
+editing. COV sequence stubs exist for every COV item from the
+moment of generation. The regression test references all of
+them. Coverage starts at stub level on day one. The
+never-overwrite contract means pssgen can be re-run without
+destroying work in progress; re-run on an existing block
+generates only new files, such as stubs for newly added COV
+items, and skips everything else.
+
+Alternatives considered:
+  Option A (chosen): VPR-driven shadow initialization. COV
+    stubs with verbatim VPR header content. Never-overwrite
+    contract. Programmatic pkg include order. Produces
+    artifacts with immediate verification value and a direct
+    connection to the requirements document.
+  Option B (rejected): Empty shadow with TODO comments.
+    Generic stub headers with no VPR content. Simple
+    overwrite on re-run. Simpler to implement but produces
+    artifacts with no immediate verification value and no
+    connection to the requirements document. Engineer must
+    manually populate shadow and look up VPR content before
+    the first meaningful verification run.

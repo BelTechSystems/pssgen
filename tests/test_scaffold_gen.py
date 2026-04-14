@@ -247,23 +247,23 @@ def test_generate_uvm_tb_with_vplan_stubs(tmp_path) -> None:
     generate_uvm_tb(ir, vpr, str(tmp_path))
     tb_dir = os.path.join(str(tmp_path), "tb")
 
-    # Two stub files must exist
-    stub1 = os.path.join(tb_dir, "seq_RCOV_001_baud_tuning.sv")
-    stub2 = os.path.join(tb_dir, "seq_RCOV_002_reset_behavior.sv")
+    # Two stub files must exist — naming: seq_RCOV<NNN>_<sanitised_name>.sv
+    stub1 = os.path.join(tb_dir, "seq_RCOV001_baud_tuning.sv")
+    stub2 = os.path.join(tb_dir, "seq_RCOV002_reset_behavior.sv")
     assert os.path.exists(stub1), f"COV stub missing: {stub1}"
     assert os.path.exists(stub2), f"COV stub missing: {stub2}"
 
     # pkg.sv must include both stubs
     pkg_content = open(os.path.join(tb_dir, "test_dut_pkg.sv"), encoding="utf-8").read()
-    assert "seq_RCOV_001_baud_tuning.sv" in pkg_content
-    assert "seq_RCOV_002_reset_behavior.sv" in pkg_content
+    assert "seq_RCOV001_baud_tuning.sv" in pkg_content
+    assert "seq_RCOV002_reset_behavior.sv" in pkg_content
 
     # regression_test.sv must reference both stub class names
     reg_content = open(
         os.path.join(tb_dir, "test_dut_regression_test.sv"), encoding="utf-8"
     ).read()
-    assert "seq_RCOV_001_baud_tuning" in reg_content
-    assert "seq_RCOV_002_reset_behavior" in reg_content
+    assert "seq_RCOV001_baud_tuning" in reg_content
+    assert "seq_RCOV002_reset_behavior" in reg_content
 
 
 def test_generate_uvm_tb_never_overwrites(tmp_path) -> None:

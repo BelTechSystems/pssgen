@@ -1205,17 +1205,30 @@ endclass"""
 def _cov_stub_names(cov_item) -> tuple[str, str, str]:
     """Derive class name, var name, and file name from a COV item.
 
+    Naming convention (STD-003B): seq_RCOV<NNN>_<name>
+    where NNN is the zero-padded numeric part of the COV ID.
+    COV-001 -> seq_RCOV001_baud_tuning
+    COV-010 -> seq_RCOV010_axi_bresp
+
     Args:
         cov_item: Object with .id and .name attributes.
 
     Returns:
         Tuple of (class_name, var_name, file_basename).
-        E.g. ('seq_RCOV_001_baud_tuning', 'cov_001', 'seq_RCOV_001_baud_tuning.sv')
+        E.g. ('seq_RCOV001_baud_tuning', 'cov001', 'seq_RCOV001_baud_tuning.sv')
     """
-    cov_id = cov_item.id.replace("-", "_")
-    name_lower = cov_item.name.lower().replace(" ", "_").replace("-", "_")
-    class_name = f"seq_R{cov_id}_{name_lower}"
-    var_name = cov_id.lower()
+    import re as _re
+    # Extract the numeric suffix from IDs like 'COV-001', 'COV-010'
+    m = _re.search(r"(\d+)$", cov_item.id)
+    num_str = m.group(1).zfill(3) if m else cov_item.id.replace("-", "")
+
+    # Sanitize name: lowercase, spaces/hyphens/dots/ampersands -> underscore,
+    # collapse multiple underscores, strip leading/trailing underscores.
+    name_raw = cov_item.name.lower()
+    name_safe = _re.sub(r"[^a-z0-9]+", "_", name_raw).strip("_")
+
+    class_name = f"seq_RCOV{num_str}_{name_safe}"
+    var_name = f"cov{num_str}"
     file_name = f"{class_name}.sv"
     return class_name, var_name, file_name
 
@@ -1262,8 +1275,8 @@ class {class_name} extends {d}_base_seq;
     endfunction
 
     virtual task body();
-        `uvm_info("STUB",
-            "{class_name}: sequence stub — implement per VPR {cov_id}",
+        `uvm_info("SEQ_PENDING",
+            "{class_name}: body not yet implemented — see VPR {cov_id}",
             UVM_MEDIUM)
     endtask
 
@@ -1450,10 +1463,27 @@ def _gen_all_content(ir: IR, vplan_result) -> dict[str, str]:
     """
     d = ir.design_name
 
-    # Build COV stub info from vplan_result
-    cov_items = []
+    # Build COV stub info from vplan_result.
+    # vplan_result.cov_items is a dict[str, dict] keyed by COV ID.
+    # Normalise to a list of simple objects so _cov_stub_names / _gen_cov_stub
+    # can access .id, .name, etc. with attribute syntax.
+    class _CovItem:  # lightweight adapter — no external dependency
+        def __init__(self, cov_id: str, data: dict) -> None:
+            self.id = cov_id
+            self.name = data.get("name", "")
+            self.linked_requirements = data.get("linked_requirements", [])
+            self.stimulus_strategy = data.get("stimulus_strategy", "")
+            self.boundary_values = data.get("boundary_values", "")
+
+    raw_cov_items = {}
     if vplan_result is not None and hasattr(vplan_result, "cov_items"):
-        cov_items = vplan_result.cov_items or []
+        raw_cov_items = vplan_result.cov_items or {}
+
+    # Handle both dict[str, dict] (vplan_parser) and list (legacy)
+    if isinstance(raw_cov_items, dict):
+        cov_items = [_CovItem(k, v) for k, v in raw_cov_items.items()]
+    else:
+        cov_items = list(raw_cov_items)
 
     cov_stub_filenames: list[str] = []
     cov_stub_class_vars: list[tuple[str, str]] = []

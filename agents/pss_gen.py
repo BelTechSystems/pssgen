@@ -141,11 +141,24 @@ def _build_coverage_labels(ir: IR, intent_result=None) -> list[dict]:
     # Build set of waived req IDs for quick lookup
     waived_req_ids: set[str] = set()
     waiver_reasons: dict[str, str] = {}
-    if intent_result is not None and hasattr(intent_result, "waivers"):
-        for w in intent_result.waivers:
+    # Prefer intent_waivers (list[dict]) over waivers (list[str]).
+    # VplanParseResult exposes both; .waivers is list[str] (IDs only).
+    _waivers_src = (
+        intent_result.intent_waivers
+        if (intent_result is not None and hasattr(intent_result, "intent_waivers"))
+        else (
+            intent_result.waivers
+            if (intent_result is not None and hasattr(intent_result, "waivers"))
+            else []
+        )
+    )
+    for w in _waivers_src:
+        if isinstance(w, dict):
             for rid in w.get("req_ids", []):
                 waived_req_ids.add(rid)
                 waiver_reasons[rid] = w.get("reason", "")
+        elif isinstance(w, str):
+            waived_req_ids.add(w)
 
     # --- Tier 1: lines with [REQ-xxx] IDs ---
     if intent_result is not None and hasattr(intent_result, "req_ids"):
