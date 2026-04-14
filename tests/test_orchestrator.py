@@ -47,3 +47,24 @@ def test_orchestrator_retry_fires(tmp_path):
     assert result.attempts == 2
     assert result.success is True
     assert call_count["n"] == 2
+
+
+def test_orchestrator_generates_uvm_tb(tmp_path):
+    """Orchestrator run creates tb/ structure for every sim target."""
+    job = JobSpec(
+        input_file="tests/fixtures/counter.v",
+        top_module="up_down_counter",
+        out_dir=str(tmp_path),
+        sim_target="vivado",
+        max_retries=1,
+        no_llm=True,
+        dump_ir=False,
+        verbose=False,
+    )
+    result = run(job)
+    tb_dir = tmp_path / "tb"
+    assert tb_dir.exists(), "tb/ directory must be created"
+    assert (tb_dir / "tb_top.sv").exists()
+    assert (tb_dir / "up_down_counter_if.sv").exists()
+    assert (tb_dir / "up_down_counter_pkg.sv").exists()
+    assert (tb_dir / "scripts" / "vivado" / "build.tcl").exists()

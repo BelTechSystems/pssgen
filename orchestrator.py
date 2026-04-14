@@ -46,6 +46,7 @@
 #   v5a-prep 2026-04-06  SB  .req is optional; inline_requirements flow through intent_result (D-025)
 #   v5a      2026-04-08  SB  Wired generate_datasheet; DATASHEET.md added to output_files (D-026)
 #   v6a      2026-04-12  SB  Replaced parse_req + parse_intent with parse_vplan (OI-30, D-031)
+#   v6b      2026-04-14  SB  Wire generate_uvm_tb into pipeline (D-032)
 #
 # ===========================================================
 """orchestrator.py — Pipeline coordinator and retry owner.
@@ -69,7 +70,7 @@ from parser.context import resolve_context_files, resolve_regmap_file
 from parser.regmap_parser import parse_regmap
 from agents.structure_gen import Artifact, generate
 from agents.pss_gen import generate_pss, _build_coverage_labels
-from agents.scaffold_gen import generate_intent_scaffold, generate_req_scaffold
+from agents.scaffold_gen import generate_intent_scaffold, generate_req_scaffold, generate_uvm_tb
 from agents.gap_agent import analyse_gaps, update_gaps_from_coverage, write_gap_report, format_console_summary
 from agents.coverage_reader import read_coverage_xml
 from agents.closure_gen import generate_closure_script
@@ -520,6 +521,20 @@ def run(job: JobSpec) -> OrchestratorResult:
         with open(os.path.join(job.out_dir, "ir.json"), "w") as f:
             json.dump(ir.__dict__, f, indent=2, default=lambda o: o.__dict__)
 
+    # --- UVM testbench generation (D-032) ---
+    # generate_uvm_tb() is safe to call on every run:
+    # its never-overwrite contract skips existing files.
+    uvm_paths = generate_uvm_tb(
+        ir=ir,
+        vplan_result=vplan_result,
+        out_dir=job.out_dir,
+    )
+    if job.verbose:
+        print(
+            f"[orchestrator] UVM testbench: "
+            f"{len(uvm_paths)} files → {job.out_dir}/tb/"
+        )
+
     if job.verbose:
         print(f"[orchestrator] IR populated: {ir.design_name}, {len(ir.ports)} ports")
 
@@ -575,6 +590,8 @@ def run(job: JobSpec) -> OrchestratorResult:
                 print(f"[orchestrator] Checker passed all tiers; tier-1 structural checks passed")
             emitter = _resolve_emitter(job.sim_target)
             output_files = emitter(ir, artifacts, job.out_dir)
+            # UVM tb/ files were written before the retry loop; include in output list.
+            output_files = list(uvm_paths) + output_files
 
             # --- Data sheet generation (v5a) ---
             datasheet_path: Optional[str] = None
