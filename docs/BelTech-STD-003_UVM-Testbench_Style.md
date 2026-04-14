@@ -235,16 +235,20 @@ protocol role
 timing options
 agent enable flags
 protocol-specific knobs
+
 12.2 Environment Configuration
 
 dut_env_cfg.sv should define:
 
-scoreboard enable
+scoreboard enable 
+scoreboard_enable knob - provided so directed tests can suppress shadow checking intentionally — this is a UVMF pattern that prevents false failures in negative testing.
 coverage enable
 assertion enable
 timeout limits
 error policy
 verbosity level
+
+
 12.3 Configuration Delivery
 
 Configuration objects should be passed through uvm_config_db.
@@ -257,6 +261,7 @@ Hardcoded operating modes should be avoided unless the bench is intentionally mi
 The agent shall connect the driver and sequencer:
 
 drv.seq_item_port.connect(seqr.seq_item_export);
+
 13.2 Monitor to Scoreboard
 
 The monitor shall define a typed analysis port:
@@ -297,6 +302,7 @@ common sequence startup behavior
 optional reset wait helpers
 reusable utility tasks
 common transaction creation methods
+
 15.2 Requirement Sequences
 
 The AI should generate one or more requirement-specific sequence files named:
@@ -308,6 +314,10 @@ Each requirement-specific sequence should extend dut_base_seq.
 15.3 Smoke Sequence Requirement
 
 At least one smoke-style sequence shall be present and shall be runnable from the smoke test.
+
+15.4 Interface vs. Environment/Testbench Sequences
+All sequences in a single-agent environment are interface sequences by default.
+Higher tiers apply when multi-agent coordination is needed.
 
 16. Test Rules
 16.1 Base Test
