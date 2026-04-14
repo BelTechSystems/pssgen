@@ -10,39 +10,47 @@
 #   and intent parse results. All machine-inferred lines are tagged with
 #   [GENERATED] to distinguish them from human-authored content. Both output
 #   files include a human-contribution notice and are never overwritten.
+#   Also generates a complete STD-003B UVM testbench file set from IR and
+#   an optional VplanParseResult via Python string generation (D-032).
 #
 # LAYER:        3 — agents
-# PHASE:        v3a
+# PHASE:        v3a / D-032
 #
 # FUNCTIONS:
 #   generate_intent_scaffold(ir, intent_result, out_path)
 #     Write a _generated.intent scaffold with [GENERATED] port entries and gaps section.
 #   generate_req_scaffold(ir, intent_result, out_path)
 #     Write a _generated.req scaffold with skeleton entries for each intent req ID.
+#   generate_uvm_tb(ir, vplan_result, out_dir)
+#     Write all 15 STD-003B UVM testbench files under out_dir/tb/; never overwrites.
 #
 # DEPENDENCIES:
-#   Standard library:  os
+#   Standard library:  os, logging
 #   Internal:          ir
 #
 # HISTORY:
-#   v3a   2026-03-28  SB  Initial implementation; intent and req scaffold generation
+#   v3a    2026-03-28  SB  Initial implementation; intent and req scaffold generation
+#   D-032  2026-04-14  SB  Add generate_uvm_tb() — Python string UVM generation
+#                          retiring Jinja2 template-based UVM generation
 #
 # ===========================================================
-"""agents/scaffold_gen.py — Intent and requirements scaffold file generator.
+"""agents/scaffold_gen.py — Intent, requirements, and UVM testbench scaffold generator.
 
-Phase: v3a
+Phase: v3a / D-032
 Layer: 3 (agent)
 
 Generates _generated.intent and _generated.req scaffold files from the IR
-and intent parse results. Output files include human-contribution notices
-and [GENERATED] markers to distinguish machine-generated content from
-human-authored content.
+and intent parse results. Also generates a complete STD-003B UVM testbench
+file set (15 required files) using Python string generation per D-032.
 
-The never-overwrite contract: these files are written only when they do not
+The never-overwrite contract: files are written only when they do not
 already exist at the target path. Callers are responsible for enforcing this.
 """
 import os
+import logging
 from ir import IR
+
+logger = logging.getLogger(__name__)
 
 # Human contribution notice included verbatim in every scaffold file.
 _HUMAN_NOTICE = """\
@@ -211,3 +219,1318 @@ def _role_description(role: str, direction: str, width: int) -> str:
         "data": f"{width}-bit data {direction} — describe expected values and ranges",
     }
     return descriptions.get(role, f"{width}-bit {direction} — describe expected behavior")
+
+
+# ===========================================================================
+# UVM testbench generation (D-032) — Python string generation
+# ===========================================================================
+
+def _port_signal_decl(port) -> str:
+    """Return a logic signal declaration line for a non-clock port.
+
+    Args:
+        port: Port dataclass with name, direction, width fields.
+
+    Returns:
+        SystemVerilog logic declaration string (no trailing newline).
+    """
+    if port.width == 1:
+        return f"    logic {port.name};"
+    else:
+        return f"    logic [{port.width - 1}:0] {port.name};"
+
+
+def _gen_if(d: str, ir: IR) -> str:
+    """Generate {design}_if.sv content.
+
+    Args:
+        d: Design name.
+        ir: Populated IR with port list.
+
+    Returns:
+        Full file content string.
+    """
+    clock_port = next((p for p in ir.ports if p.role == "clock"), None)
+    non_clock_ports = [p for p in ir.ports if p.role != "clock"]
+
+    lines = [f"interface {d}_if ("]
+    lines.append("    input logic clk")
+    lines.append(");")
+    lines.append(f"    // Signals mirroring {d} non-clock ports")
+    lines.append("")
+
+    # If the DUT has an explicit clock port with a different name than 'clk',
+    # add an axi_aclk alias inside the interface for driver/monitor compatibility.
+    if clock_port is not None and clock_port.name != "clk":
+        lines.append(f"    logic {clock_port.name};")
+        lines.append("")
+
+    for port in non_clock_ports:
+        if port.width == 1:
+            lines.append(f"    logic {port.name};")
+        else:
+            lines.append(f"    logic [{port.width - 1}:0] {port.name};")
+        lines.append("")
+
+    lines.append("endinterface")
+    return "\n".join(lines)
+
+
+def _gen_pkg(d: str, cov_stubs: list[str]) -> str:
+    """Generate {design}_pkg.sv content.
+
+    Args:
+        d: Design name.
+        cov_stubs: List of COV stub file basenames (e.g. ['seq_RCOV_001_foo.sv']).
+
+    Returns:
+        Full file content string.
+    """
+    lines = [
+        f"package {d}_pkg;",
+        "    // Bring in UVM for the whole package",
+        "    import uvm_pkg::*;",
+        '    `include "uvm_macros.svh"',
+        "",
+        "    // Include the class files in strict dependency order",
+        f'    `include "{d}_seq_item.sv"            // no dependencies',
+        f'    `include "{d}_seqr.sv"                // depends on seq_item',
+        f'    `include "{d}_driver.sv"              // depends on seq_item',
+        f'    `include "{d}_monitor.sv"             // depends on seq_item',
+        f'    `include "{d}_scoreboard.sv"          // depends on seq_item',
+        f'    `include "{d}_coverage_subscriber.sv" // depends on seq_item',
+        f'    `include "{d}_base_seq.sv"            // depends on seq_item',
+        f'    `include "{d}_smoke_seq.sv"           // depends on base_seq',
+    ]
+    for stub_file in cov_stubs:
+        lines.append(f'    `include "{stub_file}"                    // depends on base_seq')
+    lines.append(f'    `include "{d}_agent.sv"               // depends on drv/mon/seqr')
+    lines.append(f'    `include "{d}_env.sv"                 // depends on agent/sb/cov')
+    lines.append(f'    `include "{d}_test.sv"                // depends on env')
+    lines.append(f'    `include "{d}_regression_test.sv"     // depends on test + seqs')
+    lines.append("endpackage")
+    return "\n".join(lines)
+
+
+def _gen_seq_item(d: str) -> str:
+    """Generate {design}_seq_item.sv content.
+
+    Args:
+        d: Design name.
+
+    Returns:
+        Full file content string.
+    """
+    D = d.upper()
+    return f"""`ifndef {D}_SEQ_ITEM_SV
+`define {D}_SEQ_ITEM_SV
+
+//------------------------------------------------------------------------------
+// File: {d}_seq_item.sv
+// Description:
+//   UVM sequence item for the {d} testbench.
+//   Represents one AXI-Lite register access transaction.
+//
+// Notes:
+//   - Supports single-beat AXI-Lite reads and writes.
+//   - Keeps stimulus fields separate from response fields.
+//   - Includes simple randomization constraints for aligned register access.
+//------------------------------------------------------------------------------
+
+class {d}_seq_item extends uvm_sequence_item;
+
+    //--------------------------------------------------------------------------
+    // Type used to describe the requested bus operation
+    //--------------------------------------------------------------------------
+    typedef enum logic [0:0] {{
+        AXI_READ  = 1'b0,
+        AXI_WRITE = 1'b1
+    }} axi_cmd_e;
+
+    //--------------------------------------------------------------------------
+    // Stimulus fields
+    //--------------------------------------------------------------------------
+    rand axi_cmd_e    cmd;
+    rand bit [31:0]   addr;
+    rand bit [31:0]   wdata;
+    rand bit [3:0]    wstrb;
+
+    // Optional timing knob for bus stress testing
+    rand int unsigned pre_delay_cycles;
+
+    //--------------------------------------------------------------------------
+    // Response / observation fields
+    //--------------------------------------------------------------------------
+    bit [31:0]        rdata;
+    bit [1:0]         resp;
+
+    // Optional bookkeeping / checking aids
+    string            reg_name;
+    bit               expect_error;
+    bit [31:0]        expected_rdata;
+
+    //--------------------------------------------------------------------------
+    // Constraints
+    //--------------------------------------------------------------------------
+    // AXI-Lite registers are 32-bit aligned
+    constraint c_addr_aligned {{
+        addr[1:0] == 2'b00;
+    }}
+
+    // Keep delay small by default for fast regression runtime
+    constraint c_pre_delay_cycles {{
+        pre_delay_cycles inside {{[0:10]}};
+    }}
+
+    // Default strobes:
+    // - Writes default to full word access
+    // - Reads keep strobes at zero
+    constraint c_wstrb_by_cmd {{
+        if (cmd == AXI_WRITE) {{
+            wstrb != 4'b0000;
+        }} else {{
+            wstrb == 4'b0000;
+        }}
+    }}
+
+    //--------------------------------------------------------------------------
+    // UVM automation
+    //--------------------------------------------------------------------------
+    `uvm_object_utils_begin({d}_seq_item)
+        `uvm_field_enum(axi_cmd_e,  cmd,             UVM_DEFAULT)
+        `uvm_field_int(addr,                         UVM_HEX)
+        `uvm_field_int(wdata,                        UVM_HEX)
+        `uvm_field_int(wstrb,                        UVM_BIN)
+        `uvm_field_int(pre_delay_cycles,             UVM_DEC)
+        `uvm_field_int(rdata,                        UVM_HEX | UVM_NOCOMPARE)
+        `uvm_field_int(resp,                         UVM_BIN | UVM_NOCOMPARE)
+        `uvm_field_string(reg_name,                  UVM_DEFAULT)
+        `uvm_field_int(expect_error,                 UVM_DEFAULT)
+        `uvm_field_int(expected_rdata,               UVM_HEX)
+    `uvm_object_utils_end
+
+    //--------------------------------------------------------------------------
+    // Constructor
+    //--------------------------------------------------------------------------
+    function new(string name = "{d}_seq_item");
+        super.new(name);
+        reg_name        = "";
+        expect_error    = 1'b0;
+        expected_rdata  = '0;
+        rdata           = '0;
+        resp            = 2'b00;
+    endfunction
+
+    //--------------------------------------------------------------------------
+    // Convenience helpers
+    //--------------------------------------------------------------------------
+    function bit is_read();
+        return (cmd == AXI_READ);
+    endfunction
+
+    function bit is_write();
+        return (cmd == AXI_WRITE);
+    endfunction
+
+    //--------------------------------------------------------------------------
+    // Convert to readable string for logs / debug
+    //--------------------------------------------------------------------------
+    function string convert2string();
+        string cmd_str;
+        cmd_str = (cmd == AXI_WRITE) ? "WRITE" : "READ";
+
+        return $sformatf(
+            "cmd=%s addr=0x%08h wdata=0x%08h wstrb=0x%1h pre_delay=%0d rdata=0x%08h resp=0x%0h reg_name=%s expect_error=%0b expected_rdata=0x%08h",
+            cmd_str,
+            addr,
+            wdata,
+            wstrb,
+            pre_delay_cycles,
+            rdata,
+            resp,
+            reg_name,
+            expect_error,
+            expected_rdata
+        );
+    endfunction
+
+    //--------------------------------------------------------------------------
+    // Optional helper to set up a write quickly
+    //--------------------------------------------------------------------------
+    function void set_write(
+        bit [31:0] addr_in,
+        bit [31:0] data_in,
+        bit [3:0]  strb_in = 4'hF,
+        string     reg_name_in = ""
+    );
+        cmd      = AXI_WRITE;
+        addr     = addr_in;
+        wdata    = data_in;
+        wstrb    = strb_in;
+        reg_name = reg_name_in;
+    endfunction
+
+    //--------------------------------------------------------------------------
+    // Optional helper to set up a read quickly
+    //--------------------------------------------------------------------------
+    function void set_read(
+        bit [31:0] addr_in,
+        string     reg_name_in = ""
+    );
+        cmd      = AXI_READ;
+        addr     = addr_in;
+        wdata    = '0;
+        wstrb    = '0;
+        reg_name = reg_name_in;
+    endfunction
+
+endclass
+
+`endif"""
+
+
+def _gen_seqr(d: str) -> str:
+    """Generate {design}_seqr.sv content.
+
+    Args:
+        d: Design name.
+
+    Returns:
+        Full file content string.
+    """
+    return (
+        f"class {d}_sequencer extends uvm_sequencer #({d}_seq_item);\n"
+        f"    `uvm_component_utils({d}_sequencer)\n"
+        "\n"
+        f"    function new(string name, uvm_component parent);\n"
+        f"        super.new(name, parent);\n"
+        f"    endfunction\n"
+        f"endclass"
+    )
+
+
+def _gen_base_seq(d: str) -> str:
+    """Generate {design}_base_seq.sv content.
+
+    Args:
+        d: Design name.
+
+    Returns:
+        Full file content string.
+    """
+    return f"""class {d}_base_seq extends
+    uvm_sequence #({d}_seq_item);
+
+    `uvm_object_utils({d}_base_seq)
+
+    function new(string name = "{d}_base_seq");
+        super.new(name);
+    endfunction
+
+    // Convenience task: perform one AXI-Lite write and wait for BVALID.
+    // The driver handles handshaking; this task just creates and sends
+    // the item.
+    virtual task axi_write(input bit [31:0] addr,
+                           input bit [31:0] data,
+                           input bit [3:0]  strb     = 4'hF,
+                           input string     reg_name = "");
+        {d}_seq_item item;
+        item = {d}_seq_item::type_id::create("item");
+        start_item(item);
+        item.set_write(addr, data, strb, reg_name);
+        finish_item(item);
+    endtask
+
+    // Convenience task: perform one AXI-Lite read.
+    virtual task axi_read(input  bit [31:0] addr,
+                          output bit [31:0] rdata,
+                          input  string     reg_name = "");
+        {d}_seq_item item;
+        item = {d}_seq_item::type_id::create("item");
+        start_item(item);
+        item.set_read(addr, reg_name);
+        finish_item(item);
+        rdata = item.rdata;
+    endtask
+
+endclass"""
+
+
+def _gen_driver(d: str, ir: IR) -> str:
+    """Generate {design}_driver.sv content.
+
+    Generates a driver that initialises all interface signals before
+    reset deassertion and then processes items from the sequencer.
+    Signal names are derived from the IR port list.
+
+    Args:
+        d: Design name.
+        ir: Populated IR with port list.
+
+    Returns:
+        Full file content string.
+    """
+    # Find clock and reset ports for interface signal mapping
+    clock_port = next((p for p in ir.ports if p.role == "clock"), None)
+    reset_port = next(
+        (p for p in ir.ports if p.role in ("reset_n", "reset")), None
+    )
+    clock_sig = clock_port.name if clock_port else "clk"
+    reset_sig = reset_port.name if reset_port else "rst_n"
+    reset_val = "1'b1" if (reset_port and reset_port.role == "reset_n") else "1'b0"
+
+    return f"""class {d}_driver extends uvm_driver #({d}_seq_item);
+    `uvm_component_utils({d}_driver)
+
+    virtual {d}_if vif;
+
+    function new(string name, uvm_component parent);
+        super.new(name, parent);
+    endfunction
+
+    function void build_phase(uvm_phase phase);
+        super.build_phase(phase);
+        if (!uvm_config_db #(virtual {d}_if)::get(
+                this, "", "vif", vif))
+            `uvm_fatal("NO_VIF",
+                "{d}_driver: vif not found in config_db")
+    endfunction
+
+    task run_phase(uvm_phase phase);
+        {d}_seq_item req;
+        // Deassert all driven signals before waiting for reset
+        vif.s_axi_awvalid <= 1'b0;
+        vif.s_axi_awaddr  <= '0;
+        vif.s_axi_awprot  <= '0;
+        vif.s_axi_wvalid  <= 1'b0;
+        vif.s_axi_wdata   <= '0;
+        vif.s_axi_wstrb   <= '0;
+        vif.s_axi_bready  <= 1'b0;
+        vif.s_axi_arvalid <= 1'b0;
+        vif.s_axi_araddr  <= '0;
+        vif.s_axi_arprot  <= '0;
+        vif.s_axi_rready  <= 1'b0;
+        // Wait for reset to deassert before driving any transactions
+        @(posedge vif.{clock_sig} iff vif.{reset_sig} === {reset_val});
+        forever begin
+            seq_item_port.get_next_item(req);
+            if (req.cmd === {d}_seq_item::AXI_WRITE)
+                drive_write(req);
+            else
+                drive_read(req);
+            seq_item_port.item_done();
+        end
+    endtask
+
+    // Drive one AXI-Lite write transaction: AW -> W -> B
+    task drive_write({d}_seq_item req);
+        // Optional pre-delay
+        repeat (req.pre_delay_cycles) @(posedge vif.{clock_sig});
+
+        // AW channel: assert awvalid, hold until awready
+        @(posedge vif.{clock_sig});
+        vif.s_axi_awvalid <= 1'b1;
+        vif.s_axi_awaddr  <= req.addr[7:0];
+        vif.s_axi_awprot  <= 3'b000;
+        @(posedge vif.{clock_sig} iff vif.s_axi_awready === 1'b1);
+        vif.s_axi_awvalid <= 1'b0;
+        vif.s_axi_awaddr  <= '0;
+
+        // W channel: assert wvalid, hold until wready
+        @(posedge vif.{clock_sig});
+        vif.s_axi_wvalid <= 1'b1;
+        vif.s_axi_wdata  <= req.wdata;
+        vif.s_axi_wstrb  <= req.wstrb;
+        @(posedge vif.{clock_sig} iff vif.s_axi_wready === 1'b1);
+        vif.s_axi_wvalid <= 1'b0;
+        vif.s_axi_wdata  <= '0;
+        vif.s_axi_wstrb  <= '0;
+
+        // B channel: assert bready, wait for bvalid, capture bresp
+        vif.s_axi_bready <= 1'b1;
+        @(posedge vif.{clock_sig} iff vif.s_axi_bvalid === 1'b1);
+        req.resp = vif.s_axi_bresp;
+        @(posedge vif.{clock_sig});
+        vif.s_axi_bready <= 1'b0;
+    endtask
+
+    // Drive one AXI-Lite read transaction: AR -> R
+    task drive_read({d}_seq_item req);
+        // Optional pre-delay
+        repeat (req.pre_delay_cycles) @(posedge vif.{clock_sig});
+
+        // AR channel: assert arvalid, hold until arready
+        @(posedge vif.{clock_sig});
+        vif.s_axi_arvalid <= 1'b1;
+        vif.s_axi_araddr  <= req.addr[7:0];
+        vif.s_axi_arprot  <= 3'b000;
+        @(posedge vif.{clock_sig} iff vif.s_axi_arready === 1'b1);
+        vif.s_axi_arvalid <= 1'b0;
+        vif.s_axi_araddr  <= '0;
+
+        // R channel: assert rready, wait for rvalid, capture rdata and rresp
+        vif.s_axi_rready <= 1'b1;
+        @(posedge vif.{clock_sig} iff vif.s_axi_rvalid === 1'b1);
+        req.rdata = vif.s_axi_rdata;
+        req.resp  = vif.s_axi_rresp;
+        @(posedge vif.{clock_sig});
+        vif.s_axi_rready <= 1'b0;
+    endtask
+
+endclass"""
+
+
+def _gen_monitor(d: str, ir: IR) -> str:
+    """Generate {design}_monitor.sv content.
+
+    Args:
+        d: Design name.
+        ir: Populated IR with port list.
+
+    Returns:
+        Full file content string.
+    """
+    clock_port = next((p for p in ir.ports if p.role == "clock"), None)
+    reset_port = next(
+        (p for p in ir.ports if p.role in ("reset_n", "reset")), None
+    )
+    clock_sig = clock_port.name if clock_port else "clk"
+    reset_sig = reset_port.name if reset_port else "rst_n"
+    reset_val = "1'b1" if (reset_port and reset_port.role == "reset_n") else "1'b0"
+
+    return f"""class {d}_monitor extends uvm_monitor;
+    `uvm_component_utils({d}_monitor)
+
+    virtual {d}_if              vif;
+    uvm_analysis_port #({d}_seq_item) ap;
+
+    function new(string name, uvm_component parent);
+        super.new(name, parent);
+    endfunction
+
+    function void build_phase(uvm_phase phase);
+        super.build_phase(phase);
+        ap = new("ap", this);
+        if (!uvm_config_db #(virtual {d}_if)::get(
+                this, "", "vif", vif))
+            `uvm_fatal("NO_VIF",
+                "{d}_monitor: vif not found in config_db")
+    endfunction
+
+    task run_phase(uvm_phase phase);
+        {d}_seq_item item;
+        // Latches for channel data — populated on handshake, used at response
+        bit [7:0]  aw_addr_lat_s;
+        bit [31:0] wd_data_lat_s;
+        bit [3:0]  wd_strb_lat_s;
+        bit [7:0]  ar_addr_lat_s;
+
+        @(posedge vif.{clock_sig} iff vif.{reset_sig} === {reset_val});
+
+        forever begin
+            @(posedge vif.{clock_sig});
+
+            // Latch AW handshake address
+            if (vif.s_axi_awvalid === 1'b1 && vif.s_axi_awready === 1'b1)
+                aw_addr_lat_s = vif.s_axi_awaddr;
+
+            // Latch W handshake data and strobe
+            if (vif.s_axi_wvalid === 1'b1 && vif.s_axi_wready === 1'b1) begin
+                wd_data_lat_s = vif.s_axi_wdata;
+                wd_strb_lat_s = vif.s_axi_wstrb;
+            end
+
+            // Completed write: B handshake
+            if (vif.s_axi_bvalid === 1'b1 && vif.s_axi_bready === 1'b1) begin
+                item = {d}_seq_item::type_id::create("mon_wr");
+                item.cmd   = {d}_seq_item::AXI_WRITE;
+                item.addr  = {{24'b0, aw_addr_lat_s}};
+                item.wdata = wd_data_lat_s;
+                item.wstrb = wd_strb_lat_s;
+                item.resp  = vif.s_axi_bresp;
+                ap.write(item);
+            end
+
+            // Latch AR handshake address
+            if (vif.s_axi_arvalid === 1'b1 && vif.s_axi_arready === 1'b1)
+                ar_addr_lat_s = vif.s_axi_araddr;
+
+            // Completed read: R handshake
+            if (vif.s_axi_rvalid === 1'b1 && vif.s_axi_rready === 1'b1) begin
+                item = {d}_seq_item::type_id::create("mon_rd");
+                item.cmd   = {d}_seq_item::AXI_READ;
+                item.addr  = {{24'b0, ar_addr_lat_s}};
+                item.rdata = vif.s_axi_rdata;
+                item.resp  = vif.s_axi_rresp;
+                ap.write(item);
+            end
+        end
+    endtask
+
+endclass"""
+
+
+def _gen_agent(d: str) -> str:
+    """Generate {design}_agent.sv content.
+
+    Args:
+        d: Design name.
+
+    Returns:
+        Full file content string.
+    """
+    return f"""class {d}_agent extends uvm_agent;
+    `uvm_component_utils({d}_agent)
+
+    {d}_driver     drv;
+    {d}_monitor    mon;
+    {d}_sequencer  seqr;
+
+    function new(string name, uvm_component parent);
+        super.new(name, parent);
+    endfunction
+
+    function void build_phase(uvm_phase phase);
+        super.build_phase(phase);
+        drv  = {d}_driver::type_id::create("drv",  this);
+        mon  = {d}_monitor::type_id::create("mon", this);
+        seqr = {d}_sequencer::type_id::create("seqr", this);
+    endfunction
+
+    function void connect_phase(uvm_phase phase);
+        drv.seq_item_port.connect(seqr.seq_item_export);
+        // mon.ap is connected to sb and cov in env.sv connect_phase
+    endfunction
+
+endclass"""
+
+
+def _gen_scoreboard(d: str, vplan_result) -> str:
+    """Generate {design}_scoreboard.sv content.
+
+    If vplan_result provides register map data, pre-loads shadow registers
+    from it. Otherwise emits an empty shadow with a UVM_WARNING.
+
+    Args:
+        d: Design name.
+        vplan_result: VplanParseResult or None.
+
+    Returns:
+        Full file content string.
+    """
+    # Build shadow init body from vplan register map if available
+    shadow_lines: list[str] = []
+    has_regmap = False
+
+    if vplan_result is not None and hasattr(vplan_result, "register_map"):
+        reg_map = vplan_result.register_map
+        if reg_map and isinstance(reg_map, dict):
+            registers = reg_map.get("registers", [])
+            if registers:
+                has_regmap = True
+                for reg in registers:
+                    offset = reg.get("offset", "0x00")
+                    # Normalise offset to a padded hex literal
+                    try:
+                        offset_int = int(offset, 16) if isinstance(offset, str) else int(offset)
+                        offset_str = f"32'h{offset_int:08X}"
+                    except (ValueError, TypeError):
+                        offset_str = "32'h00000000"
+                    name = reg.get("name", "UNKNOWN")
+                    shadow_lines.append(
+                        f"        shadow[{offset_str}] = 32'h00000000;   // {name} reset value"
+                    )
+
+    if has_regmap:
+        init_body = "\n".join(shadow_lines) if shadow_lines else "        // no RW registers found"
+    else:
+        init_body = (
+            "        `uvm_warning(\"SB\",\n"
+            "            \"Shadow register map not available — scoreboard checks disabled\")"
+        )
+
+    return f"""class {d}_scoreboard extends uvm_scoreboard;
+    `uvm_component_utils({d}_scoreboard)
+
+    uvm_analysis_imp #({d}_seq_item,
+                       {d}_scoreboard) analysis_export;
+
+    // Shadow register model — RW registers only.
+    // RO and WO registers are not predicted here.
+    local bit [31:0] shadow [bit [31:0]];
+
+    // Running error count reported in check_phase.
+    local int error_count;
+
+    function new(string name, uvm_component parent);
+        super.new(name, parent);
+        error_count = 0;
+    endfunction
+
+    function void build_phase(uvm_phase phase);
+        super.build_phase(phase);
+        analysis_export = new("analysis_export", this);
+        _init_shadow();
+    endfunction
+
+    // Pre-load RW register reset values.
+    local function void _init_shadow();
+{init_body}
+    endfunction
+
+    // Apply a write to the shadow, honouring wstrb byte-enable masking.
+    local function void _apply_write(
+        bit [31:0] addr,
+        bit [31:0] wdata,
+        bit [3:0]  wstrb
+    );
+        for (int b = 0; b < 4; b++) begin
+            if (wstrb[b])
+                shadow[addr][b*8 +: 8] = wdata[b*8 +: 8];
+        end
+    endfunction
+
+    function void write({d}_seq_item item);
+        if (item.cmd === {d}_seq_item::AXI_WRITE) begin
+
+            if (item.resp !== 2'b00) begin
+                error_count++;
+                `uvm_error("SB", $sformatf(
+                    "write response not OKAY — addr=0x%08h resp=%02b",
+                    item.addr, item.resp))
+            end
+
+            if (shadow.exists(item.addr))
+                _apply_write(item.addr, item.wdata, item.wstrb);
+
+        end else begin  // AXI_READ
+
+            if (item.resp !== 2'b00) begin
+                error_count++;
+                `uvm_error("SB", $sformatf(
+                    "read response not OKAY — addr=0x%08h resp=%02b",
+                    item.addr, item.resp))
+            end
+
+            if (shadow.exists(item.addr)) begin
+                if (item.rdata !== shadow[item.addr]) begin
+                    error_count++;
+                    `uvm_error("SB", $sformatf(
+                        "register readback mismatch — addr=0x%08h expected=0x%08h actual=0x%08h",
+                        item.addr, shadow[item.addr], item.rdata))
+                end
+            end
+        end
+    endfunction
+
+    function void check_phase(uvm_phase phase);
+        `uvm_info("SB", $sformatf(
+            "Scoreboard check_phase: %0d error(s)", error_count), UVM_MEDIUM)
+    endfunction
+
+endclass"""
+
+
+def _gen_coverage_subscriber(d: str, vplan_result) -> str:
+    """Generate {design}_coverage_subscriber.sv content.
+
+    Args:
+        d: Design name.
+        vplan_result: VplanParseResult or None; used for named register bins.
+
+    Returns:
+        Full file content string.
+    """
+    # Build cp_addr bins from register map if available
+    addr_bins_lines: list[str] = []
+    has_bins = False
+
+    if vplan_result is not None and hasattr(vplan_result, "register_map"):
+        reg_map = vplan_result.register_map
+        if reg_map and isinstance(reg_map, dict):
+            registers = reg_map.get("registers", [])
+            if registers:
+                has_bins = True
+                for reg in registers:
+                    offset = reg.get("offset", "0x00")
+                    try:
+                        offset_int = int(offset, 16) if isinstance(offset, str) else int(offset)
+                        offset_str = f"8'h{offset_int:02X}"
+                    except (ValueError, TypeError):
+                        offset_str = "8'h00"
+                    name = reg.get("name", "UNKNOWN")
+                    addr_bins_lines.append(
+                        f"            bins {name:<16} = {{{offset_str}}};"
+                    )
+
+    if has_bins:
+        cp_addr_body = "\n".join(addr_bins_lines)
+    else:
+        cp_addr_body = "            bins addr_default = {default};"
+
+    return f"""class {d}_coverage_subscriber extends
+    uvm_subscriber #({d}_seq_item);
+
+    `uvm_component_utils({d}_coverage_subscriber)
+
+    // Current transaction — updated before each sample() call.
+    {d}_seq_item item_s;
+
+    covergroup axi_transaction_cg;
+
+        // Confirms bidirectional bus traffic: both READ and WRITE must be hit.
+        cp_cmd: coverpoint item_s.cmd {{
+            bins AXI_WRITE = {{{d}_seq_item::AXI_WRITE}};
+            bins AXI_READ  = {{{d}_seq_item::AXI_READ}};
+        }}
+
+        // One named bin per register — confirms each register was accessed.
+        cp_addr: coverpoint item_s.addr[7:0] {{
+{cp_addr_body}
+        }}
+
+        // Unhit SLVERR bin is informative — shows no error responses seen.
+        cp_resp: coverpoint item_s.resp {{
+            bins OKAY   = {{2'b00}};
+            bins SLVERR = {{2'b10}};
+        }}
+
+        // Cross: confirms every register was both read and written where
+        // access type permits. Unhit bins for RO/WO registers are expected.
+        cp_cmd_x_addr: cross cp_cmd, cp_addr;
+
+    endgroup
+
+    function new(string name, uvm_component parent);
+        super.new(name, parent);
+        // Vivado requires embedded covergroups to be instantiated in new(),
+        // not in build_phase (VRFC 10-8922).
+        axi_transaction_cg = new();
+    endfunction
+
+    function void build_phase(uvm_phase phase);
+        super.build_phase(phase);
+    endfunction
+
+    virtual function void write({d}_seq_item t);
+        item_s = t;
+        axi_transaction_cg.sample();
+    endfunction
+
+    function void report_phase(uvm_phase phase);
+        `uvm_info("COV",
+            $sformatf("axi_transaction_cg coverage: %.1f%%",
+                axi_transaction_cg.get_coverage()),
+            UVM_MEDIUM)
+    endfunction
+
+endclass"""
+
+
+def _gen_env(d: str) -> str:
+    """Generate {design}_env.sv content.
+
+    Args:
+        d: Design name.
+
+    Returns:
+        Full file content string.
+    """
+    return f"""class {d}_env extends uvm_env;
+    `uvm_component_utils({d}_env)
+
+    {d}_agent                   agent;
+    {d}_scoreboard              sb;
+    {d}_coverage_subscriber     cov;
+
+    function new(string name, uvm_component parent);
+        super.new(name, parent);
+    endfunction
+
+    function void build_phase(uvm_phase phase);
+        super.build_phase(phase);
+        agent = {d}_agent::type_id::create("agent", this);
+        sb    = {d}_scoreboard::type_id::create("sb", this);
+        cov   = {d}_coverage_subscriber::type_id::create("cov", this);
+    endfunction
+
+    function void connect_phase(uvm_phase phase);
+        agent.mon.ap.connect(sb.analysis_export);
+        agent.mon.ap.connect(cov.analysis_export);
+    endfunction
+
+endclass"""
+
+
+def _gen_test(d: str) -> str:
+    """Generate {design}_test.sv content (two classes: base_test + smoke_test).
+
+    Args:
+        d: Design name.
+
+    Returns:
+        Full file content string.
+    """
+    return f"""// Base test: owns the env and provides the raise/drop objection wrapper.
+// Subclasses override run_sequences() to supply stimulus.
+class {d}_base_test extends uvm_test;
+    `uvm_component_utils({d}_base_test)
+
+    {d}_env env_h;
+
+    function new(string name, uvm_component parent);
+        super.new(name, parent);
+    endfunction
+
+    function void build_phase(uvm_phase phase);
+        super.build_phase(phase);
+        env_h = {d}_env::type_id::create("env_h", this);
+    endfunction
+
+    task run_phase(uvm_phase phase);
+        phase.raise_objection(this);
+        run_sequences(phase);
+        phase.drop_objection(this);
+    endtask
+
+    // Override in subclass to run sequences. Base does nothing.
+    virtual task run_sequences(uvm_phase phase);
+    endtask
+
+endclass
+
+
+// Smoke test: runs {d}_smoke_seq end-to-end.
+// Start with: +UVM_TESTNAME={d}_smoke_test
+class {d}_smoke_test extends {d}_base_test;
+    `uvm_component_utils({d}_smoke_test)
+
+    function new(string name, uvm_component parent);
+        super.new(name, parent);
+    endfunction
+
+    virtual task run_sequences(uvm_phase phase);
+        {d}_smoke_seq seq;
+        seq = {d}_smoke_seq::type_id::create("seq");
+        seq.start(env_h.agent.seqr);
+    endtask
+
+endclass"""
+
+
+def _gen_smoke_seq(d: str) -> str:
+    """Generate {design}_smoke_seq.sv content.
+
+    Args:
+        d: Design name.
+
+    Returns:
+        Full file content string.
+    """
+    return f"""class {d}_smoke_seq extends
+    {d}_base_seq;
+
+    `uvm_object_utils({d}_smoke_seq)
+
+    function new(string name = "{d}_smoke_seq");
+        super.new(name);
+    endfunction
+
+    virtual task body();
+        bit [31:0] rdata;
+        // Write a known value to the first register (offset 0x00)
+        axi_write(32'h00000000, 32'h00000000, 4'hF, "REG_0");
+        // Read it back
+        axi_read(32'h00000000, rdata, "REG_0");
+        `uvm_info("SMOKE_SEQ",
+            $sformatf("REG_0 readback = 0x%08h", rdata),
+            UVM_MEDIUM)
+    endtask
+
+endclass"""
+
+
+def _gen_regression_test(d: str, cov_stubs: list[tuple[str, str]]) -> str:
+    """Generate {design}_regression_test.sv content.
+
+    Args:
+        d: Design name.
+        cov_stubs: List of (class_name, var_name) tuples for COV sequences.
+
+    Returns:
+        Full file content string.
+    """
+    decl_lines: list[str] = []
+    create_lines: list[str] = []
+    start_lines: list[str] = []
+
+    decl_lines.append(f"        {d}_smoke_seq  smoke;")
+    create_lines.append(
+        f'        smoke  = {d}_smoke_seq::type_id::create("smoke");'
+    )
+    start_lines.append(f"        smoke.start(env_h.agent.seqr);")
+
+    for class_name, var_name in cov_stubs:
+        decl_lines.append(f"        {class_name}           {var_name};")
+        create_lines.append(
+            f'        {var_name} = {class_name}::type_id::create("{var_name}");'
+        )
+        start_lines.append(f"        {var_name}.start(env_h.agent.seqr);")
+
+    decl_block = "\n".join(decl_lines)
+    create_block = "\n".join(create_lines)
+    start_block = "\n".join(start_lines)
+
+    return f"""// Regression test: runs smoke sequence followed by all COV sequences.
+// Additional COV sequences are added here as they are created.
+// Start with: +UVM_TESTNAME={d}_regression_test
+class {d}_regression_test extends {d}_base_test;
+    `uvm_component_utils({d}_regression_test)
+
+    function new(string name, uvm_component parent);
+        super.new(name, parent);
+    endfunction
+
+    virtual task run_sequences(uvm_phase phase);
+{decl_block}
+
+{create_block}
+
+{start_block}
+    endtask
+
+endclass"""
+
+
+def _cov_stub_names(cov_item) -> tuple[str, str, str]:
+    """Derive class name, var name, and file name from a COV item.
+
+    Args:
+        cov_item: Object with .id and .name attributes.
+
+    Returns:
+        Tuple of (class_name, var_name, file_basename).
+        E.g. ('seq_RCOV_001_baud_tuning', 'cov_001', 'seq_RCOV_001_baud_tuning.sv')
+    """
+    cov_id = cov_item.id.replace("-", "_")
+    name_lower = cov_item.name.lower().replace(" ", "_").replace("-", "_")
+    class_name = f"seq_R{cov_id}_{name_lower}"
+    var_name = cov_id.lower()
+    file_name = f"{class_name}.sv"
+    return class_name, var_name, file_name
+
+
+def _gen_cov_stub(d: str, cov_item) -> str:
+    """Generate a COV sequence stub file content.
+
+    Args:
+        d: Design name.
+        cov_item: Object with .id, .name, .linked_requirements,
+                  .stimulus_strategy, .boundary_values attributes.
+
+    Returns:
+        Full file content string.
+    """
+    class_name, _, _ = _cov_stub_names(cov_item)
+    cov_id = getattr(cov_item, "id", "")
+    cov_name = getattr(cov_item, "name", "")
+    linked_reqs = getattr(cov_item, "linked_requirements", []) or []
+    strat = getattr(cov_item, "stimulus_strategy", "") or ""
+    boundary = getattr(cov_item, "boundary_values", "") or ""
+
+    req_str = ", ".join(linked_reqs) if linked_reqs else "(none)"
+
+    return f"""// =============================================================================
+// {cov_id}  {cov_name}
+//
+// Linked requirements:
+//   {req_str}
+//
+// Stimulus strategy:
+//   {strat}
+//
+// Boundary values:
+//   {boundary}
+// =============================================================================
+
+class {class_name} extends {d}_base_seq;
+
+    `uvm_object_utils({class_name})
+
+    function new(string name = "{class_name}");
+        super.new(name);
+    endfunction
+
+    virtual task body();
+        `uvm_info("STUB",
+            "{class_name}: sequence stub — implement per VPR {cov_id}",
+            UVM_MEDIUM)
+    endtask
+
+endclass"""
+
+
+def _gen_tb_top(d: str, ir: IR) -> str:
+    """Generate tb_top.sv content.
+
+    Args:
+        d: Design name.
+        ir: Populated IR with port list.
+
+    Returns:
+        Full file content string.
+    """
+    clock_port = next((p for p in ir.ports if p.role == "clock"), None)
+    reset_port = next(
+        (p for p in ir.ports if p.role in ("reset_n", "reset")), None
+    )
+    clock_name = clock_port.name if clock_port else "clk"
+    reset_name = reset_port.name if reset_port else "rst_n"
+    is_active_low = (reset_port is None or reset_port.role == "reset_n")
+
+    # Build DUT port connection list
+    port_conns: list[str] = []
+    for port in ir.ports:
+        if port.role == "clock":
+            port_conns.append(f"        .{port.name}(clk)")
+        else:
+            port_conns.append(f"        .{port.name}(intf.{port.name})")
+
+    port_conn_str = ",\n".join(port_conns)
+
+    # Signal initialisation — set all non-clock signals to 0, uart_rx to 1
+    init_lines: list[str] = []
+    for port in ir.ports:
+        if port.role == "clock":
+            continue
+        if port.name == "uart_rx":
+            init_lines.append(f"        intf.{port.name} = 1'b1;")
+        else:
+            init_lines.append(f"        intf.{port.name} = '0;")
+
+    init_block = "\n".join(init_lines) if init_lines else "        // no signals to initialise"
+
+    # Clock-to-interface mapping
+    if clock_name != "clk":
+        clock_map = f"    always_comb intf.{clock_name} = clk;"
+    else:
+        clock_map = f"    // clk drives intf directly via the interface port"
+
+    # Reset generation
+    if is_active_low:
+        reset_init = f"        intf.{reset_name} = 1'b0;"
+        reset_deassert = f"        intf.{reset_name} = 1'b1;"
+    else:
+        reset_init = f"        intf.{reset_name} = 1'b1;"
+        reset_deassert = f"        intf.{reset_name} = 1'b0;"
+
+    return f"""`timescale 1ns/1ps
+module tb_top;
+    import uvm_pkg::*;
+    import {d}_pkg::*;
+    `include "uvm_macros.svh"
+
+    // Free-running clock
+    logic clk;
+    initial clk = 1'b0;
+    always #5 clk = ~clk;
+
+    // Interface instance
+    {d}_if intf(.clk(clk));
+
+    // DUT instantiation
+    {d} dut (
+{port_conn_str}
+    );
+
+{clock_map}
+
+    initial begin
+        // Initialise all interface signals
+{init_block}
+        // Hold reset for 10 clock cycles then deassert
+        {reset_init}
+        repeat (10) @(posedge clk);
+        {reset_deassert}
+    end
+
+    // Pass virtual interface to UVM config_db
+    initial begin
+        uvm_config_db #(virtual {d}_if)::set(null, "uvm_test_top.*", "vif", intf);
+        run_test();
+    end
+
+    // Waveform dump
+    initial begin
+        $dumpfile("tb_top.vcd");
+        $dumpvars(0, tb_top);
+    end
+
+endmodule"""
+
+
+def _gen_build_tcl(d: str, ir: IR) -> str:
+    """Generate scripts/vivado/build.tcl content.
+
+    Args:
+        d: Design name.
+        ir: Populated IR (used for HDL language detection).
+
+    Returns:
+        Full file content string.
+    """
+    is_vhdl = (ir.hdl_language.lower() in ("vhdl", "vhd"))
+    if is_vhdl:
+        dut_compile = (
+            "puts \"--- Compiling DUT ---\"\n"
+            "run_cmd [list xvhdl --2008 --work work \\\n"
+            "    [file join $DUT_DIR vhdl/${DESIGN}.vhd]]"
+        )
+    else:
+        dut_compile = (
+            "puts \"--- Compiling DUT ---\"\n"
+            "run_cmd [list xvlog --sv --work work \\\n"
+            "    [file join $DUT_DIR ${DESIGN}.sv]]"
+        )
+
+    return f"""set DESIGN   {d}
+set SNAPSHOT ${{DESIGN}}_snapshot
+
+set SCRIPT_DIR [file dirname [file normalize [info script]]]
+set TB_DIR     [file join $SCRIPT_DIR ../..]
+set DUT_DIR    [file join $SCRIPT_DIR ../../..]
+
+proc run_cmd {{cmd}} {{
+    if {{[catch {{exec {{*}}$cmd >@stdout 2>@stderr}} msg]}} {{
+        puts "ERROR: Command failed:"
+        puts "  $cmd"
+        puts $msg
+        exit 1
+    }}
+}}
+
+{dut_compile}
+
+puts "--- Compiling UVM TB ---"
+run_cmd [list xvlog --sv --uvm_version 1.2 -L uvm --work work \\
+    --include $TB_DIR \\
+    [file join $TB_DIR ${{DESIGN}}_if.sv] \\
+    [file join $TB_DIR ${{DESIGN}}_pkg.sv] \\
+    [file join $TB_DIR tb_top.sv]]
+
+puts "--- Elaborating ---"
+run_cmd [list xelab -L uvm \\
+    work.tb_top \\
+    -s $SNAPSHOT \\
+    -timescale 1ns/1ps \\
+    -debug typical]
+
+puts "--- Simulating ---"
+run_cmd [list xsim $SNAPSHOT \\
+    -testplusarg UVM_TESTNAME=${{DESIGN}}_smoke_test \\
+    -runall \\
+    -log xsim.log]
+
+puts "Simulation complete. Log: xsim.log"
+"""
+
+
+def _gen_all_content(ir: IR, vplan_result) -> dict[str, str]:
+    """Generate all UVM TB file contents as a dict of filename -> content.
+
+    This is the internal generation engine used by both generate_uvm_tb()
+    (writes to disk) and structure_gen.generate() (returns Artifacts).
+
+    Args:
+        ir: Populated IR for the design.
+        vplan_result: VplanParseResult or None.
+
+    Returns:
+        Dict mapping flat filename to file content string.
+    """
+    d = ir.design_name
+
+    # Build COV stub info from vplan_result
+    cov_items = []
+    if vplan_result is not None and hasattr(vplan_result, "cov_items"):
+        cov_items = vplan_result.cov_items or []
+
+    cov_stub_filenames: list[str] = []
+    cov_stub_class_vars: list[tuple[str, str]] = []
+    cov_stub_contents: dict[str, str] = {}
+
+    for item in cov_items:
+        class_name, var_name, file_name = _cov_stub_names(item)
+        cov_stub_filenames.append(file_name)
+        cov_stub_class_vars.append((class_name, var_name))
+        cov_stub_contents[file_name] = _gen_cov_stub(d, item)
+
+    files: dict[str, str] = {
+        f"{d}_if.sv":                   _gen_if(d, ir),
+        f"{d}_pkg.sv":                  _gen_pkg(d, cov_stub_filenames),
+        f"{d}_seq_item.sv":             _gen_seq_item(d),
+        f"{d}_seqr.sv":                 _gen_seqr(d),
+        f"{d}_base_seq.sv":             _gen_base_seq(d),
+        f"{d}_driver.sv":               _gen_driver(d, ir),
+        f"{d}_monitor.sv":              _gen_monitor(d, ir),
+        f"{d}_agent.sv":                _gen_agent(d),
+        f"{d}_scoreboard.sv":           _gen_scoreboard(d, vplan_result),
+        f"{d}_coverage_subscriber.sv":  _gen_coverage_subscriber(d, vplan_result),
+        f"{d}_env.sv":                  _gen_env(d),
+        f"{d}_test.sv":                 _gen_test(d),
+        f"{d}_smoke_seq.sv":            _gen_smoke_seq(d),
+        f"{d}_regression_test.sv":      _gen_regression_test(d, cov_stub_class_vars),
+        "tb_top.sv":                    _gen_tb_top(d, ir),
+        "build.tcl":                    _gen_build_tcl(d, ir),
+    }
+
+    # Add COV stub files
+    files.update(cov_stub_contents)
+
+    return files
+
+
+def generate_uvm_tb(ir: IR, vplan_result, out_dir: str) -> list[str]:
+    """Generate all STD-003B UVM testbench files under out_dir/tb/.
+
+    Creates the 15 required files (plus one per COV item if vplan_result
+    is provided) under out_dir/tb/ and out_dir/tb/scripts/vivado/.
+
+    Never-overwrite contract: if a file already exists at the target path
+    it is skipped and a warning is logged. The file is NOT returned in the
+    output list if skipped.
+
+    Args:
+        ir: Populated IR for the design.
+        vplan_result: VplanParseResult or None; drives scoreboard shadow init,
+            coverage bins, and COV stub file generation.
+        out_dir: Root output directory. TB files go under out_dir/tb/.
+
+    Returns:
+        List of file paths that were written (skipped files not included).
+    """
+    tb_dir = os.path.join(out_dir, "tb")
+    scripts_dir = os.path.join(tb_dir, "scripts", "vivado")
+    os.makedirs(tb_dir, exist_ok=True)
+    os.makedirs(scripts_dir, exist_ok=True)
+
+    all_content = _gen_all_content(ir, vplan_result)
+    written: list[str] = []
+
+    for filename, content in all_content.items():
+        if filename == "build.tcl":
+            dest = os.path.join(scripts_dir, filename)
+        else:
+            dest = os.path.join(tb_dir, filename)
+
+        if os.path.exists(dest):
+            logger.warning(
+                "generate_uvm_tb: skipping existing file %s (never-overwrite)", dest
+            )
+            continue
+
+        with open(dest, "w", encoding="utf-8") as fh:
+            fh.write(content)
+        written.append(dest)
+
+    return written

@@ -45,7 +45,7 @@ from agents.structure_gen import Artifact
 from ir import IR
 
 
-_TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "..", "templates", "uvm")
+_TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "..", "templates", "questa")
 _TEMPLATE_NAME = "build_questa.mk.jinja"
 
 

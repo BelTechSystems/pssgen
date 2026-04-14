@@ -6,41 +6,44 @@
 # ===========================================================
 #
 # DESCRIPTION:
-#   UVM artifact generation agent. Renders Jinja2 templates for interface,
-#   driver, monitor, sequencer, agent, test, and build script files.
-#   In --no-llm mode returns rendered templates directly; in production mode
-#   sends templates to the LLM for completion of dynamic content.
+#   UVM artifact generation agent. Delegates to scaffold_gen.generate_uvm_tb()
+#   for Python-string-based UVM file generation per D-032. Returns list of
+#   Artifact objects for downstream checker and emitter consumption. The
+#   Jinja2 template-based generation path has been retired.
 #
 # LAYER:        3 — agents
-# PHASE:        v0
+# PHASE:        v0 / D-032
 #
 # FUNCTIONS:
 #   generate(ir, fail_reason, no_llm)
-#     Render UVM Jinja2 templates and optionally complete via LLM.
+#     Generate UVM artifacts by delegating to scaffold_gen.generate_uvm_tb().
 #
 # DEPENDENCIES:
-#   Standard library:  dataclasses, typing, os
-#   External:          jinja2, anthropic
-#   Internal:          ir
+#   Standard library:  dataclasses, typing
+#   External:          anthropic
+#   Internal:          ir, agents.scaffold_gen
 #
 # HISTORY:
-#   v0    2026-03-27  SB  Initial implementation; Jinja2 + LLM UVM generation
+#   v0     2026-03-27  SB  Initial implementation; Jinja2 + LLM UVM generation
+#   D-032  2026-04-14  SB  Replace Jinja2 rendering with scaffold_gen.generate_uvm_tb()
+#                          delegation; retire jinja2 dependency from this module
 #
 # ===========================================================
 """agents/structure_gen.py — UVM artifact generation agent.
 
-Phase: v0
+Phase: v0 / D-032
 Layer: 3 (agents)
 
-Renders Jinja2 UVM templates and, in production mode, asks the LLM to complete
-dynamic content. In test/CI mode (`no_llm=True`), returns rendered templates
-directly with no API calls.
+Delegates UVM file generation to scaffold_gen.generate_uvm_tb() and returns
+Artifact objects for checker and emitter consumption. The fail_reason and
+no_llm parameters are retained for interface stability; fail_reason is
+currently unused at this delegation layer.
 """
 from dataclasses import dataclass
 from typing import Optional
-from jinja2 import Environment, FileSystemLoader
 from ir import IR
-import os, anthropic
+from agents.scaffold_gen import _gen_all_content
+import anthropic
 
 
 @dataclass
@@ -55,101 +58,37 @@ class Artifact:
     content: str
 
 
-TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "..", "templates", "uvm")
-TEMPLATES = [
-    "interface.sv.jinja",
-    "driver.sv.jinja",
-    "monitor.sv.jinja",
-    "sequencer.sv.jinja",
-    "agent.sv.jinja",
-    "test.sv.jinja",
-    "build_vivado.tcl.jinja",
-]
-
-
 def generate(ir: IR, fail_reason: Optional[str] = None, no_llm: bool = False) -> list[Artifact]:
-    """Generate UVM artifacts from templates.
+    """Generate UVM artifacts from Python string generation.
+
+    Delegates to scaffold_gen._gen_all_content() to produce all STD-003B
+    UVM file content. Returns Artifact objects with flat filenames for
+    compatibility with the checker and emitter layers.
+
+    The fail_reason parameter is accepted for interface stability but is
+    not currently propagated to the Python string generation path.
+    The no_llm parameter is accepted for interface stability; this
+    implementation never calls the LLM.
 
     Args:
-        ir: Parsed intermediate representation used for template rendering.
+        ir: Parsed intermediate representation used for generation.
         fail_reason: Optional checker feedback from a previous attempt.
-        no_llm: When True, returns rendered templates directly and never calls
-            the LLM.
+            Reserved for future LLM integration.
+        no_llm: When True, returns generated content directly and never
+            calls the LLM. Currently all generation is template-free Python.
 
     Returns:
-        List of generated artifacts.
+        List of generated artifacts with flat filenames.
     """
-    env = Environment(loader=FileSystemLoader(TEMPLATE_DIR))
-    artifacts = []
-
-    for tmpl_name in TEMPLATES:
-        template = env.get_template(tmpl_name)
-        partial = template.render(ir=ir)
-
-        if no_llm:
-            filled = partial
-        else:
-            # Build LLM prompt
-            prompt = _build_prompt(ir, tmpl_name, partial, fail_reason)
-            filled = _call_llm(prompt)
-
-        out_name = _output_filename(ir.design_name, tmpl_name)
-        artifacts.append(Artifact(filename=out_name, content=filled))
-
-    return artifacts
-
-
-def _output_filename(design_name: str, tmpl_name: str) -> str:
-    """Map a template filename to its emitted artifact filename.
-
-    Args:
-        design_name: Parsed design name used as filename prefix.
-        tmpl_name: Template filename under templates/uvm.
-
-    Returns:
-        Output artifact filename.
-    """
-    name = tmpl_name.replace(".jinja", "").replace("interface", f"{design_name}_if")
-    for role in ["driver", "monitor", "sequencer", "agent", "test"]:
-        name = name.replace(role, f"{design_name}_{role}")
-    # Preserve v0 file contract: sequencer class file is named *_seqr.sv.
-    name = name.replace(f"{design_name}_sequencer", f"{design_name}_seqr")
-    name = name.replace("build_vivado", "build")
-    return name
-
-
-def _build_prompt(ir: IR, tmpl_name: str, partial: str, fail_reason: Optional[str]) -> str:
-    """Build the prompt used for production LLM completion.
-
-    Args:
-        ir: Parsed intermediate representation.
-        tmpl_name: Source template filename.
-        partial: Rendered template text prior to LLM completion.
-        fail_reason: Optional checker failure reason from a previous attempt.
-
-    Returns:
-        Prompt string sent to the LLM.
-    """
-    lines = [
-        f"You are generating a UVM 1.2 SystemVerilog file for a design named '{ir.design_name}'.",
-        f"Design ports: {[p.__dict__ for p in ir.ports]}",
-        "",
-        "Complete the following template. Fill ALL placeholder markers. "
-        "Output ONLY the completed file content — no explanation, no markdown fences.",
-        "",
-        partial,
-    ]
-    if fail_reason:
-        lines = [
-            f"Previous attempt failed with: {fail_reason}",
-            "Fix that specific issue in your output.",
-            "",
-        ] + lines
-    return "\n".join(lines)
+    all_content = _gen_all_content(ir, None)
+    return [Artifact(filename=fname, content=content)
+            for fname, content in all_content.items()]
 
 
 def _call_llm(prompt: str) -> str:
     """Call Anthropic API and return generated file text.
+
+    Retained for potential future LLM-augmented generation.
 
     Args:
         prompt: Prompt text requesting completed artifact content.
