@@ -86,3 +86,6 @@ hdl_style_old.md
 
 # Microsoft Office temporary lock files
 ~$*
+
+# pssgen output at IP root (belong under tb/)
+ip/*/scripts/
