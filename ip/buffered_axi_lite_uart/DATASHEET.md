@@ -1,16 +1,16 @@
-# IP Data Sheet: Buffered AXI-Lite UART
+# IP Data Sheet: buffered_axi_lite_uart
 
 ## Identity
 
 | Field        | Value                                            |
 |--------------|--------------------------------------------------|
 | Design Name  | buffered_axi_lite_uart                           |
-| Spec         | BALU-RS-001 Rev 0.4                              |
+| Spec         | —                                                |
 | Version      | 0.1.0                                            |
 | Status       | IN DEVELOPMENT — architecture stub               |
 | Author       | S. Belton, BelTech Systems LLC                   |
 | License      | MIT                                              |
-| Bus Protocol | AXI4-Lite (ARM IHI0022E), 32-bit data, 8-bit addr|
+| Bus Protocol | AXI4-Lite (ARM IHI0022E), 32-bit data, 8-bit addr |
 
 ---
 
@@ -18,10 +18,10 @@
 
 | Milestone                        | Status     | Date       |
 |----------------------------------|------------|------------|
-| Requirements specification       | ✓ Complete | 2026-04-07 |
-| VCRM — 141 requirements          | ✓ Complete | 2026-04-07 |
-| Register map spreadsheet         | ✓ Complete | 2026-04-07 |
-| VHDL entity + architecture stub  | ✓ Complete | 2026-04-07 |
+| Requirements specification       | ✓ Complete | 2026-04-14 |
+| VCRM — 141 requirements          | ✓ Complete | 2026-04-14 |
+| Register map spreadsheet         | Pending    | —          |
+| VHDL entity + architecture stub  | ✓ Complete | 2026-04-14 |
 | SystemVerilog module + stub      | Pending    | —          |
 | Architecture implementation      | Pending    | —          |
 | pssgen gap report — all closed   | Pending    | —          |
@@ -37,38 +37,38 @@
 
 VHDL instantiation at default generics:
 ```vhdl
-u_uart : entity work.buffered_axi_lite_uart
+u_buffered_axi_lite_uart : entity work.buffered_axi_lite_uart
   generic map (
-    G_CLK_FREQ_HZ     => 100_000_000,
-    G_DEFAULT_BAUD    => 115_200,
-    G_FIFO_DEPTH      => 16,
-    G_TIMEOUT_DEFAULT => 255
+    G_CLK_FREQ_HZ          => 100_000_000,
+    G_DEFAULT_BAUD         => 115_200,
+    G_FIFO_DEPTH           => 16,
+    G_TIMEOUT_DEFAULT      => 255
   )
   port map (
-    axi_aclk      => clk_s,
-    axi_aresetn   => resetn_s,
-    s_axi_awvalid => m_axi_awvalid_s,
-    s_axi_awready => m_axi_awready_s,
-    s_axi_awaddr  => m_axi_awaddr_s,
-    s_axi_awprot  => m_axi_awprot_s,
-    s_axi_wvalid  => m_axi_wvalid_s,
-    s_axi_wready  => m_axi_wready_s,
-    s_axi_wdata   => m_axi_wdata_s,
-    s_axi_wstrb   => m_axi_wstrb_s,
-    s_axi_bvalid  => m_axi_bvalid_s,
-    s_axi_bready  => m_axi_bready_s,
-    s_axi_bresp   => m_axi_bresp_s,
-    s_axi_arvalid => m_axi_arvalid_s,
-    s_axi_arready => m_axi_arready_s,
-    s_axi_araddr  => m_axi_araddr_s,
-    s_axi_arprot  => m_axi_arprot_s,
-    s_axi_rvalid  => m_axi_rvalid_s,
-    s_axi_rready  => m_axi_rready_s,
-    s_axi_rdata   => m_axi_rdata_s,
-    s_axi_rresp   => m_axi_rresp_s,
-    uart_tx       => uart_tx_s,
-    uart_rx       => uart_rx_s,
-    irq           => uart_irq_s
+    axi_aclk           => clk_s,
+    axi_aresetn        => resetn_s,
+    s_axi_awvalid      => s_axi_awvalid_s,
+    s_axi_awready      => s_axi_awready_s,
+    s_axi_awaddr       => s_axi_awaddr_s,
+    s_axi_awprot       => s_axi_awprot_s,
+    s_axi_wvalid       => s_axi_wvalid_s,
+    s_axi_wready       => s_axi_wready_s,
+    s_axi_wdata        => s_axi_wdata_s,
+    s_axi_wstrb        => s_axi_wstrb_s,
+    s_axi_bvalid       => s_axi_bvalid_s,
+    s_axi_bready       => s_axi_bready_s,
+    s_axi_bresp        => s_axi_bresp_s,
+    s_axi_arvalid      => s_axi_arvalid_s,
+    s_axi_arready      => s_axi_arready_s,
+    s_axi_araddr       => s_axi_araddr_s,
+    s_axi_arprot       => s_axi_arprot_s,
+    s_axi_rvalid       => s_axi_rvalid_s,
+    s_axi_rready       => s_axi_rready_s,
+    s_axi_rdata        => s_axi_rdata_s,
+    s_axi_rresp        => s_axi_rresp_s,
+    uart_tx            => uart_tx_s,
+    uart_rx            => uart_rx_s,
+    irq                => irq_s
   );
 ```
 
@@ -79,19 +79,7 @@ See the register map spreadsheet for the complete field list.
 
 ## Known Limitations and Integration Notes
 
-- BAUD_TUNING writes are silently ignored while UART_EN=1.
-  Disable the UART before changing baud rate at runtime.
-- G_FIFO_DEPTH must be a power of 2 in range 8–256.
-  Elaboration fails with a descriptive message otherwise.
-- The RX input is synchronised with a two-stage FF chain.
-  Minimum recognisable pulse width on uart_rx is two
-  axi_aclk cycles.
-- STATUS is a combinatorial register. Hold the sampled
-  value in software if multi-cycle consistency is needed.
-- INT_CLEAR is write-only. Reads always return 0x00000000.
-- TX_DATA writes while TX_FULL is asserted are silently
-  discarded. Poll STATUS[TX_FULL] or use the TX_THRESH
-  interrupt before writing.
+- No known limitations at this stage.
 
 *This section grows as integration experience accumulates.*
 
