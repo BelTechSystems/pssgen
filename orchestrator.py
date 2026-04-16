@@ -47,6 +47,7 @@
 #   v5a      2026-04-08  SB  Wired generate_datasheet; DATASHEET.md added to output_files (D-026)
 #   v6a      2026-04-12  SB  Replaced parse_req + parse_intent with parse_vplan (OI-30, D-031)
 #   v6b      2026-04-14  SB  Wire generate_uvm_tb into pipeline (D-032)
+#   v6c      2026-04-16  SB  Wire --collect-results (OI-29)
 #
 # ===========================================================
 """orchestrator.py — Pipeline coordinator and retry owner.
@@ -104,6 +105,8 @@ class JobSpec:
         coverage_db: Stub — coverage database path; reserved for v3c.
         reg_map_file: Optional explicit path to register map .xlsx or .intent file.
         register_maps_list: Optional list of {file, base_address} dicts for multi-file mode.
+        collect_results: If True, parse sim_log and write RTL results back to the VPR.
+        sim_log: Path to xsim.log; required when collect_results is True.
     """
     input_file: str
     top_module: Optional[str]
@@ -122,6 +125,8 @@ class JobSpec:
     coverage_db: Optional[str] = None
     reg_map_file: Optional[str] = None
     register_maps_list: Optional[list] = None
+    collect_results: bool = False
+    sim_log: Optional[str] = None
 
 
 @dataclass
@@ -537,6 +542,49 @@ def run(job: JobSpec) -> OrchestratorResult:
 
     if job.verbose:
         print(f"[orchestrator] IR populated: {ir.design_name}, {len(ir.ports)} ports")
+
+    # --- Collect simulation results and write back to VPR (OI-29) ---
+    if job.collect_results:
+        from agents.results_collector import (
+            parse_xsim_log,
+            write_vpr_results,
+            generate_gap_report_json,
+        )
+        if not job.sim_log:
+            print("[pssgen] --collect-results requires --sim-log <path>")
+            return OrchestratorResult(
+                success=False,
+                last_fail_reason="--sim-log not provided",
+            )
+        sim_result = parse_xsim_log(job.sim_log)
+        if job.verbose:
+            print(
+                f"[orchestrator] Sim result: "
+                f"{'PASS' if sim_result.passed else 'FAIL'} "
+                f"({sim_result.uvm_errors} errors, "
+                f"{sim_result.uvm_warnings} warnings)"
+            )
+        gap_json_path: Optional[str] = None
+        if vplan_path and vplan_path.endswith(".xlsx"):
+            rows_updated = write_vpr_results(
+                vplan_path=vplan_path,
+                sim_result=sim_result,
+            )
+            if job.verbose:
+                print(f"[orchestrator] VPR updated: {rows_updated} rows")
+            os.makedirs(job.out_dir, exist_ok=True)
+            gap_json_path = os.path.join(job.out_dir, "gap_report.json")
+            generate_gap_report_json(
+                vplan_path=vplan_path,
+                sim_result=sim_result,
+                out_path=gap_json_path,
+            )
+            print(f"[pssgen] Gap report: {gap_json_path}")
+        return OrchestratorResult(
+            success=sim_result.passed,
+            output_files=[job.sim_log],
+            gap_report_path=gap_json_path,
+        )
 
     # --- Orchestrator retry loop ---
     last_fail_reason: Optional[str] = None
