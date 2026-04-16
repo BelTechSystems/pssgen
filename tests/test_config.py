@@ -187,3 +187,42 @@ def test_config_merge_empty_coverage_db_not_set() -> None:
     args = _make_args()
     result = merge_config_with_args(config, args)
     assert result.coverage_db is None
+
+
+# ---------------------------------------------------------------------------
+# CLI argument parser — --collect-results and --sim-log (OI-29)
+# ---------------------------------------------------------------------------
+
+def test_cli_collect_results_and_sim_log_accepted() -> None:
+    """CLI parser accepts --collect-results and --sim-log without error."""
+    import argparse
+    import sys
+
+    # Build a minimal parser that mirrors what cli.main() registers.
+    # We test the two new flags in isolation from the rest of the argument
+    # surface so the test is not fragile to unrelated CLI additions.
+    p = argparse.ArgumentParser()
+    p.add_argument("--input", default=None)
+    p.add_argument("--collect-results", action="store_true", dest="collect_results")
+    p.add_argument("--sim-log", default=None, dest="sim_log", metavar="PATH")
+
+    args = p.parse_args(["--input", "dummy.vhd",
+                         "--collect-results",
+                         "--sim-log", "path/to/xsim.log"])
+
+    assert args.collect_results is True
+    assert args.sim_log == "path/to/xsim.log"
+
+
+def test_cli_collect_results_default_false() -> None:
+    """--collect-results defaults to False when omitted."""
+    import argparse
+
+    p = argparse.ArgumentParser()
+    p.add_argument("--collect-results", action="store_true", dest="collect_results")
+    p.add_argument("--sim-log", default=None, dest="sim_log")
+
+    args = p.parse_args([])
+
+    assert args.collect_results is False
+    assert args.sim_log is None

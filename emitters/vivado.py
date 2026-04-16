@@ -83,6 +83,11 @@ def emit(ir: IR, artifacts: list[Artifact], out_dir: str) -> list[str]:
                 continue
 
         if artifact.filename.endswith(".tcl"):
+            # Skip .tcl artifacts already written by generate_uvm_tb() to
+            # out_dir/tb/scripts/vivado/ — prevents stray scripts/ at IP root.
+            tb_tcl_path = os.path.join(tb_dir, "scripts", "vivado", artifact.filename)
+            if os.path.exists(tb_tcl_path):
+                continue
             os.makedirs(scripts_dir, exist_ok=True)
             path = os.path.join(scripts_dir, artifact.filename)
         else:

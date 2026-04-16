@@ -180,10 +180,14 @@ def test_generate_uvm_tb_required_files(tmp_path) -> None:
     for fname in _REQUIRED_FILES:
         assert os.path.exists(os.path.join(tb_dir, fname)), \
             f"Required file missing: {fname}"
-    # build.tcl lives in tb/scripts/vivado/
+    # build.tcl must exist at the correct path: tb/scripts/vivado/
     assert os.path.exists(
         os.path.join(tb_dir, "scripts", "vivado", "build.tcl")
-    )
+    ), "build.tcl missing from tb/scripts/vivado/"
+    # build.tcl must NOT exist at the stray path: scripts/vivado/ (no tb/)
+    assert not os.path.exists(
+        os.path.join(str(tmp_path), "scripts", "vivado", "build.tcl")
+    ), "build.tcl must not appear at scripts/vivado/ without tb/ prefix (stray path)"
 
 
 def test_generate_uvm_tb_pkg_include_order(tmp_path) -> None:

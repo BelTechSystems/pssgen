@@ -31,6 +31,7 @@
 #                          --coverage-db flag, file resolution verbose reporting
 #   v4a   2026-04-03  SB  Added --reg-map flag; verbose reg-map resolution reporting
 #   v5a   2026-04-07  SB  import-reqs subcommand for .docx requirement extraction
+#   v6c   2026-04-16  SB  Added --collect-results and --sim-log flags (OI-29)
 #
 # ===========================================================
 """cli.py — Command-line entry point for pssgen.
@@ -238,8 +239,34 @@ def main() -> None:
             "the input file if not specified."
         ),
     )
+    parser.add_argument(
+        "--collect-results",
+        action="store_true",
+        dest="collect_results",
+        help=(
+            "Parse sim log and write RTL results back to the VPR spreadsheet. "
+            "Requires --sim-log."
+        ),
+    )
+    parser.add_argument(
+        "--sim-log",
+        default=None,
+        dest="sim_log",
+        metavar="PATH",
+        help="Path to xsim.log; required with --collect-results.",
+    )
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args()
+
+    # ------------------------------------------------------------------
+    # Validate --collect-results dependency
+    # ------------------------------------------------------------------
+    if args.collect_results and not args.sim_log:
+        print(
+            "[pssgen] ERROR: --collect-results requires --sim-log <path>",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
     # ------------------------------------------------------------------
     # Merge pssgen.toml config into args (CLI flags take priority)
@@ -354,6 +381,8 @@ def main() -> None:
         coverage_db=args.coverage_db,
         reg_map_file=args.reg_map,
         register_maps_list=loaded_config.get("register_maps_list"),
+        collect_results=args.collect_results,
+        sim_log=args.sim_log,
     )
     result = run(job)
     if not result.success:
