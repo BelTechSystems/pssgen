@@ -47,7 +47,7 @@
 #   v5a      2026-04-08  SB  Wired generate_datasheet; DATASHEET.md added to output_files (D-026)
 #   v6a      2026-04-12  SB  Replaced parse_req + parse_intent with parse_vplan (OI-30, D-031)
 #   v6b      2026-04-14  SB  Wire generate_uvm_tb into pipeline (D-032)
-#   v6c      2026-04-16  SB  Wire --collect-results (OI-29)
+#   v6c      2026-04-16  SB  Wire --collect-results (OI-29); vplan_file in JobSpec
 #
 # ===========================================================
 """orchestrator.py — Pipeline coordinator and retry owner.
@@ -107,6 +107,7 @@ class JobSpec:
         register_maps_list: Optional list of {file, base_address} dicts for multi-file mode.
         collect_results: If True, parse sim_log and write RTL results back to the VPR.
         sim_log: Path to xsim.log; required when collect_results is True.
+        vplan_file: Explicit path to the VPR .xlsx file (overrides auto-detection).
     """
     input_file: str
     top_module: Optional[str]
@@ -127,6 +128,7 @@ class JobSpec:
     register_maps_list: Optional[list] = None
     collect_results: bool = False
     sim_log: Optional[str] = None
+    vplan_file: Optional[str] = None
 
 
 @dataclass
@@ -368,7 +370,9 @@ def run(job: JobSpec) -> OrchestratorResult:
     req_result = None
     req_source = "none"
 
-    vplan_path = intent_path  # resolve_context_files returns vplan via intent slot
+    # Explicit --vplan flag (or pssgen.toml [input] vplan) takes priority;
+    # fall back to whatever resolve_context_files returned in the intent slot.
+    vplan_path = job.vplan_file or intent_path
     if vplan_path and vplan_path.endswith(".xlsx"):
         vplan_result = parse_vplan(vplan_path)
         intent_result = vplan_result
@@ -537,7 +541,7 @@ def run(job: JobSpec) -> OrchestratorResult:
     if job.verbose:
         print(
             f"[orchestrator] UVM testbench: "
-            f"{len(uvm_paths)} files → {job.out_dir}/tb/"
+            f"{len(uvm_paths)} files -> {job.out_dir}/tb/"
         )
 
     if job.verbose:

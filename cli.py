@@ -31,7 +31,7 @@
 #                          --coverage-db flag, file resolution verbose reporting
 #   v4a   2026-04-03  SB  Added --reg-map flag; verbose reg-map resolution reporting
 #   v5a   2026-04-07  SB  import-reqs subcommand for .docx requirement extraction
-#   v6c   2026-04-16  SB  Added --collect-results and --sim-log flags (OI-29)
+#   v6c   2026-04-16  SB  Added --collect-results and --sim-log flags (OI-29); --vplan flag
 #
 # ===========================================================
 """cli.py — Command-line entry point for pssgen.
@@ -240,6 +240,17 @@ def main() -> None:
         ),
     )
     parser.add_argument(
+        "--vplan",
+        default=None,
+        dest="vplan",
+        metavar="FILE",
+        help=(
+            "Verification plan spreadsheet (.xlsx) containing requirements, "
+            "coverage goals, and waiver entries. Auto-detected from pssgen.toml "
+            "[input] vplan if not specified."
+        ),
+    )
+    parser.add_argument(
         "--collect-results",
         action="store_true",
         dest="collect_results",
@@ -383,6 +394,7 @@ def main() -> None:
         register_maps_list=loaded_config.get("register_maps_list"),
         collect_results=args.collect_results,
         sim_log=args.sim_log,
+        vplan_file=args.vplan,
     )
     result = run(job)
     if not result.success:

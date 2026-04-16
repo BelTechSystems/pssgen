@@ -281,7 +281,7 @@ def write_vpr_results(
     wb.save(vplan_path)
     wb.close()
 
-    print(f"[results_collector] VPR write-back: {rows_updated} row(s) updated → {vplan_path}")
+    print(f"[results_collector] VPR write-back: {rows_updated} row(s) updated -> {vplan_path}")
     return rows_updated
 
 

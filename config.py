@@ -31,6 +31,7 @@
 #   v3c-b  2026-03-29  SB  Resolve TOML file paths relative to TOML directory
 #   v4c    2026-04-05  SB  [[register_maps]] array-of-tables multi-file support
 #   v5b    2026-04-10  SB  Resolve [output] dir relative to TOML directory
+#   v6c    2026-04-16  SB  Read [input] vplan key; wire to vplan_file arg
 #
 # ===========================================================
 """config.py — pssgen.toml project configuration loader.
@@ -54,6 +55,7 @@ _CLI_DEFAULTS: dict = {
     "top":           None,
     "intent":        None,
     "req":           None,
+    "vplan":         None,
     "out":           "./out",
     "sim":           "vivado",
     "retry":         3,
@@ -69,6 +71,7 @@ _CONFIG_TO_ARGS: list[tuple[str, str]] = [
     ("top_module",    "top"),
     ("intent_file",   "intent"),
     ("req_file",      "req"),
+    ("vplan_file",    "vplan"),
     ("out_dir",       "out"),
     ("sim_target",    "sim"),
     ("max_retries",   "retry"),
@@ -123,6 +126,7 @@ def load_project_config(config_path: str) -> dict:
         top     → top_module   (--top)
         intent  → intent_file  (--intent)
         req     → req_file     (--req)
+        vplan   → vplan_file   (--vplan)
 
         [output]
         dir     → out_dir      (--out)
@@ -174,6 +178,8 @@ def load_project_config(config_path: str) -> dict:
         config["intent_file"] = _resolve(input_sec["intent"])
     if "req" in input_sec:
         config["req_file"] = _resolve(input_sec["req"])
+    if "vplan" in input_sec:
+        config["vplan_file"] = _resolve(input_sec["vplan"])
 
     output_sec = raw.get("output", {})
     if "dir" in output_sec:
