@@ -412,6 +412,10 @@ def generate_gap_report_json(
         else:
             b["not_run"] += 1
     family_summary = {fam: family_buckets[fam] for fam in sorted(family_buckets)}
+    family_summary_array = [
+        {"family": k, **v}
+        for k, v in sorted(family_summary.items())
+    ]
 
     report = {
         "generated": sim_result.run_date,
@@ -422,9 +426,10 @@ def generate_gap_report_json(
             "uvm_fatals":   sim_result.uvm_fatals,
             "coverage_pct": sim_result.coverage_pct,
         },
-        "summary":        summary,
-        "family_summary": family_summary,
-        "requirements":   requirements,
+        "summary":              summary,
+        "family_summary":       family_summary,
+        "family_summary_array": family_summary_array,
+        "requirements":         requirements,
     }
 
     os.makedirs(os.path.dirname(os.path.abspath(out_path)), exist_ok=True)

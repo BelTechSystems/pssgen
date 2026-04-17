@@ -561,3 +561,9 @@ def test_family_summary_counts(tmp_path):
     assert fs["FF"]["failing"] == 2
     assert fs["FF"]["passing"] == 0
     assert fs["FF"]["waived"]  == 0
+
+    assert "family_summary_array" in report
+    assert isinstance(report["family_summary_array"], list)
+    br_entry = next(e for e in report["family_summary_array"] if e["family"] == "BR")
+    assert br_entry["passing"] == 3
+    assert br_entry["waived"]  == 1

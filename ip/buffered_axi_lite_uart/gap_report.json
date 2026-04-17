@@ -1,6 +1,6 @@
 {
   "generated": "2026-04-17",
-  "commit": "0a2fdfb",
+  "commit": "00a8fe2",
   "sim_result": {
     "passed": true,
     "uvm_errors": 0,
@@ -95,6 +95,96 @@
       "not_run": 0
     }
   },
+  "family_summary_array": [
+    {
+      "family": "BR",
+      "total": 6,
+      "passing": 6,
+      "failing": 0,
+      "waived": 0,
+      "not_run": 0
+    },
+    {
+      "family": "EN",
+      "total": 6,
+      "passing": 6,
+      "failing": 0,
+      "waived": 0,
+      "not_run": 0
+    },
+    {
+      "family": "FF",
+      "total": 9,
+      "passing": 9,
+      "failing": 0,
+      "waived": 0,
+      "not_run": 0
+    },
+    {
+      "family": "FIFO",
+      "total": 9,
+      "passing": 9,
+      "failing": 0,
+      "waived": 0,
+      "not_run": 0
+    },
+    {
+      "family": "IF",
+      "total": 14,
+      "passing": 14,
+      "failing": 0,
+      "waived": 0,
+      "not_run": 0
+    },
+    {
+      "family": "INT",
+      "total": 13,
+      "passing": 13,
+      "failing": 0,
+      "waived": 0,
+      "not_run": 0
+    },
+    {
+      "family": "PAR",
+      "total": 9,
+      "passing": 8,
+      "failing": 0,
+      "waived": 1,
+      "not_run": 0
+    },
+    {
+      "family": "REG",
+      "total": 52,
+      "passing": 52,
+      "failing": 0,
+      "waived": 0,
+      "not_run": 0
+    },
+    {
+      "family": "RST",
+      "total": 6,
+      "passing": 6,
+      "failing": 0,
+      "waived": 0,
+      "not_run": 0
+    },
+    {
+      "family": "TO",
+      "total": 7,
+      "passing": 7,
+      "failing": 0,
+      "waived": 0,
+      "not_run": 0
+    },
+    {
+      "family": "VER",
+      "total": 10,
+      "passing": 9,
+      "failing": 0,
+      "waived": 1,
+      "not_run": 0
+    }
+  ],
   "requirements": [
     {
       "req_id": "UART-PAR-001",
