@@ -18,10 +18,10 @@
 
 | Milestone                        | Status     | Date       |
 |----------------------------------|------------|------------|
-| Requirements specification       | ✓ Complete | 2026-04-14 |
-| VCRM — 141 requirements          | ✓ Complete | 2026-04-14 |
+| Requirements specification       | ✓ Complete | 2026-04-16 |
+| VCRM — 141 requirements          | ✓ Complete | 2026-04-16 |
 | Register map spreadsheet         | Pending    | —          |
-| VHDL entity + architecture stub  | ✓ Complete | 2026-04-14 |
+| VHDL entity + architecture stub  | ✓ Complete | 2026-04-16 |
 | SystemVerilog module + stub      | Pending    | —          |
 | Architecture implementation      | Pending    | —          |
 | pssgen gap report — all closed   | Pending    | —          |

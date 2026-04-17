@@ -1,8 +1,7 @@
 ========================================================================
 pssgen Gap Report — buffered_axi_lite_uart
-Generated: 2026-04-14
+Generated: 2026-04-16
 Input:     ip/buffered_axi_lite_uart/vhdl/buffered_axi_lite_uart.vhd
-Intent:    ip/buffered_axi_lite_uart/buffered_axi_lite_uart_vplan.xlsx
 Req mode:  full
 ========================================================================
 
