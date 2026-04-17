@@ -1,0 +1,531 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_PSSGEN-GAP-REPORT",
+      "label": "pssgen-gap-report",
+      "description": "Infinity datasource for pssgen gap_report.json",
+      "type": "datasource",
+      "pluginId": "yesoreyeram-infinity-datasource",
+      "pluginName": "Infinity"
+    }
+  ],
+  "__requires": [
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "11.0.0"
+    },
+    {
+      "type": "datasource",
+      "id": "yesoreyeram-infinity-datasource",
+      "name": "Infinity",
+      "version": "2.0.0"
+    },
+    {
+      "type": "panel",
+      "id": "stat",
+      "name": "Stat",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "gauge",
+      "name": "Gauge",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "barchart",
+      "name": "Bar chart",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "table",
+      "name": "Table",
+      "version": ""
+    }
+  ],
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Simulation Result",
+      "gridPos": { "h": 4, "w": 8, "x": 0, "y": 0 },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${DS_PSSGEN-GAP-REPORT}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${DS_PSSGEN-GAP-REPORT}"
+          },
+          "refId": "A",
+          "source": "url",
+          "url": "https://raw.githubusercontent.com/BelTechSystems/pssgen/main/ip/buffered_axi_lite_uart/gap_report.json",
+          "url_options": { "method": "GET", "data": "" },
+          "type": "json",
+          "parser": "backend",
+          "root_selector": "$.sim_result",
+          "columns": [
+            { "selector": "passed",     "text": "Passed",     "type": "boolean" },
+            { "selector": "uvm_errors", "text": "UVM Errors", "type": "number"  },
+            { "selector": "uvm_fatals", "text": "UVM Fatals", "type": "number"  }
+          ],
+          "format": "table",
+          "filters": [],
+          "global_query_id": ""
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": ["lastNotNull"],
+          "fields": ""
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "true":  { "text": "PASS", "color": "green", "index": 0 },
+                "false": { "text": "FAIL", "color": "red",   "index": 1 }
+              }
+            },
+            {
+              "type": "range",
+              "options": {
+                "from": 1,
+                "to": 10000,
+                "result": { "color": "red", "index": 2 }
+              }
+            },
+            {
+              "type": "range",
+              "options": {
+                "from": 0,
+                "to": 0,
+                "result": { "color": "green", "index": 3 }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red",   "value": 1    }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 2,
+      "type": "gauge",
+      "title": "Functional Coverage",
+      "gridPos": { "h": 4, "w": 8, "x": 8, "y": 0 },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${DS_PSSGEN-GAP-REPORT}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${DS_PSSGEN-GAP-REPORT}"
+          },
+          "refId": "A",
+          "source": "url",
+          "url": "https://raw.githubusercontent.com/BelTechSystems/pssgen/main/ip/buffered_axi_lite_uart/gap_report.json",
+          "url_options": { "method": "GET", "data": "" },
+          "type": "json",
+          "parser": "backend",
+          "root_selector": "$.sim_result",
+          "columns": [
+            { "selector": "coverage_pct", "text": "Coverage %", "type": "number" }
+          ],
+          "format": "table",
+          "filters": [],
+          "global_query_id": ""
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": ["lastNotNull"],
+          "fields": ""
+        },
+        "orientation": "auto",
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "minVizWidth": 75,
+        "minVizHeight": 75
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red",    "value": null },
+              { "color": "orange", "value": 50   },
+              { "color": "green",  "value": 80   }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Requirements",
+      "gridPos": { "h": 4, "w": 8, "x": 16, "y": 0 },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${DS_PSSGEN-GAP-REPORT}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${DS_PSSGEN-GAP-REPORT}"
+          },
+          "refId": "A",
+          "source": "url",
+          "url": "https://raw.githubusercontent.com/BelTechSystems/pssgen/main/ip/buffered_axi_lite_uart/gap_report.json",
+          "url_options": { "method": "GET", "data": "" },
+          "type": "json",
+          "parser": "backend",
+          "root_selector": "$.summary",
+          "columns": [
+            { "selector": "total",   "text": "Total",   "type": "number" },
+            { "selector": "passing", "text": "Passing", "type": "number" },
+            { "selector": "failing", "text": "Failing", "type": "number" },
+            { "selector": "waived",  "text": "Waived",  "type": "number" }
+          ],
+          "format": "table",
+          "filters": [],
+          "global_query_id": ""
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": ["lastNotNull"],
+          "fields": ""
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "text", "value": null }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Total" },
+            "properties": [
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "blue" } }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Passing" },
+            "properties": [
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Failing" },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    { "color": "green", "value": null },
+                    { "color": "red",   "value": 1    }
+                  ]
+                }
+              },
+              { "id": "color", "value": { "mode": "thresholds" } }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Waived" },
+            "properties": [
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "yellow" } }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": 4,
+      "type": "barchart",
+      "title": "Coverage by Family",
+      "gridPos": { "h": 8, "w": 14, "x": 0, "y": 4 },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${DS_PSSGEN-GAP-REPORT}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${DS_PSSGEN-GAP-REPORT}"
+          },
+          "refId": "A",
+          "source": "url",
+          "url": "https://raw.githubusercontent.com/BelTechSystems/pssgen/main/ip/buffered_axi_lite_uart/gap_report.json",
+          "url_options": { "method": "GET", "data": "" },
+          "type": "json",
+          "parser": "uql",
+          "root_selector": "$.family_summary",
+          "uql": "parse-json | project \"family\"=keys, \"data\"=values | mv-expand \"family\", \"data\" | project \"family\", \"passing\"=data.passing, \"failing\"=data.failing, \"waived\"=data.waived",
+          "format": "table",
+          "filters": [],
+          "global_query_id": ""
+        }
+      ],
+      "options": {
+        "xField": "family",
+        "stacking": "normal",
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "fillOpacity": 80,
+        "groupWidth": 0.7,
+        "barWidth": 0.97,
+        "tooltip": { "mode": "multi", "sort": "none" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "fillOpacity": 80,
+            "lineWidth": 1
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "passing" },
+            "properties": [
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "failing" },
+            "properties": [
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "waived" },
+            "properties": [
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "yellow" } }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Last Run",
+      "gridPos": { "h": 8, "w": 10, "x": 14, "y": 4 },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${DS_PSSGEN-GAP-REPORT}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${DS_PSSGEN-GAP-REPORT}"
+          },
+          "refId": "A",
+          "source": "url",
+          "url": "https://raw.githubusercontent.com/BelTechSystems/pssgen/main/ip/buffered_axi_lite_uart/gap_report.json",
+          "url_options": { "method": "GET", "data": "" },
+          "type": "json",
+          "parser": "backend",
+          "root_selector": "$",
+          "columns": [
+            { "selector": "generated",              "text": "Date",       "type": "string" },
+            { "selector": "commit",                 "text": "Commit",     "type": "string" },
+            { "selector": "sim_result.coverage_pct","text": "Coverage %", "type": "number" }
+          ],
+          "format": "table",
+          "filters": [],
+          "global_query_id": ""
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": ["lastNotNull"],
+          "fields": ""
+        },
+        "orientation": "vertical",
+        "textMode": "value_and_name",
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "center"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "text", "value": null }
+            ]
+          },
+          "color": { "mode": "fixed", "fixedColor": "text" }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 6,
+      "type": "table",
+      "title": "Requirements",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 12 },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${DS_PSSGEN-GAP-REPORT}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${DS_PSSGEN-GAP-REPORT}"
+          },
+          "refId": "A",
+          "source": "url",
+          "url": "https://raw.githubusercontent.com/BelTechSystems/pssgen/main/ip/buffered_axi_lite_uart/gap_report.json",
+          "url_options": { "method": "GET", "data": "" },
+          "type": "json",
+          "parser": "backend",
+          "root_selector": "$.requirements",
+          "columns": [
+            { "selector": "req_id",         "text": "Req ID",         "type": "string" },
+            { "selector": "family",         "text": "Family",         "type": "string" },
+            { "selector": "covered_by",     "text": "Covered By",     "type": "string" },
+            { "selector": "disposition",    "text": "Disposition",    "type": "string" },
+            { "selector": "rtl_status",     "text": "RTL Status",     "type": "string" },
+            { "selector": "overall_status", "text": "Overall Status", "type": "string" }
+          ],
+          "format": "table",
+          "filters": [],
+          "global_query_id": ""
+        }
+      ],
+      "options": {
+        "footer": {
+          "show": false,
+          "reducer": ["sum"],
+          "countRows": false,
+          "fields": ""
+        },
+        "showHeader": true,
+        "cellHeight": "sm",
+        "frameIndex": 0,
+        "sortBy": [
+          { "displayName": "Family", "desc": false }
+        ]
+      },
+      "transformations": [],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "displayMode": "auto",
+            "inspect": false
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "RTL Status" },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "PASS":    { "color": "green", "index": 0 },
+                      "FAIL":    { "color": "red",   "index": 1 },
+                      "NOT_RUN": { "color": "grey",  "index": 2 }
+                    }
+                  }
+                ]
+              },
+              { "id": "custom.displayMode", "value": "color-background" }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Overall Status" },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "PASS":    { "color": "green", "index": 0 },
+                      "FAIL":    { "color": "red",   "index": 1 },
+                      "NOT_RUN": { "color": "grey",  "index": 2 }
+                    }
+                  }
+                ]
+              },
+              { "id": "custom.displayMode", "value": "color-background" }
+            ]
+          }
+        ]
+      },
+      "pluginVersion": "11.0.0"
+    }
+  ],
+  "refresh": "5m",
+  "schemaVersion": 39,
+  "tags": ["pssgen", "verification", "uart"],
+  "templating": { "list": [] },
+  "time": { "from": "now-24h", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "pssgen \u2014 BALU Verification Status",
+  "uid": "pssgen-balu-verification",
+  "version": 1
+}

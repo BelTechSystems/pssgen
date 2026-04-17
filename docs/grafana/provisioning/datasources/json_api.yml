@@ -1,0 +1,10 @@
+apiVersion: 1
+
+datasources:
+  - name: pssgen-gap-report
+    type: yesoreyeram-infinity-datasource
+    access: proxy
+    isDefault: true
+    editable: true
+    jsonData:
+      global_queries: []
