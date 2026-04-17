@@ -66,11 +66,12 @@ def _make_data_row(
     req_id: str,
     disposition: str = "GENERATED",
     rtl_status: str = "NOT_RUN",
+    family: str = "FAM",
 ) -> list:
     """Build a 28-element VPR data row with minimal fields populated."""
     row = [None] * _N_COLS
     row[0]  = req_id
-    row[1]  = "FAM"
+    row[1]  = family
     row[3]  = f"The IP shall {req_id}."
     row[7]  = "COV-001"
     row[10] = disposition
@@ -457,7 +458,8 @@ def test_generate_gap_report_json_structure(tmp_path):
         report = json.load(fh)
 
     # Top-level keys
-    for key in ("generated", "commit", "sim_result", "summary", "requirements"):
+    for key in ("generated", "commit", "sim_result", "summary",
+                "family_summary", "requirements"):
         assert key in report, f"Missing top-level key: {key}"
 
     # Summary keys
@@ -474,6 +476,17 @@ def test_generate_gap_report_json_structure(tmp_path):
     # Summary counts (3 total: 2 GENERATED, 1 WAIVED)
     assert report["summary"]["total"] == 3
     assert report["summary"]["waived"] == 1
+
+    # family_summary structure
+    fs = report["family_summary"]
+    assert isinstance(fs, dict)
+    for fam_entry in fs.values():
+        for key in ("total", "passing", "failing", "waived", "not_run"):
+            assert key in fam_entry, f"Missing family_summary key: {key}"
+        assert (
+            fam_entry["passing"] + fam_entry["failing"]
+            + fam_entry["waived"] + fam_entry["not_run"]
+        ) == fam_entry["total"]
 
 
 def test_generate_gap_report_json_sim_result_block(tmp_path):
@@ -516,3 +529,35 @@ def test_generate_gap_report_json_req_fields(tmp_path):
     for field_name in ("req_id", "family", "disposition", "covered_by",
                        "rtl_status", "overall_status"):
         assert field_name in entry, f"Missing requirement field: {field_name}"
+
+
+def test_family_summary_counts(tmp_path):
+    """family_summary correctly groups pass/fail/waived counts by family."""
+    vpr_path = str(tmp_path / "test_vpr.xlsx")
+    data_rows = [
+        _make_data_row("BR-001", disposition="GENERATED", rtl_status="PASS",    family="BR"),
+        _make_data_row("BR-002", disposition="GENERATED", rtl_status="PASS",    family="BR"),
+        _make_data_row("BR-003", disposition="GENERATED", rtl_status="PASS",    family="BR"),
+        _make_data_row("BR-004", disposition="WAIVED",    rtl_status="NOT_RUN", family="BR"),
+        _make_data_row("FF-001", disposition="GENERATED", rtl_status="FAIL",    family="FF"),
+        _make_data_row("FF-002", disposition="GENERATED", rtl_status="FAIL",    family="FF"),
+    ]
+    _make_vpr_workbook(data_rows, vpr_path)
+
+    sim = _make_passing_sim_result()
+    out_path = str(tmp_path / "gap_report.json")
+    generate_gap_report_json(vpr_path, sim, out_path)
+
+    with open(out_path, encoding="utf-8") as fh:
+        report = json.load(fh)
+
+    fs = report["family_summary"]
+    assert fs["BR"]["total"]   == 4
+    assert fs["BR"]["passing"] == 3
+    assert fs["BR"]["waived"]  == 1
+    assert fs["BR"]["failing"] == 0
+    assert fs["BR"]["not_run"] == 0
+    assert fs["FF"]["total"]   == 2
+    assert fs["FF"]["failing"] == 2
+    assert fs["FF"]["passing"] == 0
+    assert fs["FF"]["waived"]  == 0

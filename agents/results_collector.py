@@ -29,6 +29,7 @@
 #
 # HISTORY:
 #   v1a  2026-04-16  SB  Initial implementation; --collect-results pipeline (OI-29)
+#   v1b  2026-04-17  SB  Add family_summary block to gap_report.json (Grafana bar chart)
 #
 # ===========================================================
 """agents/results_collector.py — Simulation results collection and VPR write-back.
@@ -391,6 +392,27 @@ def generate_gap_report_json(
         else:
             summary["not_run"] += 1
 
+    # ── Build family_summary: per-family pass/fail/waived/not_run counts ────────
+    family_buckets: dict[str, dict[str, int]] = {}
+    for req in requirements:
+        fam = req.get("family") or ""
+        if fam not in family_buckets:
+            family_buckets[fam] = {
+                "total": 0, "passing": 0, "failing": 0,
+                "waived": 0, "not_run": 0,
+            }
+        b = family_buckets[fam]
+        b["total"] += 1
+        if req["disposition"] == "WAIVED":
+            b["waived"] += 1
+        elif req["rtl_status"] == "PASS":
+            b["passing"] += 1
+        elif req["rtl_status"] == "FAIL":
+            b["failing"] += 1
+        else:
+            b["not_run"] += 1
+    family_summary = {fam: family_buckets[fam] for fam in sorted(family_buckets)}
+
     report = {
         "generated": sim_result.run_date,
         "commit":    sim_result.commit_hash,
@@ -400,8 +422,9 @@ def generate_gap_report_json(
             "uvm_fatals":   sim_result.uvm_fatals,
             "coverage_pct": sim_result.coverage_pct,
         },
-        "summary":      summary,
-        "requirements": requirements,
+        "summary":        summary,
+        "family_summary": family_summary,
+        "requirements":   requirements,
     }
 
     os.makedirs(os.path.dirname(os.path.abspath(out_path)), exist_ok=True)

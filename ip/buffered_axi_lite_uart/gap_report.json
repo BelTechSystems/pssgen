@@ -1,6 +1,6 @@
 {
-  "generated": "2026-04-16",
-  "commit": "0148f1e",
+  "generated": "2026-04-17",
+  "commit": "0a2fdfb",
   "sim_result": {
     "passed": true,
     "uvm_errors": 0,
@@ -15,6 +15,85 @@
     "not_run": 0,
     "at_risk": 0,
     "open": 0
+  },
+  "family_summary": {
+    "BR": {
+      "total": 6,
+      "passing": 6,
+      "failing": 0,
+      "waived": 0,
+      "not_run": 0
+    },
+    "EN": {
+      "total": 6,
+      "passing": 6,
+      "failing": 0,
+      "waived": 0,
+      "not_run": 0
+    },
+    "FF": {
+      "total": 9,
+      "passing": 9,
+      "failing": 0,
+      "waived": 0,
+      "not_run": 0
+    },
+    "FIFO": {
+      "total": 9,
+      "passing": 9,
+      "failing": 0,
+      "waived": 0,
+      "not_run": 0
+    },
+    "IF": {
+      "total": 14,
+      "passing": 14,
+      "failing": 0,
+      "waived": 0,
+      "not_run": 0
+    },
+    "INT": {
+      "total": 13,
+      "passing": 13,
+      "failing": 0,
+      "waived": 0,
+      "not_run": 0
+    },
+    "PAR": {
+      "total": 9,
+      "passing": 8,
+      "failing": 0,
+      "waived": 1,
+      "not_run": 0
+    },
+    "REG": {
+      "total": 52,
+      "passing": 52,
+      "failing": 0,
+      "waived": 0,
+      "not_run": 0
+    },
+    "RST": {
+      "total": 6,
+      "passing": 6,
+      "failing": 0,
+      "waived": 0,
+      "not_run": 0
+    },
+    "TO": {
+      "total": 7,
+      "passing": 7,
+      "failing": 0,
+      "waived": 0,
+      "not_run": 0
+    },
+    "VER": {
+      "total": 10,
+      "passing": 9,
+      "failing": 0,
+      "waived": 1,
+      "not_run": 0
+    }
   },
   "requirements": [
     {
