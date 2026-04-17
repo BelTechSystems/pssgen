@@ -125,10 +125,17 @@ def test_config_load_reads_input_section() -> None:
 
 
 def test_config_load_reads_output_section() -> None:
-    """load_project_config() resolves out_dir to an absolute path relative to TOML."""
+    """load_project_config() sets out_dir to the TOML's parent directory (IP root).
+
+    Since D-032, generate_uvm_tb() always creates out_dir/tb/.  The [output] dir
+    value in pssgen.toml names the TB subdir; the out_dir returned is the IP root
+    (the directory containing pssgen.toml) so that /tb/ appended by generate_uvm_tb
+    lands at IP_root/tb/ rather than IP_root/dir_value/tb/.
+    """
     config = load_project_config(FIXTURE_TOML)
     assert os.path.isabs(config["out_dir"])
-    assert config["out_dir"].replace("\\", "/").endswith("out_toml")
+    # out_dir is now the IP root (fixtures dir), not fixtures/out_toml.
+    assert os.path.samefile(config["out_dir"], FIXTURES_DIR)
     assert config["sim_target"] == "vivado"
 
 

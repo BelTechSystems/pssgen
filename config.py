@@ -32,6 +32,7 @@
 #   v4c    2026-04-05  SB  [[register_maps]] array-of-tables multi-file support
 #   v5b    2026-04-10  SB  Resolve [output] dir relative to TOML directory
 #   v6c    2026-04-16  SB  Read [input] vplan key; wire to vplan_file arg
+#   v6d    2026-04-16  SB  [output] dir sets out_dir=toml_dir (IP root) to prevent tb/tb/ nesting
 #
 # ===========================================================
 """config.py — pssgen.toml project configuration loader.
@@ -129,7 +130,7 @@ def load_project_config(config_path: str) -> dict:
         vplan   → vplan_file   (--vplan)
 
         [output]
-        dir     → out_dir      (--out)
+        dir     → out_dir = toml_dir  (IP root; generate_uvm_tb appends /tb/)
         sim     → sim_target   (--sim)
 
         [generation]
@@ -183,7 +184,14 @@ def load_project_config(config_path: str) -> dict:
 
     output_sec = raw.get("output", {})
     if "dir" in output_sec:
-        config["out_dir"] = _resolve(output_sec["dir"])
+        # D-032: generate_uvm_tb() always creates out_dir/tb/.
+        # The [output] dir value names the TB subdirectory the engineer wants,
+        # but the out_dir exposed to the rest of pssgen must be the IP root
+        # (the directory containing pssgen.toml) so that generate_uvm_tb()'s
+        # out_dir/tb/ suffix lands in the right place.  Using _resolve() here
+        # would give toml_dir/dir_value as out_dir, causing a double tb/tb/
+        # nesting when dir = "tb".
+        config["out_dir"] = toml_dir
     if "sim" in output_sec:
         config["sim_target"] = output_sec["sim"]
 
