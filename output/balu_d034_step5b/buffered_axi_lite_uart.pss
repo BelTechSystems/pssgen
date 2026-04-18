@@ -1,0 +1,1786 @@
+
+component buffered_axi_lite_uart_comp {
+
+
+    action drive_axi_aclk {
+        // Drive behavior inferred from control input 'axi_aclk'.
+    }
+
+    action drive_axi_aresetn {
+        // Drive behavior inferred from control input 'axi_aresetn'.
+    }
+
+    action drive_s_axi_awvalid {
+        // Drive behavior inferred from control input 's_axi_awvalid'.
+    }
+
+    action drive_s_axi_awaddr {
+        // Drive behavior inferred from control input 's_axi_awaddr'.
+    }
+
+    action drive_s_axi_awprot {
+        // Drive behavior inferred from control input 's_axi_awprot'.
+    }
+
+    action drive_s_axi_wvalid {
+        // Drive behavior inferred from control input 's_axi_wvalid'.
+    }
+
+    action drive_s_axi_wdata {
+        // Drive behavior inferred from control input 's_axi_wdata'.
+    }
+
+    action drive_s_axi_wstrb {
+        // Drive behavior inferred from control input 's_axi_wstrb'.
+    }
+
+    action drive_s_axi_bready {
+        // Drive behavior inferred from control input 's_axi_bready'.
+    }
+
+    action drive_s_axi_arvalid {
+        // Drive behavior inferred from control input 's_axi_arvalid'.
+    }
+
+    action drive_s_axi_araddr {
+        // Drive behavior inferred from control input 's_axi_araddr'.
+    }
+
+    action drive_s_axi_arprot {
+        // Drive behavior inferred from control input 's_axi_arprot'.
+    }
+
+    action drive_s_axi_rready {
+        // Drive behavior inferred from control input 's_axi_rready'.
+    }
+
+    action drive_uart_rx {
+        // Drive behavior inferred from control input 'uart_rx'.
+    }
+
+
+    action sample_s_axi_awready {
+        // Sample behavior inferred from data output 's_axi_awready'.
+    }
+
+    action sample_s_axi_wready {
+        // Sample behavior inferred from data output 's_axi_wready'.
+    }
+
+    action sample_s_axi_bvalid {
+        // Sample behavior inferred from data output 's_axi_bvalid'.
+    }
+
+    action sample_s_axi_bresp {
+        // Sample behavior inferred from data output 's_axi_bresp'.
+    }
+
+    action sample_s_axi_arready {
+        // Sample behavior inferred from data output 's_axi_arready'.
+    }
+
+    action sample_s_axi_rvalid {
+        // Sample behavior inferred from data output 's_axi_rvalid'.
+    }
+
+    action sample_s_axi_rdata {
+        // Sample behavior inferred from data output 's_axi_rdata'.
+    }
+
+    action sample_s_axi_rresp {
+        // Sample behavior inferred from data output 's_axi_rresp'.
+    }
+
+    action sample_uart_tx {
+        // Sample behavior inferred from data output 'uart_tx'.
+    }
+
+    action sample_irq {
+        // Sample behavior inferred from data output 'irq'.
+    }
+
+
+
+    action main {
+
+
+        drive_axi_aclk d_1;
+
+        drive_axi_aresetn d_2;
+
+        drive_s_axi_awvalid d_3;
+
+        drive_s_axi_awaddr d_4;
+
+        drive_s_axi_awprot d_5;
+
+        drive_s_axi_wvalid d_6;
+
+        drive_s_axi_wdata d_7;
+
+        drive_s_axi_wstrb d_8;
+
+        drive_s_axi_bready d_9;
+
+        drive_s_axi_arvalid d_10;
+
+        drive_s_axi_araddr d_11;
+
+        drive_s_axi_arprot d_12;
+
+        drive_s_axi_rready d_13;
+
+        drive_uart_rx d_14;
+
+
+        sample_s_axi_awready s_1;
+
+        sample_s_axi_wready s_2;
+
+        sample_s_axi_bvalid s_3;
+
+        sample_s_axi_bresp s_4;
+
+        sample_s_axi_arready s_5;
+
+        sample_s_axi_rvalid s_6;
+
+        sample_s_axi_rdata s_7;
+
+        sample_s_axi_rresp s_8;
+
+        sample_uart_tx s_9;
+
+        sample_irq s_10;
+
+
+        // LLM_FILL_CONSTRAINTS_START
+        constraint c_default {
+            // Extend: add scenario constraints here.
+        }
+        // LLM_FILL_CONSTRAINTS_END
+
+        
+        
+        
+        covergroup cg_UART_PAR_001 {
+            
+            // Traces to: UART-PAR-001
+            
+            // UART-PAR-001
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_PAR_002 {
+            
+            // Traces to: UART-PAR-002
+            
+            // UART-PAR-002
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_PAR_004 {
+            
+            // Traces to: UART-PAR-004
+            
+            // UART-PAR-004
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_PAR_005 {
+            
+            // Traces to: UART-PAR-005
+            
+            // UART-PAR-005
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_PAR_006 {
+            
+            // Traces to: UART-PAR-006
+            
+            // UART-PAR-006
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_PAR_007 {
+            
+            // Traces to: UART-PAR-007
+            
+            // UART-PAR-007
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_PAR_008 {
+            
+            // Traces to: UART-PAR-008
+            
+            // UART-PAR-008
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_PAR_009 {
+            
+            // Traces to: UART-PAR-009
+            
+            // UART-PAR-009
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_IF_001 {
+            
+            // Traces to: UART-IF-001
+            
+            // UART-IF-001
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_IF_002 {
+            
+            // Traces to: UART-IF-002
+            
+            // UART-IF-002
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_IF_003 {
+            
+            // Traces to: UART-IF-003
+            
+            // UART-IF-003
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_IF_004 {
+            
+            // Traces to: UART-IF-004
+            
+            // UART-IF-004
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_IF_005 {
+            
+            // Traces to: UART-IF-005
+            
+            // UART-IF-005
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_IF_006 {
+            
+            // Traces to: UART-IF-006
+            
+            // UART-IF-006
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_IF_007 {
+            
+            // Traces to: UART-IF-007
+            
+            // UART-IF-007
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_IF_008 {
+            
+            // Traces to: UART-IF-008
+            
+            // UART-IF-008
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_IF_009 {
+            
+            // Traces to: UART-IF-009
+            
+            // UART-IF-009
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_IF_010 {
+            
+            // Traces to: UART-IF-010
+            
+            // UART-IF-010
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_IF_011 {
+            
+            // Traces to: UART-IF-011
+            
+            // UART-IF-011
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_IF_012 {
+            
+            // Traces to: UART-IF-012
+            
+            // UART-IF-012
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_IF_013 {
+            
+            // Traces to: UART-IF-013
+            
+            // UART-IF-013
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_IF_014 {
+            
+            // Traces to: UART-IF-014
+            
+            // UART-IF-014
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_EN_001 {
+            
+            // Traces to: UART-EN-001
+            
+            // UART-EN-001
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_EN_002 {
+            
+            // Traces to: UART-EN-002
+            
+            // UART-EN-002
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_EN_003 {
+            
+            // Traces to: UART-EN-003
+            
+            // UART-EN-003
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_EN_004 {
+            
+            // Traces to: UART-EN-004
+            
+            // UART-EN-004
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_EN_005 {
+            
+            // Traces to: UART-EN-005
+            
+            // UART-EN-005
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_EN_006 {
+            
+            // Traces to: UART-EN-006
+            
+            // UART-EN-006
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_BR_001 {
+            
+            // Traces to: UART-BR-001
+            
+            // UART-BR-001
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_BR_002 {
+            
+            // Traces to: UART-BR-002
+            
+            // UART-BR-002
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_BR_003 {
+            
+            // Traces to: UART-BR-003
+            
+            // UART-BR-003
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_BR_004 {
+            
+            // Traces to: UART-BR-004
+            
+            // UART-BR-004
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_BR_005 {
+            
+            // Traces to: UART-BR-005
+            
+            // UART-BR-005
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_BR_006 {
+            
+            // Traces to: UART-BR-006
+            
+            // UART-BR-006
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_FF_001 {
+            
+            // Traces to: UART-FF-001
+            
+            // UART-FF-001
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_FF_002 {
+            
+            // Traces to: UART-FF-002
+            
+            // UART-FF-002
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_FF_003 {
+            
+            // Traces to: UART-FF-003
+            
+            // UART-FF-003
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_FF_004 {
+            
+            // Traces to: UART-FF-004
+            
+            // UART-FF-004
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_FF_005 {
+            
+            // Traces to: UART-FF-005
+            
+            // UART-FF-005
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_FF_006 {
+            
+            // Traces to: UART-FF-006
+            
+            // UART-FF-006
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_FF_007 {
+            
+            // Traces to: UART-FF-007
+            
+            // UART-FF-007
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_FF_008 {
+            
+            // Traces to: UART-FF-008
+            
+            // UART-FF-008
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_FF_009 {
+            
+            // Traces to: UART-FF-009
+            
+            // UART-FF-009
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_FIFO_001 {
+            
+            // Traces to: UART-FIFO-001
+            
+            // UART-FIFO-001
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_FIFO_002 {
+            
+            // Traces to: UART-FIFO-002
+            
+            // UART-FIFO-002
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_FIFO_003 {
+            
+            // Traces to: UART-FIFO-003
+            
+            // UART-FIFO-003
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_FIFO_004 {
+            
+            // Traces to: UART-FIFO-004
+            
+            // UART-FIFO-004
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_FIFO_005 {
+            
+            // Traces to: UART-FIFO-005
+            
+            // UART-FIFO-005
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_FIFO_006 {
+            
+            // Traces to: UART-FIFO-006
+            
+            // UART-FIFO-006
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_FIFO_007 {
+            
+            // Traces to: UART-FIFO-007
+            
+            // UART-FIFO-007
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_FIFO_008 {
+            
+            // Traces to: UART-FIFO-008
+            
+            // UART-FIFO-008
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_FIFO_009 {
+            
+            // Traces to: UART-FIFO-009
+            
+            // UART-FIFO-009
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_TO_001 {
+            
+            // Traces to: UART-TO-001
+            
+            // UART-TO-001
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_TO_002 {
+            
+            // Traces to: UART-TO-002
+            
+            // UART-TO-002
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_TO_003 {
+            
+            // Traces to: UART-TO-003
+            
+            // UART-TO-003
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_TO_004 {
+            
+            // Traces to: UART-TO-004
+            
+            // UART-TO-004
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_TO_005 {
+            
+            // Traces to: UART-TO-005
+            
+            // UART-TO-005
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_TO_006 {
+            
+            // Traces to: UART-TO-006
+            
+            // UART-TO-006
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_TO_007 {
+            
+            // Traces to: UART-TO-007
+            
+            // UART-TO-007
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_INT_001 {
+            
+            // Traces to: UART-INT-001
+            
+            // UART-INT-001
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_INT_002 {
+            
+            // Traces to: UART-INT-002
+            
+            // UART-INT-002
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_INT_003 {
+            
+            // Traces to: UART-INT-003
+            
+            // UART-INT-003
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_INT_004 {
+            
+            // Traces to: UART-INT-004
+            
+            // UART-INT-004
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_INT_005 {
+            
+            // Traces to: UART-INT-005
+            
+            // UART-INT-005
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_INT_006 {
+            
+            // Traces to: UART-INT-006
+            
+            // UART-INT-006
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_INT_007 {
+            
+            // Traces to: UART-INT-007
+            
+            // UART-INT-007
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_INT_008 {
+            
+            // Traces to: UART-INT-008
+            
+            // UART-INT-008
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_INT_009 {
+            
+            // Traces to: UART-INT-009
+            
+            // UART-INT-009
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_INT_010 {
+            
+            // Traces to: UART-INT-010
+            
+            // UART-INT-010
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_INT_011 {
+            
+            // Traces to: UART-INT-011
+            
+            // UART-INT-011
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_INT_012 {
+            
+            // Traces to: UART-INT-012
+            
+            // UART-INT-012
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_INT_013 {
+            
+            // Traces to: UART-INT-013
+            
+            // UART-INT-013
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_001 {
+            
+            // Traces to: UART-REG-001
+            
+            // UART-REG-001
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_002 {
+            
+            // Traces to: UART-REG-002
+            
+            // UART-REG-002
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_003 {
+            
+            // Traces to: UART-REG-003
+            
+            // UART-REG-003
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_004 {
+            
+            // Traces to: UART-REG-004
+            
+            // UART-REG-004
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_005 {
+            
+            // Traces to: UART-REG-005
+            
+            // UART-REG-005
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_006 {
+            
+            // Traces to: UART-REG-006
+            
+            // UART-REG-006
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_007 {
+            
+            // Traces to: UART-REG-007
+            
+            // UART-REG-007
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_008 {
+            
+            // Traces to: UART-REG-008
+            
+            // UART-REG-008
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_009 {
+            
+            // Traces to: UART-REG-009
+            
+            // UART-REG-009
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_010 {
+            
+            // Traces to: UART-REG-010
+            
+            // UART-REG-010
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_011 {
+            
+            // Traces to: UART-REG-011
+            
+            // UART-REG-011
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_012 {
+            
+            // Traces to: UART-REG-012
+            
+            // UART-REG-012
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_013 {
+            
+            // Traces to: UART-REG-013
+            
+            // UART-REG-013
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_014 {
+            
+            // Traces to: UART-REG-014
+            
+            // UART-REG-014
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_015 {
+            
+            // Traces to: UART-REG-015
+            
+            // UART-REG-015
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_016 {
+            
+            // Traces to: UART-REG-016
+            
+            // UART-REG-016
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_017 {
+            
+            // Traces to: UART-REG-017
+            
+            // UART-REG-017
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_018 {
+            
+            // Traces to: UART-REG-018
+            
+            // UART-REG-018
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_019 {
+            
+            // Traces to: UART-REG-019
+            
+            // UART-REG-019
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_020 {
+            
+            // Traces to: UART-REG-020
+            
+            // UART-REG-020
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_021 {
+            
+            // Traces to: UART-REG-021
+            
+            // UART-REG-021
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_022 {
+            
+            // Traces to: UART-REG-022
+            
+            // UART-REG-022
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_023 {
+            
+            // Traces to: UART-REG-023
+            
+            // UART-REG-023
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_024 {
+            
+            // Traces to: UART-REG-024
+            
+            // UART-REG-024
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_025 {
+            
+            // Traces to: UART-REG-025
+            
+            // UART-REG-025
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_026 {
+            
+            // Traces to: UART-REG-026
+            
+            // UART-REG-026
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_027 {
+            
+            // Traces to: UART-REG-027
+            
+            // UART-REG-027
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_028 {
+            
+            // Traces to: UART-REG-028
+            
+            // UART-REG-028
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_029 {
+            
+            // Traces to: UART-REG-029
+            
+            // UART-REG-029
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_030 {
+            
+            // Traces to: UART-REG-030
+            
+            // UART-REG-030
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_031 {
+            
+            // Traces to: UART-REG-031
+            
+            // UART-REG-031
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_032 {
+            
+            // Traces to: UART-REG-032
+            
+            // UART-REG-032
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_033 {
+            
+            // Traces to: UART-REG-033
+            
+            // UART-REG-033
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_034 {
+            
+            // Traces to: UART-REG-034
+            
+            // UART-REG-034
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_035 {
+            
+            // Traces to: UART-REG-035
+            
+            // UART-REG-035
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_036 {
+            
+            // Traces to: UART-REG-036
+            
+            // UART-REG-036
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_037 {
+            
+            // Traces to: UART-REG-037
+            
+            // UART-REG-037
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_038 {
+            
+            // Traces to: UART-REG-038
+            
+            // UART-REG-038
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_039 {
+            
+            // Traces to: UART-REG-039
+            
+            // UART-REG-039
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_040 {
+            
+            // Traces to: UART-REG-040
+            
+            // UART-REG-040
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_041 {
+            
+            // Traces to: UART-REG-041
+            
+            // UART-REG-041
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_042 {
+            
+            // Traces to: UART-REG-042
+            
+            // UART-REG-042
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_043 {
+            
+            // Traces to: UART-REG-043
+            
+            // UART-REG-043
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_044 {
+            
+            // Traces to: UART-REG-044
+            
+            // UART-REG-044
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_045 {
+            
+            // Traces to: UART-REG-045
+            
+            // UART-REG-045
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_046 {
+            
+            // Traces to: UART-REG-046
+            
+            // UART-REG-046
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_047 {
+            
+            // Traces to: UART-REG-047
+            
+            // UART-REG-047
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_048 {
+            
+            // Traces to: UART-REG-048
+            
+            // UART-REG-048
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_049 {
+            
+            // Traces to: UART-REG-049
+            
+            // UART-REG-049
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_050 {
+            
+            // Traces to: UART-REG-050
+            
+            // UART-REG-050
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_051 {
+            
+            // Traces to: UART-REG-051
+            
+            // UART-REG-051
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_REG_052 {
+            
+            // Traces to: UART-REG-052
+            
+            // UART-REG-052
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_RST_001 {
+            
+            // Traces to: UART-RST-001
+            
+            // UART-RST-001
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_RST_002 {
+            
+            // Traces to: UART-RST-002
+            
+            // UART-RST-002
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_RST_003 {
+            
+            // Traces to: UART-RST-003
+            
+            // UART-RST-003
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_RST_004 {
+            
+            // Traces to: UART-RST-004
+            
+            // UART-RST-004
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_RST_005 {
+            
+            // Traces to: UART-RST-005
+            
+            // UART-RST-005
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_RST_006 {
+            
+            // Traces to: UART-RST-006
+            
+            // UART-RST-006
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_VER_002 {
+            
+            // Traces to: UART-VER-002
+            
+            // UART-VER-002
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_VER_003 {
+            
+            // Traces to: UART-VER-003
+            
+            // UART-VER-003
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_VER_004 {
+            
+            // Traces to: UART-VER-004
+            
+            // UART-VER-004
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_VER_005 {
+            
+            // Traces to: UART-VER-005
+            
+            // UART-VER-005
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_VER_006 {
+            
+            // Traces to: UART-VER-006
+            
+            // UART-VER-006
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_VER_007 {
+            
+            // Traces to: UART-VER-007
+            
+            // UART-VER-007
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_VER_008 {
+            
+            // Traces to: UART-VER-008
+            
+            // UART-VER-008
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_VER_009 {
+            
+            // Traces to: UART-VER-009
+            
+            // UART-VER-009
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_UART_VER_010 {
+            
+            // Traces to: UART-VER-010
+            
+            // UART-VER-010
+            // Source: requirement
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_inferred_s_axi_awready_01 {
+            
+            // s_axi_awready
+            // Source: inferred
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_inferred_s_axi_wready_01 {
+            
+            // s_axi_wready
+            // Source: inferred
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_inferred_s_axi_bvalid_01 {
+            
+            // s_axi_bvalid
+            // Source: inferred
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_inferred_s_axi_bresp_01 {
+            
+            // s_axi_bresp
+            // Source: inferred
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_inferred_s_axi_arready_01 {
+            
+            // s_axi_arready
+            // Source: inferred
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_inferred_s_axi_rvalid_01 {
+            
+            // s_axi_rvalid
+            // Source: inferred
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_inferred_s_axi_rdata_01 {
+            
+            // s_axi_rdata
+            // Source: inferred
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_inferred_s_axi_rresp_01 {
+            
+            // s_axi_rresp
+            // Source: inferred
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_inferred_uart_tx_01 {
+            
+            // uart_tx
+            // Source: inferred
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+        covergroup cg_inferred_irq_01 {
+            
+            // irq
+            // Source: inferred
+            // Extend: add coverage bin definitions here.
+        }
+        
+        
+        
+    }
+}
