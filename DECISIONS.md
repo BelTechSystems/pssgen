@@ -2091,20 +2091,3 @@ Alternatives considered:
     in aerospace verification closure documentation and is
     immediately understood by lead engineers, program managers,
     and DO-254 auditors without translation.
-
-COMMIT
-------
-git add DECISIONS.md
-git commit -m "docs: add D-034 — VSL sequence body generation strategy
-
-Documents the two-tier sequence body generation model: mechanical
-generation from VSL rules when present, LLM-assisted generation
-from Stimulus_Strategy prose or register map content when absent.
-Five-state Seq_Status lifecycle per COV item (NONE/SUGGESTED/
-DRAFT/REVIEWED/FINAL). Conservative generation philosophy with
-automatic tier selection from coverage_type. Disable via
-vsl_suggestions = false in pssgen.toml. FINAL as terminal state
-matching aerospace closure vocabulary.
-
-Author: S. Belvin, BelTech Systems LLC"
-git push origin main
