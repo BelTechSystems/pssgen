@@ -2056,7 +2056,7 @@ Consequences:
 
   pssgen.toml gains two new keys under [generation]:
   vsl_suggestions (bool, default true) and
-  suggest_additional_cases (bool, default true).
+  suggest_additional_cases (bool, default false).
 
   The --force-regen CLI flag is added to allow regeneration
   of REVIEWED items when the engineer explicitly requests it.
