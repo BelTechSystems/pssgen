@@ -1558,6 +1558,91 @@ def _cov_stub_names(cov_item) -> tuple[str, str, str]:
     return class_name, var_name, file_name
 
 
+def _addr_to_reg(addr: str) -> str:
+    """Convert a hex address string to a placeholder register model name.
+
+    "0x04" → "reg_0004", "0x2C" → "reg_002c". Used by _render_vsl_body.
+    """
+    import re as _re
+    m = _re.match(r"0[xX]([0-9A-Fa-f]+)$", addr.strip())
+    if m:
+        return f"reg_{int(m.group(1), 16):04x}"
+    clean = addr.strip().lower().lstrip("0x").zfill(4)
+    return f"reg_{clean}"
+
+
+def _render_vsl_body(item) -> list[str]:
+    """Render UVM body() task content lines from item.vsl_steps.
+
+    Args:
+        item: Object with .vsl_steps (list[dict]) populated by parse_vsl_stimulus.
+
+    Returns:
+        List of indented SV lines for insertion inside a body() task.
+    """
+    steps = item.vsl_steps
+    needs_locals = any(s["action"] in ("READ", "POLL") for s in steps)
+
+    lines: list[str] = []
+    if needs_locals:
+        lines.append("        uvm_status_e status;")
+        lines.append("        uvm_reg_data_t rdata;")
+
+    for i, step in enumerate(steps, 1):
+        action = step["action"]
+        params = step["params"]
+        lines.append(f"        // Step {i}: {action}")
+
+        if action == "WRITE":
+            addr = params.get("addr", "0x0000")
+            data = params.get("data", "0x0")
+            reg = _addr_to_reg(addr)
+            lines.append(
+                f"        reg_model.{reg}.write(status, {data}, .parent(this));"
+            )
+
+        elif action == "READ":
+            addr = params.get("addr", "0x0000")
+            expect = params.get("expect")
+            reg = _addr_to_reg(addr)
+            lines.append(
+                f"        reg_model.{reg}.read(status, rdata, .parent(this));"
+            )
+            if expect is not None:
+                lines.append(
+                    f"        `uvm_info(get_name(), "
+                    f'$sformatf("Read 0x%0h, expect 0x%0h", rdata, {expect}), UVM_LOW)'
+                )
+
+        elif action == "WAIT":
+            cycles = params.get("cycles", "1")
+            lines.append(f"        repeat({cycles}) @(posedge vif.clk);")
+
+        elif action == "POLL":
+            addr = params.get("addr", "0x0000")
+            mask = params.get("mask", "0xFFFFFFFF")
+            expect = params.get("expect", "0x0")
+            timeout = params.get("timeout", "1000")
+            reg = _addr_to_reg(addr)
+            addr_safe = addr.strip().lower().replace("0x", "").replace("0X", "")
+            lines.append(f"        begin : poll_{addr_safe}")
+            lines.append(f"          int unsigned poll_count = 0;")
+            lines.append(f"          do begin")
+            lines.append(
+                f"            reg_model.{reg}.read(status, rdata, .parent(this));"
+            )
+            lines.append(f"            if ((rdata & {mask}) == {expect}) break;")
+            lines.append(f"            @(posedge vif.clk);")
+            lines.append(f"            poll_count++;")
+            lines.append(f"          end while (poll_count < {timeout});")
+            lines.append(f"        end")
+
+        else:
+            lines.append(f"        // Unrecognized VSL action: {action}")
+
+    return lines
+
+
 def _gen_cov_stub(d: str, cov_item) -> str:
     """Generate a COV sequence stub file content.
 
@@ -1575,8 +1660,32 @@ def _gen_cov_stub(d: str, cov_item) -> str:
     linked_reqs = getattr(cov_item, "linked_requirements", []) or []
     strat = getattr(cov_item, "stimulus_strategy", "") or ""
     boundary = getattr(cov_item, "boundary_values", "") or ""
+    seq_status = getattr(cov_item, "seq_status", "NONE") or "NONE"
+    vsl_steps = getattr(cov_item, "vsl_steps", None) or []
 
     req_str = ", ".join(linked_reqs) if linked_reqs else "(none)"
+
+    if seq_status == "PHASE_1" and vsl_steps:
+        impl_status_val = "phase_1_generated"
+        body_label = f"body (PHASE_1 — {len(vsl_steps)} VSL step(s))"
+        body_desc = f"Generated from Stimulus_VSL — {cov_id}"
+        body_lines = _render_vsl_body(cov_item)
+        body_block = (
+            "    virtual task body();\n"
+            + "\n".join(body_lines)
+            + "\n    endtask : body"
+        )
+    else:
+        impl_status_val = "stub"
+        body_label = "body (SEQ_PENDING)"
+        body_desc = f"Stub \u2014 see VPR {cov_id} for implementation guidance"
+        body_block = (
+            "    virtual task body();\n"
+            f'        `uvm_info("SEQ_PENDING",\n'
+            f'            "{class_name}: body not yet implemented \u2014 see VPR {cov_id}",\n'
+            f"            UVM_MEDIUM)\n"
+            "    endtask"
+        )
 
     header = _sv_file_header(
         filename=f"{class_name}.sv",
@@ -1584,12 +1693,10 @@ def _gen_cov_stub(d: str, cov_item) -> str:
             f"COV sequence stub for {cov_id}: {cov_name} \u2014 "
             "implement per VPR Stimulus_Strategy."
         ),
-        functional_blocks=[
-            (f"body (SEQ_PENDING)", f"Stub \u2014 see VPR {cov_id} for implementation guidance"),
-        ],
+        functional_blocks=[(body_label, body_desc)],
         dependencies=[f"{d}_base_seq"],
         portability="Simulator-independent",
-        impl_status="stub",
+        impl_status=impl_status_val,
     )
     return header + f"""// Linked requirements: {req_str}
 // Stimulus strategy  : {strat}
@@ -1603,11 +1710,7 @@ class {class_name} extends {d}_base_seq;
         super.new(name);
     endfunction
 
-    virtual task body();
-        `uvm_info("SEQ_PENDING",
-            "{class_name}: body not yet implemented \u2014 see VPR {cov_id}",
-            UVM_MEDIUM)
-    endtask
+{body_block}
 
 endclass"""
 
@@ -1827,6 +1930,7 @@ def _gen_all_content(ir: IR, vplan_result) -> dict[str, str]:
             self.linked_requirements = data.get("linked_requirements", [])
             self.stimulus_strategy = data.get("stimulus_strategy", "")
             self.boundary_values = data.get("boundary_values", "")
+            self.seq_status = data.get("seq_status", "NONE") or "NONE"
             self.stimulus_vsl = data.get("stimulus_vsl", "") or ""
             self.vsl_steps = parse_vsl_stimulus(self.stimulus_vsl)
 
