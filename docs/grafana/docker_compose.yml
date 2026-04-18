@@ -1,0 +1,32 @@
+version: "3.8"
+
+services:
+  gap-api:
+    image: python:3.13-slim
+    working_dir: /data
+    volumes:
+      - ../../ip/buffered_axi_lite_uart:/data
+      - ./serve_gap_report.py:/serve_gap_report.py
+    command: python /serve_gap_report.py
+    ports:
+      - "3001:3001"
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.0.0
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=pssgen
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=yesoreyeram-infinity-datasource
+    volumes:
+      - ./provisioning:/etc/grafana/provisioning
+      - ./dashboards:/var/lib/grafana/dashboards
+      - grafana-storage:/var/lib/grafana
+    depends_on:
+      - gap-api
+    restart: unless-stopped
+
+volumes:
+  grafana-storage:
