@@ -1824,3 +1824,287 @@ Alternatives considered:
     connection to the requirements document. Engineer must
     manually populate shadow and look up VPR content before
     the first meaningful verification run.
+
+---
+
+Add D-034 to DECISIONS.md
+
+BEFORE WRITING ANY CODE read DECISIONS.md in full.
+Find the actual last entry — do not assume it is D-033.
+Match the established format exactly — plain prose, no markdown
+tables, no bold, no bullets except in Alternatives considered
+blocks, --- separator between entries. Match the voice and style
+of D-001 through the current last entry precisely.
+
+TASK — Append D-034 to DECISIONS.md
+--------------------------------------
+Author: S. Belvin, BelTech Systems LLC
+
+Decision statement:
+  pssgen generates UVM sequence bodies from VPR Coverage_Goals
+  content using a two-tier model: mechanical generation from VSL
+  rules when present, LLM-assisted generation from Stimulus_Strategy
+  prose or register map content when VSL is absent. Generation is
+  governed by a five-state Seq_Status lifecycle per COV item.
+  The tool is conservative by default — generating minimum necessary
+  stimulus, not maximum possible stimulus. Seq_Status and
+  Stimulus_VSL are properties of COV items, not of individual
+  requirements. The feature can be disabled entirely via
+  pssgen.toml.
+
+Context points to cover:
+
+  The gap identified after the BALU testbench build-out was that
+  pssgen generated structurally correct sequence stubs but left
+  the body() task empty with a SEQ_PENDING message. Engineers had
+  to implement the stimulus logic from scratch, guided only by the
+  VPR Stimulus_Strategy prose. This created the same onramp
+  friction that has caused rules-based verification languages to
+  fail in practice: the engineer faces a blank page and a new
+  language simultaneously.
+
+  Previous attempts at rules-based verification description
+  languages — Specman e, PSS, various home-grown DSLs — failed
+  not because the languages were wrong but because the engineer
+  always had to write the first rule. The tool never helped with
+  that first step. pssgen closes this gap by generating the first
+  rule from content the engineer already wrote — either the
+  Stimulus_Strategy prose in the VPR or the register map alone
+  when no prose exists. The engineer reviews a translation rather
+  than authoring from scratch. That is a skill they already have.
+
+  The unit of sequence generation is the COV item, not the
+  individual requirement. One COV item generates one sequence
+  file. Multiple requirements are linked to each COV item via
+  the Covered_By column in VPR Tab 1. The engineer writes one
+  sequence per COV item and the traceability chain through
+  Covered_By handles the requirement-to-sequence mapping.
+  Requirements with no Covered_By entry and Disposition !=
+  WAIVED are flagged in the gap report as intentional gaps —
+  no sequence is generated and the gap is documented rather
+  than silently ignored.
+
+  The Seq_Status column is added to the Coverage_Goals tab of
+  the VPR to track generation state per COV item. Five states:
+
+  NONE — the default. No strategy written, no attempt made.
+  pssgen takes its best shot from the register map and linked
+  requirement statements alone. Sets Seq_Status to SUGGESTED
+  after generation. This ensures no COV item is left permanently
+  unstubbed simply because the engineer has not yet written a
+  strategy.
+
+  SUGGESTED — pssgen wrote the VSL and generated the body.
+  Engineer has not reviewed. Retryable on every run. pssgen
+  may overwrite without warning.
+
+  DRAFT — engineer wrote prose or partial VSL expressing their
+  intent. pssgen translates the engineer's content to VSL and
+  sets Seq_Status back to SUGGESTED so the engineer can review
+  the translation of their own words. The engineer's intent is
+  the translation target, not a replacement target.
+
+  REVIEWED — engineer accepted the VSL and the generated body.
+  Protected by default. pssgen skips this COV item unless
+  --force-regen is passed explicitly on the command line.
+
+  FINAL — engineer has implemented and validated the sequence
+  body. Never touched under any circumstance. No flag, no
+  configuration, no command overrides this state. FINAL
+  is the term verification engineers use in closure
+  documentation and maps directly to the program-level
+  meaning of a completed verification record.
+
+  The Seq_Status lifecycle maps to the impl_status vocabulary
+  in STD-006: SUGGESTED maps to generated, DRAFT maps to
+  generated, REVIEWED maps to partial, FINAL maps to validated.
+
+  The VSL (Verification Stimulus Language) is a small vocabulary
+  of operations that translate mechanically to SystemVerilog:
+  WRITE, READ, CHECK, SWEEP, ASSERT, SET, CLEAR, WAIT, REPEAT,
+  NOTE. Ten operations cover the majority of register verification
+  sequences. VSL lives in the Stimulus_VSL column of the
+  Coverage_Goals tab. When VSL is present generation is
+  deterministic and requires no LLM at generation time — the
+  LLM was used once to suggest the VSL, the engineer reviewed
+  it, and subsequent generations are mechanical translations.
+
+Rationale points to cover:
+
+  The conservative generation strategy — minimum necessary
+  stimulus, not maximum possible stimulus — reflects professional
+  experience with how engineers respond to generated code. A
+  conservative suggestion that the engineer extends builds trust.
+  An over-specified suggestion that the engineer must cut down
+  erodes trust and causes engineers to stop reading suggestions.
+  The tool should suggest what is necessary and comment what
+  is possible.
+
+  The suggestion tier is selected automatically from the
+  coverage_type column in Coverage_Goals, which the engineer
+  already fills in when authoring the VPR. Structural coverage
+  type selects Tier 1 — minimum viable stimulus: boundary
+  values, write, read, check. Functional coverage type with a
+  single register selects Tier 2 — boundary-aware: minimum
+  value, maximum value, reset value, and one representative
+  mid-range value. Functional coverage type with multi-register
+  or behavioral content selects Tier 3 — strategy-driven:
+  generates core cases from prose and adds a comment block
+  listing additional cases the engineer may want to consider.
+  The tier selection is invisible to the engineer. They never
+  choose it. They see suggestions that feel appropriately scoped
+  because the tool read the coverage_type they already set.
+
+  The comment block in Tier 3 suggestions lists cases that were
+  deferred and why, rather than generating all possible cases.
+  The tool is honest about what it generated and what it did
+  not. An engineer reading a Tier 3 suggestion sees both the
+  core implementation and a clear map of what remains. This is
+  the same feedback a senior engineer gives a junior engineer
+  in a code review — implement the essential cases, note the
+  edge cases, let the engineer decide whether to pursue them.
+
+  The disable mechanism reflects the principle that pssgen must
+  never slow down an engineer who does not want its help. A
+  single pssgen.toml key (vsl_suggestions = false) makes the
+  feature completely invisible. No suggestions are generated,
+  no Seq_Status column is read or written, no LLM calls are
+  made for sequence bodies. The verification engineer who wants
+  full control gets it without friction.
+
+  FINAL as the terminal state aligns with how closure
+  documentation is written in aerospace programs. FINAL is a
+  program term that a lead engineer, a program manager, and a
+  DO-254 auditor all understand immediately. It is not a
+  software term.
+
+Domain knowledge required:
+
+  Professional experience with the adoption failure modes of
+  rules-based verification languages. The insight that the
+  blank-page problem — not the language itself — is what kills
+  adoption required having observed engineers abandon tools that
+  were technically correct but required too much initial
+  investment. The decision to have pssgen generate the first
+  rule rather than require the engineer to write it reflects
+  that experience directly.
+
+  Understanding that DO-254 traceability requires that every
+  stimulus decision has a stated basis. The blank-strategy
+  best-effort generation is bounded by this constraint: it uses
+  only the register map and linked requirement statements, both
+  of which are traceable artifacts. pssgen never invents
+  stimulus that has no connection to a stated requirement.
+
+  Experience with how verification teams respond to generated
+  code under schedule pressure. Conservative suggestions that
+  can be extended are adopted. Ambitious suggestions that
+  require trimming are ignored. The tool strategy is calibrated
+  to the behavior of real engineers in real programs, not to
+  a theoretical ideal of complete verification coverage.
+
+  The decision to not expose generation aggressiveness as a
+  user-configurable knob reflects understanding that engineers
+  make poor choices when given dials they do not understand.
+  A tool that makes good automatic choices based on context
+  the engineer already provided is more useful than a
+  configurable tool that requires the engineer to understand
+  the configuration space. This is a judgment about human
+  behavior in engineering workflows, not a technical judgment.
+
+Why AI could not have made this decision alone:
+
+  The five-state Seq_Status lifecycle mirrors the disposition
+  vocabulary already established in the VPR — GENERATED,
+  CONFIRMED, WAIVED — because verification engineers work
+  within controlled document frameworks where consistent state
+  vocabulary reduces cognitive load. That parallel was a
+  deliberate design choice requiring knowledge of how engineers
+  navigate multi-artifact verification programs. An AI
+  optimizing for technical correctness would have designed a
+  more expressive state machine. The judgment that simplicity
+  and consistency with existing vocabulary mattered more than
+  expressiveness came from professional experience with how
+  engineers use tools under time pressure.
+
+  The selection of FINAL as the terminal state rather than
+  COMPLETE reflects domain knowledge of aerospace program
+  vocabulary. COMPLETE is a software engineering term. FINAL
+  is the term used in verification closure records, test
+  reports, and DO-254 evidence packages. An AI without
+  aerospace program experience would have chosen COMPLETE.
+
+Consequences:
+
+  The Coverage_Goals tab in the VPR template gains two new
+  columns: Stimulus_VSL and Seq_Status. Seq_Status defaults to
+  NONE for all rows. The master template at
+  docs/pssgen_vpr_template.xlsx must be updated. The BALU VPR
+  at ip/buffered_axi_lite_uart/buffered_axi_lite_uart_vplan.xlsx
+  must be updated to match.
+
+  vplan_parser.py gains updated Coverage_Goals row parsing to
+  read Stimulus_VSL and Seq_Status. The VplanParseResult
+  cov_items dict gains stimulus_vsl and seq_status fields per
+  COV item.
+
+  scaffold_gen.py gains a VSL parser and a sequence body
+  generator replacing _gen_cov_stub(). The replacement
+  _gen_cov_body() produces a complete body() task for NONE,
+  SUGGESTED, and DRAFT items and preserves existing content
+  for REVIEWED and FINAL items.
+
+  pssgen.toml gains two new keys under [generation]:
+  vsl_suggestions (bool, default true) and
+  suggest_additional_cases (bool, default true).
+
+  The --force-regen CLI flag is added to allow regeneration
+  of REVIEWED items when the engineer explicitly requests it.
+  FINAL items are never affected by any flag or configuration.
+
+  WAIVED requirements have no COV item and are unaffected by
+  this decision. Requirements with no Covered_By entry and
+  Disposition != WAIVED are flagged in gap reports as
+  intentional gaps — no sequence is generated for them.
+
+Alternatives considered:
+  Option A (chosen): Five-state Seq_Status lifecycle with
+    automatic tier selection from coverage_type. Conservative
+    generation. Comment blocks for deferred cases. Disable via
+    toml. VSL as the intermediate representation. LLM for prose
+    translation and best-effort generation from NONE strategies.
+    FINAL as the terminal state matching aerospace program
+    vocabulary.
+  Option B (rejected): Expose generation aggressiveness as a
+    user-configurable temperature knob. Rejected because
+    engineers make poor choices when given configuration dials
+    they do not understand. The tool owns the strategy, not
+    the engineer.
+  Option C (rejected): Require VSL before any generation — no
+    best-effort from NONE strategies. Rejected because it
+    replicates the blank-page problem that has caused every
+    previous rules-based verification language to fail in
+    practice. The tool must lower the barrier to entry, not
+    maintain it.
+  Option D (rejected): Use COMPLETE as the terminal state.
+    Rejected in favour of FINAL because FINAL is the term used
+    in aerospace verification closure documentation and is
+    immediately understood by lead engineers, program managers,
+    and DO-254 auditors without translation.
+
+COMMIT
+------
+git add DECISIONS.md
+git commit -m "docs: add D-034 — VSL sequence body generation strategy
+
+Documents the two-tier sequence body generation model: mechanical
+generation from VSL rules when present, LLM-assisted generation
+from Stimulus_Strategy prose or register map content when absent.
+Five-state Seq_Status lifecycle per COV item (NONE/SUGGESTED/
+DRAFT/REVIEWED/FINAL). Conservative generation philosophy with
+automatic tier selection from coverage_type. Disable via
+vsl_suggestions = false in pssgen.toml. FINAL as terminal state
+matching aerospace closure vocabulary.
+
+Author: S. Belvin, BelTech Systems LLC"
+git push origin main
