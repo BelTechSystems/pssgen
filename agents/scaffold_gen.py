@@ -1470,6 +1470,63 @@ class {d}_regression_test extends {d}_base_test;
 endclass"""
 
 
+def parse_vsl_stimulus(vsl_string) -> list[dict]:
+    """Parse a VSL stimulus string into a list of step dicts.
+
+    VSL grammar (D-034): <step> (";" <step>)* where each step is
+    <action> ("," <key>=<value>)*. Empty or "NONE" input returns [].
+
+    Args:
+        vsl_string: VSL string from Stimulus_VSL column, or None.
+
+    Returns:
+        List of dicts with keys "action" (str) and "params" (dict[str,str]).
+
+    Raises:
+        ValueError: If any step cannot be parsed per VSL grammar.
+    """
+    import re as _re
+    _IDENT = _re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+    if vsl_string is None:
+        return []
+    s = str(vsl_string).strip()
+    if not s or s.upper() == "NONE":
+        return []
+
+    steps = []
+    for raw_step in s.split(";"):
+        raw_step = raw_step.strip()
+        if not raw_step:
+            continue
+        parts = [p.strip() for p in raw_step.split(",")]
+        action = parts[0]
+        if not _IDENT.match(action):
+            raise ValueError(
+                f"VSL parse error: invalid action {action!r} in step {raw_step!r}"
+            )
+        params: dict = {}
+        for part in parts[1:]:
+            if not part:
+                raise ValueError(
+                    f"VSL parse error: empty param field in step {raw_step!r}"
+                )
+            if "=" not in part:
+                raise ValueError(
+                    f"VSL parse error: param {part!r} has no '=' in step {raw_step!r}"
+                )
+            key, _, value = part.partition("=")
+            key = key.strip()
+            value = value.strip()
+            if not _IDENT.match(key):
+                raise ValueError(
+                    f"VSL parse error: invalid key {key!r} in step {raw_step!r}"
+                )
+            params[key] = value
+        steps.append({"action": action, "params": params})
+    return steps
+
+
 def _cov_stub_names(cov_item) -> tuple[str, str, str]:
     """Derive class name, var name, and file name from a COV item.
 
@@ -1770,6 +1827,8 @@ def _gen_all_content(ir: IR, vplan_result) -> dict[str, str]:
             self.linked_requirements = data.get("linked_requirements", [])
             self.stimulus_strategy = data.get("stimulus_strategy", "")
             self.boundary_values = data.get("boundary_values", "")
+            self.stimulus_vsl = data.get("stimulus_vsl", "") or ""
+            self.vsl_steps = parse_vsl_stimulus(self.stimulus_vsl)
 
     raw_cov_items = {}
     if vplan_result is not None and hasattr(vplan_result, "cov_items"):
@@ -1786,6 +1845,9 @@ def _gen_all_content(ir: IR, vplan_result) -> dict[str, str]:
     cov_stub_contents: dict[str, str] = {}
 
     for item in cov_items:
+        vsl_steps = getattr(item, "vsl_steps", None) or []
+        if vsl_steps:
+            logger.debug("VSL parsed for %s: %d step(s)", item.id, len(vsl_steps))
         class_name, var_name, file_name = _cov_stub_names(item)
         cov_stub_filenames.append(file_name)
         cov_stub_class_vars.append((class_name, var_name))
