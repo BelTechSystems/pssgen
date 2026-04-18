@@ -1,0 +1,171 @@
+========================================================================
+pssgen Gap Report — buffered_axi_lite_uart
+Generated: 2026-04-18
+Input:     ip/buffered_axi_lite_uart/vhdl/buffered_axi_lite_uart.vhd
+Req mode:  full
+========================================================================
+
+Summary: 0 error(s), 0 warning(s), 2 waived
+
+ERRORS (requirements without PSS coverage labels):
+  (none)
+
+WARNINGS (PSS labels without traceable requirement IDs):
+  (none)
+
+WAIVERS:
+  [WAIVED] UART-PAR-003: Elaboration-time assertion — $fatal fires before simulation begins. Requires a separate negative build test. Deferred to build-system test phase.
+  [WAIVED] UART-VER-001: Verification infrastructure requirement. Describes the UVM RAL model artifact, not a testable behavior. Closed by inspection when the RAL model is committed.
+
+COVERAGE LABELS:
+  cg_UART_PAR_001  [requirement] → UART-PAR-001
+  cg_UART_PAR_002  [requirement] → UART-PAR-002
+  cg_UART_PAR_004  [requirement] → UART-PAR-004
+  cg_UART_PAR_005  [requirement] → UART-PAR-005
+  cg_UART_PAR_006  [requirement] → UART-PAR-006
+  cg_UART_PAR_007  [requirement] → UART-PAR-007
+  cg_UART_PAR_008  [requirement] → UART-PAR-008
+  cg_UART_PAR_009  [requirement] → UART-PAR-009
+  cg_UART_IF_001  [requirement] → UART-IF-001
+  cg_UART_IF_002  [requirement] → UART-IF-002
+  cg_UART_IF_003  [requirement] → UART-IF-003
+  cg_UART_IF_004  [requirement] → UART-IF-004
+  cg_UART_IF_005  [requirement] → UART-IF-005
+  cg_UART_IF_006  [requirement] → UART-IF-006
+  cg_UART_IF_007  [requirement] → UART-IF-007
+  cg_UART_IF_008  [requirement] → UART-IF-008
+  cg_UART_IF_009  [requirement] → UART-IF-009
+  cg_UART_IF_010  [requirement] → UART-IF-010
+  cg_UART_IF_011  [requirement] → UART-IF-011
+  cg_UART_IF_012  [requirement] → UART-IF-012
+  cg_UART_IF_013  [requirement] → UART-IF-013
+  cg_UART_IF_014  [requirement] → UART-IF-014
+  cg_UART_EN_001  [requirement] → UART-EN-001
+  cg_UART_EN_002  [requirement] → UART-EN-002
+  cg_UART_EN_003  [requirement] → UART-EN-003
+  cg_UART_EN_004  [requirement] → UART-EN-004
+  cg_UART_EN_005  [requirement] → UART-EN-005
+  cg_UART_EN_006  [requirement] → UART-EN-006
+  cg_UART_BR_001  [requirement] → UART-BR-001
+  cg_UART_BR_002  [requirement] → UART-BR-002
+  cg_UART_BR_003  [requirement] → UART-BR-003
+  cg_UART_BR_004  [requirement] → UART-BR-004
+  cg_UART_BR_005  [requirement] → UART-BR-005
+  cg_UART_BR_006  [requirement] → UART-BR-006
+  cg_UART_FF_001  [requirement] → UART-FF-001
+  cg_UART_FF_002  [requirement] → UART-FF-002
+  cg_UART_FF_003  [requirement] → UART-FF-003
+  cg_UART_FF_004  [requirement] → UART-FF-004
+  cg_UART_FF_005  [requirement] → UART-FF-005
+  cg_UART_FF_006  [requirement] → UART-FF-006
+  cg_UART_FF_007  [requirement] → UART-FF-007
+  cg_UART_FF_008  [requirement] → UART-FF-008
+  cg_UART_FF_009  [requirement] → UART-FF-009
+  cg_UART_FIFO_001  [requirement] → UART-FIFO-001
+  cg_UART_FIFO_002  [requirement] → UART-FIFO-002
+  cg_UART_FIFO_003  [requirement] → UART-FIFO-003
+  cg_UART_FIFO_004  [requirement] → UART-FIFO-004
+  cg_UART_FIFO_005  [requirement] → UART-FIFO-005
+  cg_UART_FIFO_006  [requirement] → UART-FIFO-006
+  cg_UART_FIFO_007  [requirement] → UART-FIFO-007
+  cg_UART_FIFO_008  [requirement] → UART-FIFO-008
+  cg_UART_FIFO_009  [requirement] → UART-FIFO-009
+  cg_UART_TO_001  [requirement] → UART-TO-001
+  cg_UART_TO_002  [requirement] → UART-TO-002
+  cg_UART_TO_003  [requirement] → UART-TO-003
+  cg_UART_TO_004  [requirement] → UART-TO-004
+  cg_UART_TO_005  [requirement] → UART-TO-005
+  cg_UART_TO_006  [requirement] → UART-TO-006
+  cg_UART_TO_007  [requirement] → UART-TO-007
+  cg_UART_INT_001  [requirement] → UART-INT-001
+  cg_UART_INT_002  [requirement] → UART-INT-002
+  cg_UART_INT_003  [requirement] → UART-INT-003
+  cg_UART_INT_004  [requirement] → UART-INT-004
+  cg_UART_INT_005  [requirement] → UART-INT-005
+  cg_UART_INT_006  [requirement] → UART-INT-006
+  cg_UART_INT_007  [requirement] → UART-INT-007
+  cg_UART_INT_008  [requirement] → UART-INT-008
+  cg_UART_INT_009  [requirement] → UART-INT-009
+  cg_UART_INT_010  [requirement] → UART-INT-010
+  cg_UART_INT_011  [requirement] → UART-INT-011
+  cg_UART_INT_012  [requirement] → UART-INT-012
+  cg_UART_INT_013  [requirement] → UART-INT-013
+  cg_UART_REG_001  [requirement] → UART-REG-001
+  cg_UART_REG_002  [requirement] → UART-REG-002
+  cg_UART_REG_003  [requirement] → UART-REG-003
+  cg_UART_REG_004  [requirement] → UART-REG-004
+  cg_UART_REG_005  [requirement] → UART-REG-005
+  cg_UART_REG_006  [requirement] → UART-REG-006
+  cg_UART_REG_007  [requirement] → UART-REG-007
+  cg_UART_REG_008  [requirement] → UART-REG-008
+  cg_UART_REG_009  [requirement] → UART-REG-009
+  cg_UART_REG_010  [requirement] → UART-REG-010
+  cg_UART_REG_011  [requirement] → UART-REG-011
+  cg_UART_REG_012  [requirement] → UART-REG-012
+  cg_UART_REG_013  [requirement] → UART-REG-013
+  cg_UART_REG_014  [requirement] → UART-REG-014
+  cg_UART_REG_015  [requirement] → UART-REG-015
+  cg_UART_REG_016  [requirement] → UART-REG-016
+  cg_UART_REG_017  [requirement] → UART-REG-017
+  cg_UART_REG_018  [requirement] → UART-REG-018
+  cg_UART_REG_019  [requirement] → UART-REG-019
+  cg_UART_REG_020  [requirement] → UART-REG-020
+  cg_UART_REG_021  [requirement] → UART-REG-021
+  cg_UART_REG_022  [requirement] → UART-REG-022
+  cg_UART_REG_023  [requirement] → UART-REG-023
+  cg_UART_REG_024  [requirement] → UART-REG-024
+  cg_UART_REG_025  [requirement] → UART-REG-025
+  cg_UART_REG_026  [requirement] → UART-REG-026
+  cg_UART_REG_027  [requirement] → UART-REG-027
+  cg_UART_REG_028  [requirement] → UART-REG-028
+  cg_UART_REG_029  [requirement] → UART-REG-029
+  cg_UART_REG_030  [requirement] → UART-REG-030
+  cg_UART_REG_031  [requirement] → UART-REG-031
+  cg_UART_REG_032  [requirement] → UART-REG-032
+  cg_UART_REG_033  [requirement] → UART-REG-033
+  cg_UART_REG_034  [requirement] → UART-REG-034
+  cg_UART_REG_035  [requirement] → UART-REG-035
+  cg_UART_REG_036  [requirement] → UART-REG-036
+  cg_UART_REG_037  [requirement] → UART-REG-037
+  cg_UART_REG_038  [requirement] → UART-REG-038
+  cg_UART_REG_039  [requirement] → UART-REG-039
+  cg_UART_REG_040  [requirement] → UART-REG-040
+  cg_UART_REG_041  [requirement] → UART-REG-041
+  cg_UART_REG_042  [requirement] → UART-REG-042
+  cg_UART_REG_043  [requirement] → UART-REG-043
+  cg_UART_REG_044  [requirement] → UART-REG-044
+  cg_UART_REG_045  [requirement] → UART-REG-045
+  cg_UART_REG_046  [requirement] → UART-REG-046
+  cg_UART_REG_047  [requirement] → UART-REG-047
+  cg_UART_REG_048  [requirement] → UART-REG-048
+  cg_UART_REG_049  [requirement] → UART-REG-049
+  cg_UART_REG_050  [requirement] → UART-REG-050
+  cg_UART_REG_051  [requirement] → UART-REG-051
+  cg_UART_REG_052  [requirement] → UART-REG-052
+  cg_UART_RST_001  [requirement] → UART-RST-001
+  cg_UART_RST_002  [requirement] → UART-RST-002
+  cg_UART_RST_003  [requirement] → UART-RST-003
+  cg_UART_RST_004  [requirement] → UART-RST-004
+  cg_UART_RST_005  [requirement] → UART-RST-005
+  cg_UART_RST_006  [requirement] → UART-RST-006
+  cg_UART_VER_002  [requirement] → UART-VER-002
+  cg_UART_VER_003  [requirement] → UART-VER-003
+  cg_UART_VER_004  [requirement] → UART-VER-004
+  cg_UART_VER_005  [requirement] → UART-VER-005
+  cg_UART_VER_006  [requirement] → UART-VER-006
+  cg_UART_VER_007  [requirement] → UART-VER-007
+  cg_UART_VER_008  [requirement] → UART-VER-008
+  cg_UART_VER_009  [requirement] → UART-VER-009
+  cg_UART_VER_010  [requirement] → UART-VER-010
+  cg_inferred_s_axi_awready_01  [inferred]
+  cg_inferred_s_axi_wready_01  [inferred]
+  cg_inferred_s_axi_bvalid_01  [inferred]
+  cg_inferred_s_axi_bresp_01  [inferred]
+  cg_inferred_s_axi_arready_01  [inferred]
+  cg_inferred_s_axi_rvalid_01  [inferred]
+  cg_inferred_s_axi_rdata_01  [inferred]
+  cg_inferred_s_axi_rresp_01  [inferred]
+  cg_inferred_uart_tx_01  [inferred]
+  cg_inferred_irq_01  [inferred]
+
+========================================================================

@@ -1558,21 +1558,65 @@ def _cov_stub_names(cov_item) -> tuple[str, str, str]:
     return class_name, var_name, file_name
 
 
-def _addr_to_reg(addr: str) -> str:
-    """Convert a hex address string to a placeholder register model name.
+_BALU_ADDR_MAP: dict[int, str] = {
+    0x00: "CTRL",
+    0x04: "STATUS",
+    0x08: "BAUD",
+    0x0C: "TX_DATA",
+    0x10: "RX_DATA",
+    0x14: "TX_FIFO",
+    0x18: "RX_FIFO",
+    0x1C: "IER",
+    0x20: "ISR",
+    0x24: "PARITY",
+    0x28: "FRAME",
+    0x2C: "SCRATCH",
+    0x30: "TIMEOUT",
+    0x34: "LOOPBACK",
+}
 
-    "0x04" → "reg_0004", "0x2C" → "reg_002c". Used by _render_vsl_body.
+
+def _addr_to_reg(addr: str) -> str:
+    """Convert a hex address string to a register model field name.
+
+    Looks up the BALU register map first. Known addresses return the real
+    register name (e.g. "0x08" → "BAUD"). Unknown addresses fall back to a
+    reg_XXXX placeholder and emit a WARNING so the caller knows a manual
+    fix is needed.
+
+    Args:
+        addr: Hex address string, e.g. "0x08" or "0x3C".
+
+    Returns:
+        Register name string ("BAUD") or placeholder ("reg_003c").
     """
     import re as _re
     m = _re.match(r"0[xX]([0-9A-Fa-f]+)$", addr.strip())
     if m:
-        return f"reg_{int(m.group(1), 16):04x}"
+        addr_int = int(m.group(1), 16)
+        if addr_int in _BALU_ADDR_MAP:
+            return _BALU_ADDR_MAP[addr_int]
+        placeholder = f"reg_{addr_int:04x}"
+        logger.warning(
+            "_addr_to_reg: unknown address %s → %s (placeholder — manual wiring required)",
+            addr.strip(), placeholder,
+        )
+        return placeholder
     clean = addr.strip().lower().lstrip("0x").zfill(4)
-    return f"reg_{clean}"
+    placeholder = f"reg_{clean}"
+    logger.warning(
+        "_addr_to_reg: non-hex address %r → %s (placeholder — manual wiring required)",
+        addr, placeholder,
+    )
+    return placeholder
 
 
 def _render_vsl_body(item) -> list[str]:
     """Render UVM body() task content lines from item.vsl_steps.
+
+    Generates reg_write / reg_read / reg_poll calls that delegate to the
+    helper tasks in axi4_lite_base_seq. POLL is self-contained via reg_poll;
+    only READ steps require a local rdata variable.
 
     Args:
         item: Object with .vsl_steps (list[dict]) populated by parse_vsl_stimulus.
@@ -1581,11 +1625,10 @@ def _render_vsl_body(item) -> list[str]:
         List of indented SV lines for insertion inside a body() task.
     """
     steps = item.vsl_steps
-    needs_locals = any(s["action"] in ("READ", "POLL") for s in steps)
+    needs_rdata = any(s["action"] == "READ" for s in steps)
 
     lines: list[str] = []
-    if needs_locals:
-        lines.append("        uvm_status_e status;")
+    if needs_rdata:
         lines.append("        uvm_reg_data_t rdata;")
 
     for i, step in enumerate(steps, 1):
@@ -1597,17 +1640,13 @@ def _render_vsl_body(item) -> list[str]:
             addr = params.get("addr", "0x0000")
             data = params.get("data", "0x0")
             reg = _addr_to_reg(addr)
-            lines.append(
-                f"        reg_model.{reg}.write(status, {data}, .parent(this));"
-            )
+            lines.append(f"        reg_write(reg_model.{reg}, {data});")
 
         elif action == "READ":
             addr = params.get("addr", "0x0000")
             expect = params.get("expect")
             reg = _addr_to_reg(addr)
-            lines.append(
-                f"        reg_model.{reg}.read(status, rdata, .parent(this));"
-            )
+            lines.append(f"        reg_read(reg_model.{reg}, rdata);")
             if expect is not None:
                 lines.append(
                     f"        `uvm_info(get_name(), "
@@ -1619,23 +1658,12 @@ def _render_vsl_body(item) -> list[str]:
             lines.append(f"        repeat({cycles}) @(posedge vif.clk);")
 
         elif action == "POLL":
-            addr = params.get("addr", "0x0000")
-            mask = params.get("mask", "0xFFFFFFFF")
-            expect = params.get("expect", "0x0")
+            addr    = params.get("addr", "0x0000")
+            mask    = params.get("mask", "0xFFFFFFFF")
+            expect  = params.get("expect", "0x0")
             timeout = params.get("timeout", "1000")
             reg = _addr_to_reg(addr)
-            addr_safe = addr.strip().lower().replace("0x", "").replace("0X", "")
-            lines.append(f"        begin : poll_{addr_safe}")
-            lines.append(f"          int unsigned poll_count = 0;")
-            lines.append(f"          do begin")
-            lines.append(
-                f"            reg_model.{reg}.read(status, rdata, .parent(this));"
-            )
-            lines.append(f"            if ((rdata & {mask}) == {expect}) break;")
-            lines.append(f"            @(posedge vif.clk);")
-            lines.append(f"            poll_count++;")
-            lines.append(f"          end while (poll_count < {timeout});")
-            lines.append(f"        end")
+            lines.append(f"        reg_poll(reg_model.{reg}, {mask}, {expect}, {timeout});")
 
         else:
             lines.append(f"        // Unrecognized VSL action: {action}")
@@ -1708,7 +1736,7 @@ def _gen_cov_stub(d: str, cov_item) -> str:
 // Stimulus strategy  : {strat}
 // Boundary values    : {boundary}
 
-class {class_name} extends {d}_base_seq;
+class {class_name} extends axi4_lite_base_seq;
 
     `uvm_object_utils({class_name})
 
@@ -1874,6 +1902,8 @@ set SNAPSHOT ${{DESIGN}}_snapshot
 set SCRIPT_DIR [file dirname [file normalize [info script]]]
 set TB_DIR     [file join $SCRIPT_DIR ../..]
 set DUT_DIR    [file join $SCRIPT_DIR ../../..]
+set REPO_ROOT  [file join $DUT_DIR ..]
+set SIM_LIB    [file join $REPO_ROOT sim lib]
 
 proc run_cmd {{cmd}} {{
     if {{[catch {{exec {{*}}$cmd >@stdout 2>@stderr}} msg]}} {{
@@ -1886,9 +1916,16 @@ proc run_cmd {{cmd}} {{
 
 {dut_compile}
 
+puts "--- Compiling BFM library (interface first, then package) ---"
+run_cmd [list xvlog --sv --uvm_version 1.2 -L uvm --work work \\
+    --include $REPO_ROOT \\
+    [file join $SIM_LIB bfm axi4_lite_if.sv] \\
+    [file join $SIM_LIB pkg bfm_pkg.sv]]
+
 puts "--- Compiling UVM TB ---"
 run_cmd [list xvlog --sv --uvm_version 1.2 -L uvm --work work \\
     --include $TB_DIR \\
+    --include $REPO_ROOT \\
     [file join $TB_DIR ${{DESIGN}}_if.sv] \\
     [file join $TB_DIR ${{DESIGN}}_pkg.sv] \\
     [file join $TB_DIR tb_top.sv]]

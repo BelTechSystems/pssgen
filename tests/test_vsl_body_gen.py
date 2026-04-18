@@ -69,7 +69,7 @@ def test_phase1_write_step_produces_reg_model_write():
     item = _make_item(seq_status="PHASE_1", vsl_string="WRITE,addr=0x00,data=0xFF")
     content = _gen_cov_stub("dut", item)
     assert "SEQ_PENDING" not in content
-    assert "reg_model.reg_0000.write(status, 0xFF, .parent(this));" in content
+    assert "reg_write(reg_model.CTRL, 0xFF);" in content
     assert "endtask : body" in content
 
 
@@ -82,7 +82,7 @@ def test_phase1_read_with_expect_produces_read_and_uvm_info():
     )
     content = _gen_cov_stub("dut", item)
     assert "SEQ_PENDING" not in content
-    assert "reg_model.reg_0004.read(status, rdata, .parent(this));" in content
+    assert "reg_read(reg_model.STATUS, rdata);" in content
     assert "expect 0x%0h" in content
     assert "0x01" in content
 
@@ -98,18 +98,14 @@ def test_phase1_wait_step_produces_repeat_posedge():
 
 # ── PHASE_1 POLL step ────────────────────────────────────────────────────────
 
-def test_phase1_poll_step_produces_do_while_block():
+def test_phase1_poll_step_produces_reg_poll_helper():
     item = _make_item(
         seq_status="PHASE_1",
         vsl_string="POLL,addr=0x0C,mask=0x01,expect=0x01,timeout=1000"
     )
     content = _gen_cov_stub("dut", item)
     assert "SEQ_PENDING" not in content
-    assert "begin : poll_0c" in content
-    assert "do begin" in content
-    assert "end while (poll_count < 1000);" in content
-    assert "reg_model.reg_000c.read(status, rdata, .parent(this));" in content
-    assert "(rdata & 0x01) == 0x01" in content
+    assert "reg_poll(reg_model.TX_DATA, 0x01, 0x01, 1000);" in content
 
 
 # ── Multi-step sequence ──────────────────────────────────────────────────────
@@ -121,9 +117,9 @@ def test_phase1_multi_step_sequence_produces_all_patterns():
     assert "Step 1: WRITE" in content
     assert "Step 2: WAIT" in content
     assert "Step 3: READ" in content
-    assert "reg_model.reg_0000.write" in content
+    assert "reg_write(reg_model.CTRL" in content
     assert "repeat(10) @(posedge vif.clk);" in content
-    assert "reg_model.reg_0004.read" in content
+    assert "reg_read(reg_model.STATUS" in content
     # Verify ordering: WRITE before WAIT before READ
     write_pos = content.index("Step 1: WRITE")
     wait_pos  = content.index("Step 2: WAIT")
@@ -139,18 +135,19 @@ def test_local_vars_present_when_read_step_exists():
         vsl_string="READ,addr=0x04"
     )
     content = _gen_cov_stub("dut", item)
-    assert "uvm_status_e status;" in content
     assert "uvm_reg_data_t rdata;" in content
+    assert "uvm_status_e status;" not in content
 
 
-def test_local_vars_present_when_poll_step_exists():
+def test_local_vars_absent_when_only_poll_step():
+    # reg_poll is self-contained; no local vars needed in the body
     item = _make_item(
         seq_status="PHASE_1",
         vsl_string="POLL,addr=0x0C,mask=0x01,expect=0x01,timeout=100"
     )
     content = _gen_cov_stub("dut", item)
-    assert "uvm_status_e status;" in content
-    assert "uvm_reg_data_t rdata;" in content
+    assert "uvm_status_e status;" not in content
+    assert "uvm_reg_data_t rdata;" not in content
 
 
 def test_local_vars_absent_when_only_write_and_wait_steps():
