@@ -140,10 +140,10 @@
   ],
   "summary": {
     "WRITTEN": 18,
-    "APPROVED": 17,
-    "DRAFT": 1,
+    "APPROVED": 18,
+    "DRAFT": 0,
     "PHASE_2_GAP": 1,
-    "coverage_pct": 89.47,
-    "notes": "COV-011 DRAFT pending review, COV-012 deferred to Phase 2"
+    "coverage_pct": 94.74,
+    "notes": "COV-012 deferred to Phase 2"
   }
 }
