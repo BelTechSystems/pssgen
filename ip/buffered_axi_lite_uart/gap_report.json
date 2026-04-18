@@ -1,6 +1,6 @@
 {
-  "generated": "2026-04-17",
-  "commit": "00a8fe2",
+  "generated": "2026-04-18T14:59:52Z",
+  "commit": "1a36ec7",
   "sim_result": {
     "passed": true,
     "uvm_errors": 0,
@@ -9,95 +9,14 @@
   },
   "summary": {
     "total": 141,
-    "waived": 2,
     "passing": 139,
     "failing": 0,
-    "not_run": 0,
-    "at_risk": 0,
-    "open": 0
-  },
-  "family_summary": {
-    "BR": {
-      "total": 6,
-      "passing": 6,
-      "failing": 0,
-      "waived": 0,
-      "not_run": 0
-    },
-    "EN": {
-      "total": 6,
-      "passing": 6,
-      "failing": 0,
-      "waived": 0,
-      "not_run": 0
-    },
-    "FF": {
-      "total": 9,
-      "passing": 9,
-      "failing": 0,
-      "waived": 0,
-      "not_run": 0
-    },
-    "FIFO": {
-      "total": 9,
-      "passing": 9,
-      "failing": 0,
-      "waived": 0,
-      "not_run": 0
-    },
-    "IF": {
-      "total": 14,
-      "passing": 14,
-      "failing": 0,
-      "waived": 0,
-      "not_run": 0
-    },
-    "INT": {
-      "total": 13,
-      "passing": 13,
-      "failing": 0,
-      "waived": 0,
-      "not_run": 0
-    },
-    "PAR": {
-      "total": 9,
-      "passing": 8,
-      "failing": 0,
-      "waived": 1,
-      "not_run": 0
-    },
-    "REG": {
-      "total": 52,
-      "passing": 52,
-      "failing": 0,
-      "waived": 0,
-      "not_run": 0
-    },
-    "RST": {
-      "total": 6,
-      "passing": 6,
-      "failing": 0,
-      "waived": 0,
-      "not_run": 0
-    },
-    "TO": {
-      "total": 7,
-      "passing": 7,
-      "failing": 0,
-      "waived": 0,
-      "not_run": 0
-    },
-    "VER": {
-      "total": 10,
-      "passing": 9,
-      "failing": 0,
-      "waived": 1,
-      "not_run": 0
-    }
+    "waived": 2,
+    "not_run": 0
   },
   "family_summary_array": [
     {
-      "family": "BR",
+      "family": "UART-BR",
       "total": 6,
       "passing": 6,
       "failing": 0,
@@ -105,7 +24,7 @@
       "not_run": 0
     },
     {
-      "family": "EN",
+      "family": "UART-EN",
       "total": 6,
       "passing": 6,
       "failing": 0,
@@ -113,7 +32,7 @@
       "not_run": 0
     },
     {
-      "family": "FF",
+      "family": "UART-FF",
       "total": 9,
       "passing": 9,
       "failing": 0,
@@ -121,7 +40,7 @@
       "not_run": 0
     },
     {
-      "family": "FIFO",
+      "family": "UART-FIFO",
       "total": 9,
       "passing": 9,
       "failing": 0,
@@ -129,7 +48,7 @@
       "not_run": 0
     },
     {
-      "family": "IF",
+      "family": "UART-IF",
       "total": 14,
       "passing": 14,
       "failing": 0,
@@ -137,7 +56,7 @@
       "not_run": 0
     },
     {
-      "family": "INT",
+      "family": "UART-INT",
       "total": 13,
       "passing": 13,
       "failing": 0,
@@ -145,7 +64,7 @@
       "not_run": 0
     },
     {
-      "family": "PAR",
+      "family": "UART-PAR",
       "total": 9,
       "passing": 8,
       "failing": 0,
@@ -153,7 +72,7 @@
       "not_run": 0
     },
     {
-      "family": "REG",
+      "family": "UART-REG",
       "total": 52,
       "passing": 52,
       "failing": 0,
@@ -161,7 +80,7 @@
       "not_run": 0
     },
     {
-      "family": "RST",
+      "family": "UART-RST",
       "total": 6,
       "passing": 6,
       "failing": 0,
@@ -169,7 +88,7 @@
       "not_run": 0
     },
     {
-      "family": "TO",
+      "family": "UART-TO",
       "total": 7,
       "passing": 7,
       "failing": 0,
@@ -177,7 +96,7 @@
       "not_run": 0
     },
     {
-      "family": "VER",
+      "family": "UART-VER",
       "total": 10,
       "passing": 9,
       "failing": 0,
@@ -188,1129 +107,1129 @@
   "requirements": [
     {
       "req_id": "UART-PAR-001",
-      "family": "PAR",
+      "family": "UART-PAR",
+      "covered_by": "cg_UART_PAR_001",
       "disposition": "GENERATED",
-      "covered_by": "COV-017",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-PAR-002",
-      "family": "PAR",
+      "family": "UART-PAR",
+      "covered_by": "cg_UART_PAR_002",
       "disposition": "GENERATED",
-      "covered_by": "COV-017",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-PAR-003",
-      "family": "PAR",
-      "disposition": "WAIVED",
+      "family": "UART-PAR",
       "covered_by": "",
-      "rtl_status": "NOT_RUN",
-      "overall_status": "NOT_RUN"
+      "disposition": "WAIVED",
+      "rtl_status": "",
+      "overall_status": ""
     },
     {
       "req_id": "UART-PAR-004",
-      "family": "PAR",
+      "family": "UART-PAR",
+      "covered_by": "cg_UART_PAR_004",
       "disposition": "GENERATED",
-      "covered_by": "COV-001",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-PAR-005",
-      "family": "PAR",
+      "family": "UART-PAR",
+      "covered_by": "cg_UART_PAR_005",
       "disposition": "GENERATED",
-      "covered_by": "COV-001",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-PAR-006",
-      "family": "PAR",
+      "family": "UART-PAR",
+      "covered_by": "cg_UART_PAR_006",
       "disposition": "GENERATED",
-      "covered_by": "COV-006",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-PAR-007",
-      "family": "PAR",
+      "family": "UART-PAR",
+      "covered_by": "cg_UART_PAR_007",
       "disposition": "GENERATED",
-      "covered_by": "COV-001, COV-015",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-PAR-008",
-      "family": "PAR",
+      "family": "UART-PAR",
+      "covered_by": "cg_UART_PAR_008",
       "disposition": "GENERATED",
-      "covered_by": "COV-015",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-PAR-009",
-      "family": "PAR",
+      "family": "UART-PAR",
+      "covered_by": "cg_UART_PAR_009",
       "disposition": "GENERATED",
-      "covered_by": "COV-017",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-IF-001",
-      "family": "IF",
+      "family": "UART-IF",
+      "covered_by": "cg_UART_IF_001",
       "disposition": "GENERATED",
-      "covered_by": "COV-017",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-IF-002",
-      "family": "IF",
+      "family": "UART-IF",
+      "covered_by": "cg_UART_IF_002",
       "disposition": "GENERATED",
-      "covered_by": "COV-017",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-IF-003",
-      "family": "IF",
+      "family": "UART-IF",
+      "covered_by": "cg_UART_IF_003",
       "disposition": "GENERATED",
-      "covered_by": "COV-017",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-IF-004",
-      "family": "IF",
+      "family": "UART-IF",
+      "covered_by": "cg_UART_IF_004",
       "disposition": "GENERATED",
-      "covered_by": "COV-017",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-IF-005",
-      "family": "IF",
+      "family": "UART-IF",
+      "covered_by": "cg_UART_IF_005",
       "disposition": "GENERATED",
-      "covered_by": "COV-012",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-IF-006",
-      "family": "IF",
+      "family": "UART-IF",
+      "covered_by": "cg_UART_IF_006",
       "disposition": "GENERATED",
-      "covered_by": "COV-010",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-IF-007",
-      "family": "IF",
+      "family": "UART-IF",
+      "covered_by": "cg_UART_IF_007",
       "disposition": "GENERATED",
-      "covered_by": "COV-011",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-IF-008",
-      "family": "IF",
+      "family": "UART-IF",
+      "covered_by": "cg_UART_IF_008",
       "disposition": "GENERATED",
-      "covered_by": "COV-010",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-IF-009",
-      "family": "IF",
+      "family": "UART-IF",
+      "covered_by": "cg_UART_IF_009",
       "disposition": "GENERATED",
-      "covered_by": "COV-011",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-IF-010",
-      "family": "IF",
+      "family": "UART-IF",
+      "covered_by": "cg_UART_IF_010",
       "disposition": "GENERATED",
-      "covered_by": "COV-018",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-IF-011",
-      "family": "IF",
+      "family": "UART-IF",
+      "covered_by": "cg_UART_IF_011",
       "disposition": "GENERATED",
-      "covered_by": "COV-018",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-IF-012",
-      "family": "IF",
+      "family": "UART-IF",
+      "covered_by": "cg_UART_IF_012",
       "disposition": "GENERATED",
-      "covered_by": "COV-017",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-IF-013",
-      "family": "IF",
+      "family": "UART-IF",
+      "covered_by": "cg_UART_IF_013",
       "disposition": "GENERATED",
-      "covered_by": "COV-017",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-IF-014",
-      "family": "IF",
+      "family": "UART-IF",
+      "covered_by": "cg_UART_IF_014",
       "disposition": "GENERATED",
-      "covered_by": "COV-017",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-EN-001",
-      "family": "EN",
+      "family": "UART-EN",
+      "covered_by": "cg_UART_EN_001",
       "disposition": "GENERATED",
-      "covered_by": "COV-016",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-EN-002",
-      "family": "EN",
+      "family": "UART-EN",
+      "covered_by": "cg_UART_EN_002",
       "disposition": "GENERATED",
-      "covered_by": "COV-016",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-EN-003",
-      "family": "EN",
+      "family": "UART-EN",
+      "covered_by": "cg_UART_EN_003",
       "disposition": "GENERATED",
-      "covered_by": "COV-016",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-EN-004",
-      "family": "EN",
+      "family": "UART-EN",
+      "covered_by": "cg_UART_EN_004",
       "disposition": "GENERATED",
-      "covered_by": "COV-016",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-EN-005",
-      "family": "EN",
+      "family": "UART-EN",
+      "covered_by": "cg_UART_EN_005",
       "disposition": "GENERATED",
-      "covered_by": "COV-016",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-EN-006",
-      "family": "EN",
+      "family": "UART-EN",
+      "covered_by": "cg_UART_EN_006",
       "disposition": "GENERATED",
-      "covered_by": "COV-016",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-BR-001",
-      "family": "BR",
+      "family": "UART-BR",
+      "covered_by": "cg_UART_BR_001",
       "disposition": "GENERATED",
-      "covered_by": "COV-001",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-BR-002",
-      "family": "BR",
+      "family": "UART-BR",
+      "covered_by": "cg_UART_BR_002",
       "disposition": "GENERATED",
-      "covered_by": "COV-001",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-BR-003",
-      "family": "BR",
+      "family": "UART-BR",
+      "covered_by": "cg_UART_BR_003",
       "disposition": "GENERATED",
-      "covered_by": "COV-001",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-BR-004",
-      "family": "BR",
+      "family": "UART-BR",
+      "covered_by": "cg_UART_BR_004",
       "disposition": "GENERATED",
-      "covered_by": "",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-BR-005",
-      "family": "BR",
+      "family": "UART-BR",
+      "covered_by": "cg_UART_BR_005",
       "disposition": "GENERATED",
-      "covered_by": "COV-001",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-BR-006",
-      "family": "BR",
+      "family": "UART-BR",
+      "covered_by": "cg_UART_BR_006",
       "disposition": "GENERATED",
-      "covered_by": "COV-001",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-FF-001",
-      "family": "FF",
+      "family": "UART-FF",
+      "covered_by": "cg_UART_FF_001",
       "disposition": "GENERATED",
-      "covered_by": "COV-017",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-FF-002",
-      "family": "FF",
+      "family": "UART-FF",
+      "covered_by": "cg_UART_FF_002",
       "disposition": "GENERATED",
-      "covered_by": "COV-003",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-FF-003",
-      "family": "FF",
+      "family": "UART-FF",
+      "covered_by": "cg_UART_FF_003",
       "disposition": "GENERATED",
-      "covered_by": "COV-003",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-FF-004",
-      "family": "FF",
+      "family": "UART-FF",
+      "covered_by": "cg_UART_FF_004",
       "disposition": "GENERATED",
-      "covered_by": "COV-003",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-FF-005",
-      "family": "FF",
+      "family": "UART-FF",
+      "covered_by": "cg_UART_FF_005",
       "disposition": "GENERATED",
-      "covered_by": "COV-002",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-FF-006",
-      "family": "FF",
+      "family": "UART-FF",
+      "covered_by": "cg_UART_FF_006",
       "disposition": "GENERATED",
-      "covered_by": "COV-002",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-FF-007",
-      "family": "FF",
+      "family": "UART-FF",
+      "covered_by": "cg_UART_FF_007",
       "disposition": "GENERATED",
-      "covered_by": "COV-002",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-FF-008",
-      "family": "FF",
+      "family": "UART-FF",
+      "covered_by": "cg_UART_FF_008",
       "disposition": "GENERATED",
-      "covered_by": "COV-002",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-FF-009",
-      "family": "FF",
+      "family": "UART-FF",
+      "covered_by": "cg_UART_FF_009",
       "disposition": "GENERATED",
-      "covered_by": "COV-002",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-FIFO-001",
-      "family": "FIFO",
+      "family": "UART-FIFO",
+      "covered_by": "cg_UART_FIFO_001",
       "disposition": "GENERATED",
-      "covered_by": "COV-017",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-FIFO-002",
-      "family": "FIFO",
+      "family": "UART-FIFO",
+      "covered_by": "cg_UART_FIFO_002",
       "disposition": "GENERATED",
-      "covered_by": "COV-005",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-FIFO-003",
-      "family": "FIFO",
+      "family": "UART-FIFO",
+      "covered_by": "cg_UART_FIFO_003",
       "disposition": "GENERATED",
-      "covered_by": "COV-005",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-FIFO-004",
-      "family": "FIFO",
+      "family": "UART-FIFO",
+      "covered_by": "cg_UART_FIFO_004",
       "disposition": "GENERATED",
-      "covered_by": "COV-004",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-FIFO-005",
-      "family": "FIFO",
+      "family": "UART-FIFO",
+      "covered_by": "cg_UART_FIFO_005",
       "disposition": "GENERATED",
-      "covered_by": "COV-004",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-FIFO-006",
-      "family": "FIFO",
+      "family": "UART-FIFO",
+      "covered_by": "cg_UART_FIFO_006",
       "disposition": "GENERATED",
-      "covered_by": "COV-005",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-FIFO-007",
-      "family": "FIFO",
+      "family": "UART-FIFO",
+      "covered_by": "cg_UART_FIFO_007",
       "disposition": "GENERATED",
-      "covered_by": "COV-004, COV-008",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-FIFO-008",
-      "family": "FIFO",
+      "family": "UART-FIFO",
+      "covered_by": "cg_UART_FIFO_008",
       "disposition": "GENERATED",
-      "covered_by": "COV-005",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-FIFO-009",
-      "family": "FIFO",
+      "family": "UART-FIFO",
+      "covered_by": "cg_UART_FIFO_009",
       "disposition": "GENERATED",
-      "covered_by": "COV-004",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-TO-001",
-      "family": "TO",
+      "family": "UART-TO",
+      "covered_by": "cg_UART_TO_001",
       "disposition": "GENERATED",
-      "covered_by": "COV-006",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-TO-002",
-      "family": "TO",
+      "family": "UART-TO",
+      "covered_by": "cg_UART_TO_002",
       "disposition": "GENERATED",
-      "covered_by": "COV-006",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-TO-003",
-      "family": "TO",
+      "family": "UART-TO",
+      "covered_by": "cg_UART_TO_003",
       "disposition": "GENERATED",
-      "covered_by": "COV-006",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-TO-004",
-      "family": "TO",
+      "family": "UART-TO",
+      "covered_by": "cg_UART_TO_004",
       "disposition": "GENERATED",
-      "covered_by": "COV-006",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-TO-005",
-      "family": "TO",
+      "family": "UART-TO",
+      "covered_by": "cg_UART_TO_005",
       "disposition": "GENERATED",
-      "covered_by": "COV-006, COV-009",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-TO-006",
-      "family": "TO",
+      "family": "UART-TO",
+      "covered_by": "cg_UART_TO_006",
       "disposition": "GENERATED",
-      "covered_by": "COV-006",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-TO-007",
-      "family": "TO",
+      "family": "UART-TO",
+      "covered_by": "cg_UART_TO_007",
       "disposition": "GENERATED",
-      "covered_by": "COV-019",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-INT-001",
-      "family": "INT",
+      "family": "UART-INT",
+      "covered_by": "cg_UART_INT_001",
       "disposition": "GENERATED",
-      "covered_by": "COV-007",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-INT-002",
-      "family": "INT",
+      "family": "UART-INT",
+      "covered_by": "cg_UART_INT_002",
       "disposition": "GENERATED",
-      "covered_by": "COV-007, COV-009",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-INT-003",
-      "family": "INT",
+      "family": "UART-INT",
+      "covered_by": "cg_UART_INT_003",
       "disposition": "GENERATED",
-      "covered_by": "COV-007",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-INT-004",
-      "family": "INT",
+      "family": "UART-INT",
+      "covered_by": "cg_UART_INT_004",
       "disposition": "GENERATED",
-      "covered_by": "COV-007",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-INT-005",
-      "family": "INT",
+      "family": "UART-INT",
+      "covered_by": "cg_UART_INT_005",
       "disposition": "GENERATED",
-      "covered_by": "COV-007",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-INT-006",
-      "family": "INT",
+      "family": "UART-INT",
+      "covered_by": "cg_UART_INT_006",
       "disposition": "GENERATED",
-      "covered_by": "COV-007",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-INT-007",
-      "family": "INT",
+      "family": "UART-INT",
+      "covered_by": "cg_UART_INT_007",
       "disposition": "GENERATED",
-      "covered_by": "COV-007",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-INT-008",
-      "family": "INT",
+      "family": "UART-INT",
+      "covered_by": "cg_UART_INT_008",
       "disposition": "GENERATED",
-      "covered_by": "COV-007, COV-009",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-INT-009",
-      "family": "INT",
+      "family": "UART-INT",
+      "covered_by": "cg_UART_INT_009",
       "disposition": "GENERATED",
-      "covered_by": "COV-019",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-INT-010",
-      "family": "INT",
+      "family": "UART-INT",
+      "covered_by": "cg_UART_INT_010",
       "disposition": "GENERATED",
-      "covered_by": "COV-019",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-INT-011",
-      "family": "INT",
+      "family": "UART-INT",
+      "covered_by": "cg_UART_INT_011",
       "disposition": "GENERATED",
-      "covered_by": "COV-019",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-INT-012",
-      "family": "INT",
+      "family": "UART-INT",
+      "covered_by": "cg_UART_INT_012",
       "disposition": "GENERATED",
-      "covered_by": "COV-019",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-INT-013",
-      "family": "INT",
+      "family": "UART-INT",
+      "covered_by": "cg_UART_INT_013",
       "disposition": "GENERATED",
-      "covered_by": "COV-019",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-REG-001",
-      "family": "REG",
+      "family": "UART-REG",
+      "covered_by": "cg_UART_REG_001",
       "disposition": "GENERATED",
-      "covered_by": "COV-010, COV-011",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-REG-002",
-      "family": "REG",
+      "family": "UART-REG",
+      "covered_by": "cg_UART_REG_002",
       "disposition": "GENERATED",
-      "covered_by": "COV-018",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-REG-003",
-      "family": "REG",
+      "family": "UART-REG",
+      "covered_by": "cg_UART_REG_003",
       "disposition": "GENERATED",
-      "covered_by": "COV-018",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-REG-004",
-      "family": "REG",
+      "family": "UART-REG",
+      "covered_by": "cg_UART_REG_004",
       "disposition": "GENERATED",
-      "covered_by": "COV-015",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-REG-005",
-      "family": "REG",
+      "family": "UART-REG",
+      "covered_by": "cg_UART_REG_005",
       "disposition": "GENERATED",
-      "covered_by": "COV-016",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-REG-006",
-      "family": "REG",
+      "family": "UART-REG",
+      "covered_by": "cg_UART_REG_006",
       "disposition": "GENERATED",
-      "covered_by": "COV-016",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-REG-007",
-      "family": "REG",
+      "family": "UART-REG",
+      "covered_by": "cg_UART_REG_007",
       "disposition": "GENERATED",
-      "covered_by": "COV-016",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-REG-008",
-      "family": "REG",
+      "family": "UART-REG",
+      "covered_by": "cg_UART_REG_008",
       "disposition": "GENERATED",
-      "covered_by": "COV-016",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-REG-009",
-      "family": "REG",
+      "family": "UART-REG",
+      "covered_by": "cg_UART_REG_009",
       "disposition": "GENERATED",
-      "covered_by": "COV-002",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-REG-010",
-      "family": "REG",
+      "family": "UART-REG",
+      "covered_by": "cg_UART_REG_010",
       "disposition": "GENERATED",
-      "covered_by": "COV-003",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-REG-011",
-      "family": "REG",
+      "family": "UART-REG",
+      "covered_by": "cg_UART_REG_011",
       "disposition": "GENERATED",
-      "covered_by": "COV-018",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-REG-012",
-      "family": "REG",
+      "family": "UART-REG",
+      "covered_by": "cg_UART_REG_012",
       "disposition": "GENERATED",
-      "covered_by": "COV-018",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-REG-013",
-      "family": "REG",
+      "family": "UART-REG",
+      "covered_by": "cg_UART_REG_013",
       "disposition": "GENERATED",
-      "covered_by": "COV-015",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-REG-014",
-      "family": "REG",
+      "family": "UART-REG",
+      "covered_by": "cg_UART_REG_014",
       "disposition": "GENERATED",
-      "covered_by": "COV-009",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-REG-015",
-      "family": "REG",
+      "family": "UART-REG",
+      "covered_by": "cg_UART_REG_015",
       "disposition": "GENERATED",
-      "covered_by": "COV-019",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-REG-016",
-      "family": "REG",
+      "family": "UART-REG",
+      "covered_by": "cg_UART_REG_016",
       "disposition": "GENERATED",
-      "covered_by": "COV-005",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-REG-017",
-      "family": "REG",
+      "family": "UART-REG",
+      "covered_by": "cg_UART_REG_017",
       "disposition": "GENERATED",
-      "covered_by": "COV-005",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-REG-018",
-      "family": "REG",
+      "family": "UART-REG",
+      "covered_by": "cg_UART_REG_018",
       "disposition": "GENERATED",
-      "covered_by": "COV-008",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-REG-019",
-      "family": "REG",
+      "family": "UART-REG",
+      "covered_by": "cg_UART_REG_019",
       "disposition": "GENERATED",
-      "covered_by": "COV-004",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-REG-020",
-      "family": "REG",
+      "family": "UART-REG",
+      "covered_by": "cg_UART_REG_020",
       "disposition": "GENERATED",
-      "covered_by": "COV-019",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-REG-021",
-      "family": "REG",
+      "family": "UART-REG",
+      "covered_by": "cg_UART_REG_021",
       "disposition": "GENERATED",
-      "covered_by": "COV-019",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-REG-022",
-      "family": "REG",
+      "family": "UART-REG",
+      "covered_by": "cg_UART_REG_022",
       "disposition": "GENERATED",
-      "covered_by": "COV-019",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-REG-023",
-      "family": "REG",
+      "family": "UART-REG",
+      "covered_by": "cg_UART_REG_023",
       "disposition": "GENERATED",
-      "covered_by": "COV-019",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-REG-024",
-      "family": "REG",
+      "family": "UART-REG",
+      "covered_by": "cg_UART_REG_024",
       "disposition": "GENERATED",
-      "covered_by": "COV-008",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-REG-025",
-      "family": "REG",
+      "family": "UART-REG",
+      "covered_by": "cg_UART_REG_025",
       "disposition": "GENERATED",
-      "covered_by": "COV-018",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-REG-026",
-      "family": "REG",
+      "family": "UART-REG",
+      "covered_by": "cg_UART_REG_026",
       "disposition": "GENERATED",
-      "covered_by": "COV-001",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-REG-027",
-      "family": "REG",
+      "family": "UART-REG",
+      "covered_by": "cg_UART_REG_027",
       "disposition": "GENERATED",
-      "covered_by": "COV-001",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-REG-028",
-      "family": "REG",
+      "family": "UART-REG",
+      "covered_by": "cg_UART_REG_028",
       "disposition": "GENERATED",
-      "covered_by": "COV-013",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-REG-029",
-      "family": "REG",
+      "family": "UART-REG",
+      "covered_by": "cg_UART_REG_029",
       "disposition": "GENERATED",
-      "covered_by": "COV-019",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-REG-030",
-      "family": "REG",
+      "family": "UART-REG",
+      "covered_by": "cg_UART_REG_030",
       "disposition": "GENERATED",
-      "covered_by": "COV-019",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-REG-031",
-      "family": "REG",
+      "family": "UART-REG",
+      "covered_by": "cg_UART_REG_031",
       "disposition": "GENERATED",
-      "covered_by": "COV-015",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-REG-032",
-      "family": "REG",
+      "family": "UART-REG",
+      "covered_by": "cg_UART_REG_032",
       "disposition": "GENERATED",
-      "covered_by": "COV-017, COV-018",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-REG-033",
-      "family": "REG",
+      "family": "UART-REG",
+      "covered_by": "cg_UART_REG_033",
       "disposition": "GENERATED",
-      "covered_by": "COV-005, COV-017",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-REG-034",
-      "family": "REG",
+      "family": "UART-REG",
+      "covered_by": "cg_UART_REG_034",
       "disposition": "GENERATED",
-      "covered_by": "COV-004, COV-017",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-REG-035",
-      "family": "REG",
+      "family": "UART-REG",
+      "covered_by": "cg_UART_REG_035",
       "disposition": "GENERATED",
-      "covered_by": "COV-006",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-REG-036",
-      "family": "REG",
+      "family": "UART-REG",
+      "covered_by": "cg_UART_REG_036",
       "disposition": "GENERATED",
-      "covered_by": "COV-006, COV-015",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-REG-037",
-      "family": "REG",
+      "family": "UART-REG",
+      "covered_by": "cg_UART_REG_037",
       "disposition": "GENERATED",
-      "covered_by": "COV-007, COV-019",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-REG-038",
-      "family": "REG",
+      "family": "UART-REG",
+      "covered_by": "cg_UART_REG_038",
       "disposition": "GENERATED",
-      "covered_by": "COV-018, COV-019",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-REG-039",
-      "family": "REG",
+      "family": "UART-REG",
+      "covered_by": "cg_UART_REG_039",
       "disposition": "GENERATED",
-      "covered_by": "COV-007, COV-019",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-REG-040",
-      "family": "REG",
+      "family": "UART-REG",
+      "covered_by": "cg_UART_REG_040",
       "disposition": "GENERATED",
-      "covered_by": "COV-007, COV-019",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-REG-041",
-      "family": "REG",
+      "family": "UART-REG",
+      "covered_by": "cg_UART_REG_041",
       "disposition": "GENERATED",
-      "covered_by": "COV-019",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-REG-042",
-      "family": "REG",
+      "family": "UART-REG",
+      "covered_by": "cg_UART_REG_042",
       "disposition": "GENERATED",
-      "covered_by": "COV-018, COV-019",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-REG-043",
-      "family": "REG",
+      "family": "UART-REG",
+      "covered_by": "cg_UART_REG_043",
       "disposition": "GENERATED",
-      "covered_by": "COV-019",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-REG-044",
-      "family": "REG",
+      "family": "UART-REG",
+      "covered_by": "cg_UART_REG_044",
       "disposition": "GENERATED",
-      "covered_by": "COV-014",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-REG-045",
-      "family": "REG",
+      "family": "UART-REG",
+      "covered_by": "cg_UART_REG_045",
       "disposition": "GENERATED",
-      "covered_by": "COV-014",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-REG-046",
-      "family": "REG",
+      "family": "UART-REG",
+      "covered_by": "cg_UART_REG_046",
       "disposition": "GENERATED",
-      "covered_by": "COV-014",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-REG-047",
-      "family": "REG",
+      "family": "UART-REG",
+      "covered_by": "cg_UART_REG_047",
       "disposition": "GENERATED",
-      "covered_by": "COV-019",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-REG-048",
-      "family": "REG",
+      "family": "UART-REG",
+      "covered_by": "cg_UART_REG_048",
       "disposition": "GENERATED",
-      "covered_by": "COV-019",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-REG-049",
-      "family": "REG",
+      "family": "UART-REG",
+      "covered_by": "cg_UART_REG_049",
       "disposition": "GENERATED",
-      "covered_by": "COV-018",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-REG-050",
-      "family": "REG",
+      "family": "UART-REG",
+      "covered_by": "cg_UART_REG_050",
       "disposition": "GENERATED",
-      "covered_by": "COV-019",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-REG-051",
-      "family": "REG",
+      "family": "UART-REG",
+      "covered_by": "cg_UART_REG_051",
       "disposition": "GENERATED",
-      "covered_by": "COV-019",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-REG-052",
-      "family": "REG",
+      "family": "UART-REG",
+      "covered_by": "cg_UART_REG_052",
       "disposition": "GENERATED",
-      "covered_by": "COV-018",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-RST-001",
-      "family": "RST",
+      "family": "UART-RST",
+      "covered_by": "cg_UART_RST_001",
       "disposition": "GENERATED",
-      "covered_by": "COV-015",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-RST-002",
-      "family": "RST",
+      "family": "UART-RST",
+      "covered_by": "cg_UART_RST_002",
       "disposition": "GENERATED",
-      "covered_by": "COV-015",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-RST-003",
-      "family": "RST",
+      "family": "UART-RST",
+      "covered_by": "cg_UART_RST_003",
       "disposition": "GENERATED",
-      "covered_by": "COV-015",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-RST-004",
-      "family": "RST",
+      "family": "UART-RST",
+      "covered_by": "cg_UART_RST_004",
       "disposition": "GENERATED",
-      "covered_by": "COV-015",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-RST-005",
-      "family": "RST",
+      "family": "UART-RST",
+      "covered_by": "cg_UART_RST_005",
       "disposition": "GENERATED",
-      "covered_by": "COV-015",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-RST-006",
-      "family": "RST",
+      "family": "UART-RST",
+      "covered_by": "cg_UART_RST_006",
       "disposition": "GENERATED",
-      "covered_by": "COV-015",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-VER-001",
-      "family": "VER",
-      "disposition": "WAIVED",
+      "family": "UART-VER",
       "covered_by": "",
-      "rtl_status": "NOT_RUN",
-      "overall_status": "NOT_RUN"
+      "disposition": "WAIVED",
+      "rtl_status": "",
+      "overall_status": ""
     },
     {
       "req_id": "UART-VER-002",
-      "family": "VER",
+      "family": "UART-VER",
+      "covered_by": "cg_UART_VER_002",
       "disposition": "GENERATED",
-      "covered_by": "COV-015",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-VER-003",
-      "family": "VER",
+      "family": "UART-VER",
+      "covered_by": "cg_UART_VER_003",
       "disposition": "GENERATED",
-      "covered_by": "COV-014",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-VER-004",
-      "family": "VER",
+      "family": "UART-VER",
+      "covered_by": "cg_UART_VER_004",
       "disposition": "GENERATED",
-      "covered_by": "COV-007",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-VER-005",
-      "family": "VER",
+      "family": "UART-VER",
+      "covered_by": "cg_UART_VER_005",
       "disposition": "GENERATED",
-      "covered_by": "COV-008",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-VER-006",
-      "family": "VER",
+      "family": "UART-VER",
+      "covered_by": "cg_UART_VER_006",
       "disposition": "GENERATED",
-      "covered_by": "COV-012",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-VER-007",
-      "family": "VER",
+      "family": "UART-VER",
+      "covered_by": "cg_UART_VER_007",
       "disposition": "GENERATED",
-      "covered_by": "COV-013",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-VER-008",
-      "family": "VER",
+      "family": "UART-VER",
+      "covered_by": "cg_UART_VER_008",
       "disposition": "GENERATED",
-      "covered_by": "COV-006",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-VER-009",
-      "family": "VER",
+      "family": "UART-VER",
+      "covered_by": "cg_UART_VER_009",
       "disposition": "GENERATED",
-      "covered_by": "COV-002",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     },
     {
       "req_id": "UART-VER-010",
-      "family": "VER",
+      "family": "UART-VER",
+      "covered_by": "cg_UART_VER_010",
       "disposition": "GENERATED",
-      "covered_by": "COV-008",
       "rtl_status": "PASS",
       "overall_status": "PASS"
     }

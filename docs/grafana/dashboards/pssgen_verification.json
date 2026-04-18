@@ -539,7 +539,7 @@
           },
           "refId": "A",
           "source": "url",
-          "url": "https://raw.githubusercontent.com/BelTechSystems/pssgen/main/output/balu_d034_step4/results/balu_coverage_results.json",
+          "url": "https://raw.githubusercontent.com/BelTechSystems/pssgen/main/ip/buffered_axi_lite_uart/results/balu_coverage_results.json",
           "url_options": { "method": "GET", "data": "" },
           "type": "json",
           "parser": "backend",
