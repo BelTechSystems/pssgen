@@ -72,6 +72,8 @@ _COV_COVERAGE_TYPE    = 7
 _COV_NOTES            = 8
 _COV_SEQ_STATUS       = 9
 _COV_STIMULUS_VSL     = 10
+_COV_VSL_NOTES        = 11
+_COV_SEQ_REVIEW       = 12
 
 # Coverage_Goals data starts at row 2 (1-based): row1=headers
 _COV_DATA_START_ROW = 2
@@ -124,7 +126,8 @@ class VplanParseResult:
         cov_items: Mapping from COV ID to coverage item detail dict.
             Keys: name, description, stimulus_strategy, boundary_values,
             linked_requirements (list[str]), status, coverage_type, notes,
-            seq_status (str, default "NONE"), stimulus_vsl (str, default "").
+            seq_status (str, default "NONE"), stimulus_vsl (str, default ""),
+            vsl_notes (str, default ""), seq_review (str, default "DRAFT").
         req_ids: Non-waived Req_IDs in row order.
         req_schemes: Unique scheme prefixes derived from req_ids.
         sections: Always empty dict — IntentParseResult duck-type.
@@ -245,6 +248,8 @@ def parse_vplan(vplan_file: str) -> VplanParseResult:
             "notes":              _cell_str(row, _COV_NOTES),
             "seq_status":         _cell_str(row, _COV_SEQ_STATUS) or "NONE",
             "stimulus_vsl":       _cell_str(row, _COV_STIMULUS_VSL),
+            "vsl_notes":          _cell_str(row, _COV_VSL_NOTES),
+            "seq_review":         _cell_str(row, _COV_SEQ_REVIEW) or "DRAFT",
         }
 
     wb.close()

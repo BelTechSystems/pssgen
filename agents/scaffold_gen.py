@@ -1662,10 +1662,16 @@ def _gen_cov_stub(d: str, cov_item) -> str:
     boundary = getattr(cov_item, "boundary_values", "") or ""
     seq_status = getattr(cov_item, "seq_status", "NONE") or "NONE"
     vsl_steps = getattr(cov_item, "vsl_steps", None) or []
+    seq_review = getattr(cov_item, "seq_review", "DRAFT") or "DRAFT"
 
     req_str = ", ".join(linked_reqs) if linked_reqs else "(none)"
 
-    if seq_status == "PHASE_1" and vsl_steps:
+    if seq_review != "APPROVED":
+        logger.warning(
+            "Skipping VSL body for %s: Seq_Review=%s (not APPROVED)", cov_id, seq_review
+        )
+
+    if seq_status == "PHASE_1" and vsl_steps and seq_review == "APPROVED":
         impl_status_val = "phase_1_generated"
         body_label = f"body (PHASE_1 — {len(vsl_steps)} VSL step(s))"
         body_desc = f"Generated from Stimulus_VSL — {cov_id}"
@@ -1933,6 +1939,8 @@ def _gen_all_content(ir: IR, vplan_result) -> dict[str, str]:
             self.seq_status = data.get("seq_status", "NONE") or "NONE"
             self.stimulus_vsl = data.get("stimulus_vsl", "") or ""
             self.vsl_steps = parse_vsl_stimulus(self.stimulus_vsl)
+            self.vsl_notes = data.get("vsl_notes", "") or ""
+            self.seq_review = data.get("seq_review", "DRAFT") or "DRAFT"
 
     raw_cov_items = {}
     if vplan_result is not None and hasattr(vplan_result, "cov_items"):

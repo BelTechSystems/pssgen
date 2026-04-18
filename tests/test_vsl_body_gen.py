@@ -30,6 +30,7 @@ def _make_item(
     stimulus_strategy="",
     boundary_values="",
     linked_requirements=None,
+    seq_review="APPROVED",
 ):
     """Build a minimal cov_item namespace for testing."""
     item = types.SimpleNamespace()
@@ -41,6 +42,7 @@ def _make_item(
     item.stimulus_strategy = stimulus_strategy
     item.boundary_values = boundary_values
     item.linked_requirements = linked_requirements or []
+    item.seq_review = seq_review
     return item
 
 

@@ -106,6 +106,56 @@ def _companion_path(input_file: str, ext: str) -> str | None:
     return path if os.path.isfile(path) else None
 
 
+# BALU register map used by --validate-vsl (14 registers 0x00–0x34)
+_BALU_KNOWN_REGISTERS: dict[str, str] = {
+    "0x00": "CTRL",
+    "0x04": "STATUS",
+    "0x08": "BAUD",
+    "0x0c": "TX_DATA",
+    "0x10": "RX_DATA",
+    "0x14": "TX_FIFO",
+    "0x18": "RX_FIFO",
+    "0x1c": "IER",
+    "0x20": "ISR",
+    "0x24": "PARITY",
+    "0x28": "FRAME",
+    "0x2c": "SCRATCH",
+    "0x30": "TIMEOUT",
+    "0x34": "LOOPBACK",
+}
+
+
+def _run_validate_vsl(args) -> None:
+    """Run --validate-vsl mode: lint VPR Coverage_Goals and exit.
+
+    Requires --vplan to be set. Exits 0 if no errors, 1 if any errors.
+    """
+    from parser.vplan_parser import parse_vplan
+    from agents.vsl_validator import validate_coverage_goals, format_validation_report
+
+    vplan_path = getattr(args, "vplan", None)
+    if not vplan_path:
+        print("[pssgen] ERROR: --validate-vsl requires --vplan <file>", file=sys.stderr)
+        sys.exit(1)
+    if not os.path.isfile(vplan_path):
+        print(f"[pssgen] ERROR: VPR file not found: {vplan_path}", file=sys.stderr)
+        sys.exit(1)
+
+    vplan = parse_vplan(vplan_path)
+    goals = []
+    for cov_id, item in vplan.cov_items.items():
+        from agents.scaffold_gen import parse_vsl_stimulus
+        vsl_str = item.get("stimulus_vsl", "") or ""
+        goals.append({**item, "id": cov_id, "vsl_steps": parse_vsl_stimulus(vsl_str)})
+
+    results = validate_coverage_goals(goals, _BALU_KNOWN_REGISTERS, strict=False)
+    report  = format_validation_report(results)
+    print(report)
+
+    has_errors = any(r["errors"] for r in results)
+    sys.exit(1 if has_errors else 0)
+
+
 def main() -> None:
     """Run the pssgen CLI entry point.
 
@@ -251,6 +301,15 @@ def main() -> None:
         ),
     )
     parser.add_argument(
+        "--validate-vsl",
+        action="store_true",
+        dest="validate_vsl",
+        help=(
+            "Validate VSL stimulus strings in the VPR Coverage_Goals sheet. "
+            "Requires --vplan. Exits 0 if only warnings, 1 if any errors."
+        ),
+    )
+    parser.add_argument(
         "--collect-results",
         action="store_true",
         dest="collect_results",
@@ -268,6 +327,12 @@ def main() -> None:
     )
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args()
+
+    # ------------------------------------------------------------------
+    # --validate-vsl: standalone VPR lint mode (no --input required)
+    # ------------------------------------------------------------------
+    if getattr(args, "validate_vsl", False):
+        _run_validate_vsl(args)
 
     # ------------------------------------------------------------------
     # Validate --collect-results dependency

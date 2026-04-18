@@ -1,6 +1,6 @@
 {
   "ip_name": "buffered_axi_lite_uart",
-  "run_timestamp": "2026-04-18T14:36:14Z",
+  "run_timestamp": "2026-04-18T14:59:52Z",
   "d034_phase": "PHASE_1_COMPLETE",
   "total_goals": 19,
   "goals": [
@@ -84,8 +84,8 @@
     {
       "id": "COV-012",
       "name": "AXI_WRITE_ORDER",
-      "seq_status": "PHASE_1",
-      "coverage_status": "WRITTEN",
+      "seq_status": "PHASE_2_GAP",
+      "coverage_status": "DEFERRED",
       "vsl_steps": 4
     },
     {
@@ -139,8 +139,11 @@
     }
   ],
   "summary": {
-    "WRITTEN": 19,
-    "NONE": 0,
-    "coverage_pct": 100.0
+    "WRITTEN": 18,
+    "APPROVED": 17,
+    "DRAFT": 1,
+    "PHASE_2_GAP": 1,
+    "coverage_pct": 89.47,
+    "notes": "COV-011 DRAFT pending review, COV-012 deferred to Phase 2"
   }
 }
