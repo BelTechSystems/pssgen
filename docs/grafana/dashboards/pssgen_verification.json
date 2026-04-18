@@ -521,6 +521,179 @@
         ]
       },
       "pluginVersion": "11.0.0"
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "D-034 Phase 1 VSL Coverage",
+      "gridPos": { "h": 4, "w": 8, "x": 0, "y": 22 },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${DS_PSSGEN-GAP-REPORT}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${DS_PSSGEN-GAP-REPORT}"
+          },
+          "refId": "A",
+          "source": "url",
+          "url": "https://raw.githubusercontent.com/BelTechSystems/pssgen/main/output/balu_d034_step4/results/balu_coverage_results.json",
+          "url_options": { "method": "GET", "data": "" },
+          "type": "json",
+          "parser": "backend",
+          "root_selector": "$.summary",
+          "columns": [
+            { "selector": "WRITTEN",      "text": "Written",      "type": "number" },
+            { "selector": "NONE",         "text": "Pending",      "type": "number" },
+            { "selector": "coverage_pct", "text": "Coverage %",   "type": "number" }
+          ],
+          "format": "table",
+          "filters": [],
+          "global_query_id": ""
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": ["lastNotNull"],
+          "fields": ""
+        },
+        "orientation": "auto",
+        "textMode": "value_and_name",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "blue", "value": null }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Coverage %" },
+            "properties": [
+              { "id": "unit", "value": "percent" },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    { "color": "red",    "value": null },
+                    { "color": "orange", "value": 50   },
+                    { "color": "green",  "value": 80   }
+                  ]
+                }
+              },
+              { "id": "color", "value": { "mode": "thresholds" } }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": 8,
+      "type": "table",
+      "title": "D-034 Phase 1 Sequence Status",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 26 },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${DS_PSSGEN-GAP-REPORT}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${DS_PSSGEN-GAP-REPORT}"
+          },
+          "refId": "A",
+          "source": "url",
+          "url": "https://raw.githubusercontent.com/BelTechSystems/pssgen/main/output/balu_d034_step4/results/balu_coverage_results.json",
+          "url_options": { "method": "GET", "data": "" },
+          "type": "json",
+          "parser": "backend",
+          "root_selector": "$.goals",
+          "columns": [
+            { "selector": "id",              "text": "COV ID",          "type": "string" },
+            { "selector": "name",            "text": "Name",            "type": "string" },
+            { "selector": "seq_status",      "text": "Seq Status",      "type": "string" },
+            { "selector": "coverage_status", "text": "Coverage Status", "type": "string" },
+            { "selector": "vsl_steps",       "text": "VSL Steps",       "type": "number" }
+          ],
+          "format": "table",
+          "filters": [],
+          "global_query_id": ""
+        }
+      ],
+      "options": {
+        "footer": {
+          "show": false,
+          "reducer": ["sum"],
+          "countRows": false,
+          "fields": ""
+        },
+        "showHeader": true,
+        "cellHeight": "sm",
+        "frameIndex": 0,
+        "sortBy": [
+          { "displayName": "COV ID", "desc": false }
+        ]
+      },
+      "transformations": [],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "displayMode": "auto",
+            "inspect": false
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Seq Status" },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "PHASE_1": { "color": "blue",  "index": 0 },
+                      "NONE":    { "color": "grey",  "index": 1 }
+                    }
+                  }
+                ]
+              },
+              { "id": "custom.displayMode", "value": "color-background" }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Coverage Status" },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "WRITTEN": { "color": "green", "index": 0 },
+                      "NONE":    { "color": "grey",  "index": 1 }
+                    }
+                  }
+                ]
+              },
+              { "id": "custom.displayMode", "value": "color-background" }
+            ]
+          }
+        ]
+      },
+      "pluginVersion": "11.0.0"
     }
   ],
   "refresh": "5m",

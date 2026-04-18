@@ -1,0 +1,146 @@
+{
+  "ip_name": "buffered_axi_lite_uart",
+  "run_timestamp": "2026-04-18T14:27:23Z",
+  "d034_phase": "PHASE_1",
+  "total_goals": 19,
+  "goals": [
+    {
+      "id": "COV-001",
+      "name": "BAUD_TUNING",
+      "seq_status": "PHASE_1",
+      "coverage_status": "WRITTEN",
+      "vsl_steps": 3
+    },
+    {
+      "id": "COV-002",
+      "name": "CTRL.PARITY",
+      "seq_status": "NONE",
+      "coverage_status": "NONE",
+      "vsl_steps": 0
+    },
+    {
+      "id": "COV-003",
+      "name": "CTRL.STOP_BITS",
+      "seq_status": "NONE",
+      "coverage_status": "NONE",
+      "vsl_steps": 0
+    },
+    {
+      "id": "COV-004",
+      "name": "FIFO_STATUS.RX_LEVEL",
+      "seq_status": "NONE",
+      "coverage_status": "NONE",
+      "vsl_steps": 0
+    },
+    {
+      "id": "COV-005",
+      "name": "FIFO_STATUS.TX_LEVEL",
+      "seq_status": "NONE",
+      "coverage_status": "NONE",
+      "vsl_steps": 0
+    },
+    {
+      "id": "COV-006",
+      "name": "TIMEOUT_VAL",
+      "seq_status": "NONE",
+      "coverage_status": "NONE",
+      "vsl_steps": 0
+    },
+    {
+      "id": "COV-007",
+      "name": "INT_STATUS each_bit_independently",
+      "seq_status": "NONE",
+      "coverage_status": "NONE",
+      "vsl_steps": 0
+    },
+    {
+      "id": "COV-008",
+      "name": "INT_STATUS.OVERRUN && INT_STATUS.RX_FULL",
+      "seq_status": "NONE",
+      "coverage_status": "NONE",
+      "vsl_steps": 0
+    },
+    {
+      "id": "COV-009",
+      "name": "INT_STATUS.TIMEOUT && INT_STATUS.RX_THRESH",
+      "seq_status": "NONE",
+      "coverage_status": "NONE",
+      "vsl_steps": 0
+    },
+    {
+      "id": "COV-010",
+      "name": "AXI_BRESP",
+      "seq_status": "PHASE_1",
+      "coverage_status": "WRITTEN",
+      "vsl_steps": 2
+    },
+    {
+      "id": "COV-011",
+      "name": "AXI_RRESP",
+      "seq_status": "NONE",
+      "coverage_status": "NONE",
+      "vsl_steps": 0
+    },
+    {
+      "id": "COV-012",
+      "name": "AXI_WRITE_ORDER",
+      "seq_status": "NONE",
+      "coverage_status": "NONE",
+      "vsl_steps": 0
+    },
+    {
+      "id": "COV-013",
+      "name": "BAUD_TUNING_WRITE_WHILE_ENABLED",
+      "seq_status": "NONE",
+      "coverage_status": "NONE",
+      "vsl_steps": 0
+    },
+    {
+      "id": "COV-014",
+      "name": "SCRATCH",
+      "seq_status": "PHASE_1",
+      "coverage_status": "WRITTEN",
+      "vsl_steps": 2
+    },
+    {
+      "id": "COV-015",
+      "name": "RESET_VALUES",
+      "seq_status": "NONE",
+      "coverage_status": "NONE",
+      "vsl_steps": 0
+    },
+    {
+      "id": "COV-016",
+      "name": "UART_EN_CONTROL",
+      "seq_status": "NONE",
+      "coverage_status": "NONE",
+      "vsl_steps": 0
+    },
+    {
+      "id": "COV-017",
+      "name": "FRAME_STRUCTURAL",
+      "seq_status": "NONE",
+      "coverage_status": "NONE",
+      "vsl_steps": 0
+    },
+    {
+      "id": "COV-018",
+      "name": "READONLY_IGNORE",
+      "seq_status": "NONE",
+      "coverage_status": "NONE",
+      "vsl_steps": 0
+    },
+    {
+      "id": "COV-019",
+      "name": "INT_THRESH_FRAME",
+      "seq_status": "NONE",
+      "coverage_status": "NONE",
+      "vsl_steps": 0
+    }
+  ],
+  "summary": {
+    "WRITTEN": 3,
+    "NONE": 16,
+    "coverage_pct": 15.79
+  }
+}
