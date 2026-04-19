@@ -402,12 +402,14 @@ def _gen_if(d: str, ir: IR) -> str:
     return header + "\n".join(lines)
 
 
-def _gen_pkg(d: str, cov_stubs: list[str]) -> str:
+def _gen_pkg(d: str, cov_stubs: list[str], ral_enabled: bool = True) -> str:
     """Generate {design}_pkg.sv content.
 
     Args:
         d: Design name.
         cov_stubs: List of COV stub file basenames (e.g. ['seq_RCOV_001_foo.sv']).
+        ral_enabled: When True, import bfm_pkg so axi4_lite_base_seq and
+            balu_reg_model are visible to TB classes in this package.
 
     Returns:
         Full file content string.
@@ -422,11 +424,19 @@ def _gen_pkg(d: str, cov_stubs: list[str]) -> str:
         ],
         dependencies=[
             "UVM 1.2",
-            "all TB class files (see include list below)",
+            "bfm_pkg (sim/lib — must be compiled first)" if ral_enabled
+            else "all TB class files (see include list below)",
         ],
         portability="Simulator-independent",
         impl_status="generated",
     )
+
+    bfm_import = (
+        "    // Import sim/lib BFM package — provides axi4_lite_base_seq,\n"
+        "    // balu_reg_model, axi4_lite_reg_adapter, axi4_lite_predictor.\n"
+        "    // Compile bfm_pkg.sv before this package.\n"
+        "    import bfm_pkg::*;\n"
+    ) if ral_enabled else ""
 
     lines = [
         f"package {d}_pkg;",
@@ -434,6 +444,10 @@ def _gen_pkg(d: str, cov_stubs: list[str]) -> str:
         "    import uvm_pkg::*;",
         '    `include "uvm_macros.svh"',
         "",
+    ]
+    if bfm_import:
+        lines.append(bfm_import)
+    lines += [
         "    // Include the class files in strict dependency order",
         f'    `include "{d}_seq_item.sv"            // no dependencies',
         f'    `include "{d}_seqr.sv"                // depends on seq_item',
@@ -1251,34 +1265,72 @@ def _gen_coverage_subscriber(d: str, vplan_result) -> str:
 endclass"""
 
 
-def _gen_env(d: str) -> str:
+def _gen_env(d: str, ral_enabled: bool = True) -> str:
     """Generate {design}_env.sv content.
 
     Args:
         d: Design name.
+        ral_enabled: When True, wire balu_reg_model, adapter, and predictor into
+            the env and publish reg_model via uvm_config_db.
 
     Returns:
         Full file content string.
     """
+    if ral_enabled:
+        extra_deps = [
+            f"{d}_agent", f"{d}_scoreboard", f"{d}_coverage_subscriber",
+            "balu_reg_model", "axi4_lite_reg_adapter", "axi4_lite_predictor",
+        ]
+        extra_decls = f"""
+    balu_reg_model              reg_model;
+    axi4_lite_reg_adapter       adapter;
+    axi4_lite_predictor         predictor;"""
+        ral_build = f"""
+        reg_model = balu_reg_model::type_id::create("reg_model", this);
+        reg_model.build();
+        reg_model.reset();
+
+        adapter   = axi4_lite_reg_adapter::type_id::create("adapter",   this);
+
+        predictor = axi4_lite_predictor::type_id::create("predictor", this);
+        predictor.map     = reg_model.default_map;
+        predictor.adapter = adapter;"""
+        ral_connect = f"""
+        reg_model.default_map.set_sequencer(agent.seqr, adapter);
+        reg_model.default_map.set_auto_predict(0);
+        agent.mon.ap.connect(predictor.bus_in);
+        uvm_config_db #(balu_reg_model)::set(this, "*", "reg_model", reg_model);"""
+        functional_blocks = [
+            ("connect_phase", "Wire monitor AP to scoreboard, coverage, and RAL predictor"),
+        ]
+        impl_status = "generated-ral"
+    else:
+        extra_deps = [f"{d}_agent", f"{d}_scoreboard", f"{d}_coverage_subscriber"]
+        extra_decls = ""
+        ral_build = ""
+        ral_connect = ""
+        functional_blocks = [
+            ("connect_phase", "Wire monitor AP to scoreboard and coverage subscriber"),
+        ]
+        impl_status = "generated"
+
     header = _sv_file_header(
         filename=f"{d}_env.sv",
         brief=(
             f"{d} UVM environment \u2014 top-level env instantiating agent, "
             "scoreboard, and coverage."
         ),
-        functional_blocks=[
-            ("connect_phase", "Wire monitor AP to scoreboard and coverage subscriber"),
-        ],
-        dependencies=[f"{d}_agent", f"{d}_scoreboard", f"{d}_coverage_subscriber"],
+        functional_blocks=functional_blocks,
+        dependencies=extra_deps,
         portability="Simulator-independent",
-        impl_status="generated",
+        impl_status=impl_status,
     )
     return header + f"""class {d}_env extends uvm_env;
     `uvm_component_utils({d}_env)
 
     {d}_agent                   agent;
     {d}_scoreboard              sb;
-    {d}_coverage_subscriber     cov;
+    {d}_coverage_subscriber     cov;{extra_decls}
 
     function new(string name, uvm_component parent);
         super.new(name, parent);
@@ -1288,12 +1340,12 @@ def _gen_env(d: str) -> str:
         super.build_phase(phase);
         agent = {d}_agent::type_id::create("agent", this);
         sb    = {d}_scoreboard::type_id::create("sb", this);
-        cov   = {d}_coverage_subscriber::type_id::create("cov", this);
+        cov   = {d}_coverage_subscriber::type_id::create("cov", this);{ral_build}
     endfunction
 
     function void connect_phase(uvm_phase phase);
         agent.mon.ap.connect(sb.analysis_export);
-        agent.mon.ap.connect(cov.analysis_export);
+        agent.mon.ap.connect(cov.analysis_export);{ral_connect}
     endfunction
 
 endclass"""
@@ -1749,12 +1801,15 @@ class {class_name} extends axi4_lite_base_seq;
 endclass"""
 
 
-def _gen_tb_top(d: str, ir: IR) -> str:
+def _gen_tb_top(d: str, ir: IR, ral_enabled: bool = True) -> str:
     """Generate tb_top.sv content.
 
     Args:
         d: Design name.
         ir: Populated IR with port list.
+        ral_enabled: When True, instantiate axi4_lite_if (from sim/lib) and
+            wire it to the DUT using s_axi_* port names. Also adds uart_loopback
+            wire and registers virtual axi4_lite_if in uvm_config_db.
 
     Returns:
         Full file content string.
@@ -1803,6 +1858,92 @@ def _gen_tb_top(d: str, ir: IR) -> str:
         reset_init = f"        intf.{reset_name} = 1'b1;"
         reset_deassert = f"        intf.{reset_name} = 1'b0;"
 
+    if ral_enabled:
+        header = _sv_file_header(
+            filename="tb_top.sv",
+            brief=(
+                "tb_top \u2014 top-level testbench module; DUT instantiation, "
+                "clock/reset, UVM run_test()."
+            ),
+            functional_blocks=[
+                ("DUT instantiation", "AXI-Lite ports connected via axi4_lite_if"),
+                ("Clock/reset", "100 MHz clock; synchronous active-low reset (20 cycles)"),
+                ("UVM config_db", "Virtual axi4_lite_if registration"),
+            ],
+            dependencies=["uvm_pkg", f"{d}_pkg", "axi4_lite_if"],
+            portability="Vivado/Questa/Icarus",
+            impl_status="generated-ral",
+        )
+        return header + f"""`timescale 1ns/1ps
+module tb_top;
+    import uvm_pkg::*;
+    import bfm_pkg::*;
+    import {d}_pkg::*;
+    `include "uvm_macros.svh"
+
+    // Free-running 100 MHz clock (10 ns period)
+    logic clk;
+    logic rst_n;
+    initial clk = 1'b0;
+    always #5 clk = ~clk;
+
+    // UART loopback — connect uart_tx directly to uart_rx for Phase 1 testing
+    logic uart_loopback;
+
+    // AXI4-Lite interface from sim/lib
+    axi4_lite_if #(32, 32) axi_if (
+        .ACLK   (clk),
+        .ARESETn(rst_n)
+    );
+
+    // DUT instantiation — BALU RTL AXI-Lite slave port names
+    {d} dut (
+        .s_axi_aclk   (clk),
+        .s_axi_aresetn(rst_n),
+        .s_axi_awaddr (axi_if.AWADDR),
+        .s_axi_awvalid(axi_if.AWVALID),
+        .s_axi_awready(axi_if.AWREADY),
+        .s_axi_wdata  (axi_if.WDATA),
+        .s_axi_wstrb  (axi_if.WSTRB),
+        .s_axi_wvalid (axi_if.WVALID),
+        .s_axi_wready (axi_if.WREADY),
+        .s_axi_bresp  (axi_if.BRESP),
+        .s_axi_bvalid (axi_if.BVALID),
+        .s_axi_bready (axi_if.BREADY),
+        .s_axi_araddr (axi_if.ARADDR),
+        .s_axi_arvalid(axi_if.ARVALID),
+        .s_axi_arready(axi_if.ARREADY),
+        .s_axi_rdata  (axi_if.RDATA),
+        .s_axi_rresp  (axi_if.RRESP),
+        .s_axi_rvalid (axi_if.RVALID),
+        .s_axi_rready (axi_if.RREADY),
+        .uart_tx      (uart_loopback),
+        .uart_rx      (uart_loopback)
+    );
+
+    // Clock/reset generation
+    initial begin
+        rst_n = 1'b0;
+        repeat (20) @(posedge clk);
+        rst_n = 1'b1;
+    end
+
+    // Register virtual interface and launch UVM test
+    initial begin
+        uvm_config_db #(virtual axi4_lite_if)::set(
+            null, "uvm_test_top.*", "vif", axi_if);
+        run_test();
+    end
+
+    // Waveform dump
+    initial begin
+        $dumpfile("tb_top.vcd");
+        $dumpvars(0, tb_top);
+    end
+
+endmodule"""
+
+    # ral_enabled=False — original portable interface
     header = _sv_file_header(
         filename="tb_top.sv",
         brief=(
@@ -1863,17 +2004,107 @@ module tb_top;
 endmodule"""
 
 
-def _gen_build_tcl(d: str, ir: IR) -> str:
+def _gen_build_tcl(d: str, ir: IR, ral_enabled: bool = True) -> str:
     """Generate scripts/vivado/build.tcl content.
 
     Args:
         d: Design name.
         ir: Populated IR (used for HDL language detection).
+        ral_enabled: When True, emit the Session 2 expanded compile order that
+            compiles each sim/lib file individually, sets RTL_DIR, and includes
+            the xvhdl note for VHDL DUTs.
 
     Returns:
         Full file content string.
     """
     is_vhdl = (ir.hdl_language.lower() in ("vhdl", "vhd"))
+
+    header = _tcl_file_header(
+        filename="build.tcl",
+        brief=(
+            f"{d} Vivado/XSIM build and run script \u2014 "
+            "three-file compile model per STD-003."
+        ),
+        tool="Vivado 2024.x / XSIM",
+        impl_status="generated",
+    )
+
+    if ral_enabled:
+        # Always include both xvhdl and xvlog notes so the engineer can
+        # uncomment the appropriate line for their RTL language.
+        # BALU is VHDL — xvhdl is the correct choice for this IP.
+        dut_note = (
+            "# NOTE: User must provide RTL source path before running.\n"
+            "# Uncomment ONE of the lines below depending on RTL language.\n"
+            "# BALU is VHDL — use xvhdl not xvlog for RTL compilation:\n"
+            "# xvhdl --2008 --work work [glob $RTL_DIR/*.vhd]\n"
+            "# For SV RTL:\n"
+            "# xvlog --sv --work work [glob $RTL_DIR/*.sv]"
+        )
+
+        return header + f"""set DESIGN   {d}
+set SNAPSHOT balu_sim_snapshot
+
+# Path anchors — all relative to this script's location (scripts/vivado)
+set REPO_ROOT [file normalize [file join [file dirname [info script]] ../../../../../]]
+set SIM_LIB   [file join $REPO_ROOT sim/lib]
+set TB_DIR    [file join $REPO_ROOT output/{d}_ral_session2/tb]
+set RTL_DIR   [file join $REPO_ROOT ip/{d}/rtl]
+
+proc run_cmd {{cmd}} {{
+    if {{[catch {{exec {{*}}$cmd >@stdout 2>@stderr}} msg]}} {{
+        puts "ERROR: Command failed:"
+        puts "  $cmd"
+        puts $msg
+        exit 1
+    }}
+}}
+
+# ── Step 1: Compile sim/lib BFM and RAL library ──────────────────────────────
+puts "--- Step 1: Compiling sim/lib ---"
+run_cmd [list xvlog --sv --uvm_version 1.2 -L uvm --work work \\
+    --include $REPO_ROOT \\
+    [file join $SIM_LIB bfm/axi4_lite_if.sv] \\
+    [file join $SIM_LIB bfm/axi4_lite_seq_item.sv] \\
+    [file join $SIM_LIB bfm/axi4_lite_master_bfm.sv] \\
+    [file join $SIM_LIB ral/axi4_lite_reg_adapter.sv] \\
+    [file join $SIM_LIB ral/axi4_lite_predictor.sv] \\
+    [file join $SIM_LIB ral/balu_reg_model.sv] \\
+    [file join $SIM_LIB seq/axi4_lite_base_seq.sv] \\
+    [file join $SIM_LIB pkg/bfm_pkg.sv]]
+
+# ── Step 2: Compile DUT ───────────────────────────────────────────────────────
+puts "--- Step 2: Compiling DUT ---"
+{dut_note}
+
+# ── Step 3: Compile TB ────────────────────────────────────────────────────────
+puts "--- Step 3: Compiling TB ---"
+run_cmd [list xvlog --sv --uvm_version 1.2 -L uvm --work work \\
+    --include $TB_DIR \\
+    --include $REPO_ROOT \\
+    [file join $TB_DIR ${{DESIGN}}_pkg.sv] \\
+    [file join $TB_DIR tb_top.sv]]
+
+# ── Step 4: Elaborate ─────────────────────────────────────────────────────────
+puts "--- Step 4: Elaborating ---"
+run_cmd [list xelab -L uvm \\
+    work.tb_top \\
+    -s $SNAPSHOT \\
+    -timescale 1ns/1ps \\
+    -debug typical]
+
+# ── Step 5: Simulate ──────────────────────────────────────────────────────────
+puts "--- Step 5: Simulating ---"
+run_cmd [list xsim $SNAPSHOT \\
+    -testplusarg UVM_TESTNAME=${{DESIGN}}_smoke_test \\
+    -testplusarg UVM_VERBOSITY=UVM_LOW \\
+    -runall \\
+    -log xsim.log]
+
+puts "Simulation complete. Log: xsim.log"
+"""
+
+    # ral_enabled=False — original single-pass build script
     if is_vhdl:
         dut_compile = (
             "puts \"--- Compiling DUT ---\"\n"
@@ -1887,15 +2118,6 @@ def _gen_build_tcl(d: str, ir: IR) -> str:
             "    [file join $DUT_DIR ${DESIGN}.sv]]"
         )
 
-    header = _tcl_file_header(
-        filename="build.tcl",
-        brief=(
-            f"{d} Vivado/XSIM build and run script \u2014 "
-            "three-file compile model per STD-003."
-        ),
-        tool="Vivado 2024.x / XSIM",
-        impl_status="generated",
-    )
     return header + f"""set DESIGN   {d}
 set SNAPSHOT ${{DESIGN}}_snapshot
 
@@ -1947,7 +2169,9 @@ puts "Simulation complete. Log: xsim.log"
 """
 
 
-def _gen_all_content(ir: IR, vplan_result) -> dict[str, str]:
+def _gen_all_content(
+    ir: IR, vplan_result, ral_enabled: bool = True
+) -> dict[str, str]:
     """Generate all UVM TB file contents as a dict of filename -> content.
 
     This is the internal generation engine used by both generate_uvm_tb()
@@ -1956,6 +2180,8 @@ def _gen_all_content(ir: IR, vplan_result) -> dict[str, str]:
     Args:
         ir: Populated IR for the design.
         vplan_result: VplanParseResult or None.
+        ral_enabled: When True, include RAL wiring in env.sv, axi4_lite_if in
+            tb_top.sv, and expanded compile steps in build.tcl.
 
     Returns:
         Dict mapping flat filename to file content string.
@@ -2004,7 +2230,7 @@ def _gen_all_content(ir: IR, vplan_result) -> dict[str, str]:
 
     files: dict[str, str] = {
         f"{d}_if.sv":                   _gen_if(d, ir),
-        f"{d}_pkg.sv":                  _gen_pkg(d, cov_stub_filenames),
+        f"{d}_pkg.sv":                  _gen_pkg(d, cov_stub_filenames, ral_enabled),
         f"{d}_seq_item.sv":             _gen_seq_item(d),
         f"{d}_seqr.sv":                 _gen_seqr(d),
         f"{d}_base_seq.sv":             _gen_base_seq(d),
@@ -2013,12 +2239,12 @@ def _gen_all_content(ir: IR, vplan_result) -> dict[str, str]:
         f"{d}_agent.sv":                _gen_agent(d),
         f"{d}_scoreboard.sv":           _gen_scoreboard(d, vplan_result),
         f"{d}_coverage_subscriber.sv":  _gen_coverage_subscriber(d, vplan_result),
-        f"{d}_env.sv":                  _gen_env(d),
+        f"{d}_env.sv":                  _gen_env(d, ral_enabled),
         f"{d}_test.sv":                 _gen_test(d),
         f"{d}_smoke_seq.sv":            _gen_smoke_seq(d),
         f"{d}_regression_test.sv":      _gen_regression_test(d, cov_stub_class_vars),
-        "tb_top.sv":                    _gen_tb_top(d, ir),
-        "build.tcl":                    _gen_build_tcl(d, ir),
+        "tb_top.sv":                    _gen_tb_top(d, ir, ral_enabled),
+        "build.tcl":                    _gen_build_tcl(d, ir, ral_enabled),
     }
 
     # Add COV stub files
@@ -2027,7 +2253,9 @@ def _gen_all_content(ir: IR, vplan_result) -> dict[str, str]:
     return files
 
 
-def generate_uvm_tb(ir: IR, vplan_result, out_dir: str) -> list[str]:
+def generate_uvm_tb(
+    ir: IR, vplan_result, out_dir: str, ral_enabled: bool = True
+) -> list[str]:
     """Generate all STD-003B UVM testbench files under out_dir/tb/.
 
     Creates the 15 required files (plus one per COV item if vplan_result
@@ -2042,6 +2270,8 @@ def generate_uvm_tb(ir: IR, vplan_result, out_dir: str) -> list[str]:
         vplan_result: VplanParseResult or None; drives scoreboard shadow init,
             coverage bins, and COV stub file generation.
         out_dir: Root output directory. TB files go under out_dir/tb/.
+        ral_enabled: When True (default), include RAL wiring in env, tb_top,
+            build.tcl, and pkg. Pass False for plain scaffold without RAL.
 
     Returns:
         List of file paths that were written (skipped files not included).
@@ -2051,7 +2281,7 @@ def generate_uvm_tb(ir: IR, vplan_result, out_dir: str) -> list[str]:
     os.makedirs(tb_dir, exist_ok=True)
     os.makedirs(scripts_dir, exist_ok=True)
 
-    all_content = _gen_all_content(ir, vplan_result)
+    all_content = _gen_all_content(ir, vplan_result, ral_enabled)
     written: list[str] = []
 
     for filename, content in all_content.items():
