@@ -24,7 +24,7 @@
 // Stimulus strategy  : TX FIFO occupancy driven to 0, TX_THRESH-1, TX_THRESH, TX_THRESH+1, and G_FIFO_DEPTH to verify status flags and write-ignore behavior.
 // Boundary values    : 0 (TX_EMPTY), TX_THRESH-1, TX_THRESH, TX_THRESH+1 (interrupt fires), G_FIFO_DEPTH (full)
 
-class seq_RCOV005_fifo_status_tx_level extends axi4_lite_base_seq;
+class seq_RCOV005_fifo_status_tx_level extends buffered_axi_lite_uart_base_seq;
 
     `uvm_object_utils(seq_RCOV005_fifo_status_tx_level)
 
@@ -34,16 +34,15 @@ class seq_RCOV005_fifo_status_tx_level extends axi4_lite_base_seq;
 
     virtual task body();
         uvm_reg_data_t rdata;
-        // Step 1: WRITE
-        reg_write(reg_model.CTRL, 0x01);
-        // Step 2: WRITE
-        reg_write(reg_model.TX_DATA, 0xAA);
-        // Step 3: WRITE
-        reg_write(reg_model.TX_DATA, 0x55);
-        // Step 4: WRITE
-        reg_write(reg_model.TX_DATA, 0xFF);
-        // Step 5: READ
-        reg_read(reg_model.TX_FIFO, rdata);
+        // CTRL (0x00): UART_EN(7) only — TX_EN not set so TX FIFO does not drain
+        axi_write(32'h00000000, 32'h80);
+        // Write 3 bytes to TX_DATA (0x28); with TX_EN=0 they queue in TX FIFO
+        axi_write(32'h00000028, 32'hAA);
+        axi_write(32'h00000028, 32'h55);
+        axi_write(32'h00000028, 32'hFF);
+        // Read FIFO_STATUS (0x10): TX_LEVEL in [15:8]
+        axi_read(32'h00000010, rdata);
+        `uvm_info(get_name(), $sformatf("FIFO_STATUS = 0x%0h (TX_LEVEL=%0d)", rdata, rdata[15:8]), UVM_LOW)
     endtask : body
 
 endclass

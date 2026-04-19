@@ -9,14 +9,14 @@
 // Standard   : SystemVerilog IEEE 1800-2017 / UVM 1.2
 //
 // Functional blocks:
-//   DUT instantiation  : AXI-Lite ports connected via axi4_lite_if
+//   DUT instantiation  : AXI-Lite ports connected via balu_axi_if
 //   Clock/reset        : 100 MHz clock; synchronous active-low reset (20 cycles)
-//   UVM config_db      : Virtual axi4_lite_if registration
+//   UVM config_db      : Virtual balu_axi_if registration
 //
 // Dependencies:
 //   uvm_pkg
 //   buffered_axi_lite_uart_pkg
-//   axi4_lite_if
+//   balu_axi_if
 //
 // Portability    : Vivado/Questa/Icarus
 // Impl. status   : generated-ral
@@ -27,7 +27,6 @@
 `timescale 1ns/1ps
 module tb_top;
     import uvm_pkg::*;
-    import bfm_pkg::*;
     import buffered_axi_lite_uart_pkg::*;
     `include "uvm_macros.svh"
 
@@ -41,16 +40,16 @@ module tb_top;
     logic uart_loopback;
 
     // AXI4-Lite interface from sim/lib
-    axi4_lite_if #(32, 32) axi_if (
+    balu_axi_if axi_if (
         .ACLK   (clk),
         .ARESETn(rst_n)
     );
 
     // DUT instantiation — BALU RTL AXI-Lite slave port names
     buffered_axi_lite_uart dut (
-        .s_axi_aclk   (clk),
-        .s_axi_aresetn(rst_n),
-        .s_axi_awaddr (axi_if.AWADDR),
+        .axi_aclk   (clk),
+        .axi_aresetn(rst_n),
+        .s_axi_awaddr (axi_if.AWADDR[7:0]),
         .s_axi_awvalid(axi_if.AWVALID),
         .s_axi_awready(axi_if.AWREADY),
         .s_axi_wdata  (axi_if.WDATA),
@@ -60,7 +59,7 @@ module tb_top;
         .s_axi_bresp  (axi_if.BRESP),
         .s_axi_bvalid (axi_if.BVALID),
         .s_axi_bready (axi_if.BREADY),
-        .s_axi_araddr (axi_if.ARADDR),
+        .s_axi_araddr (axi_if.ARADDR[7:0]),
         .s_axi_arvalid(axi_if.ARVALID),
         .s_axi_arready(axi_if.ARREADY),
         .s_axi_rdata  (axi_if.RDATA),
@@ -80,7 +79,7 @@ module tb_top;
 
     // Register virtual interface and launch UVM test
     initial begin
-        uvm_config_db #(virtual axi4_lite_if)::set(
+        uvm_config_db #(virtual balu_axi_if)::set(
             null, "uvm_test_top.*", "vif", axi_if);
         run_test();
     end

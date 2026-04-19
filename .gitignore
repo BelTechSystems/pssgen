@@ -42,6 +42,7 @@ ir.json
 .env
 .env.*
 *.env
+*.ps1
 
 # ── Vivado / XSIM build artifacts ────────────────────────────────────
 *.jou
@@ -52,6 +53,7 @@ xsim.dir/
 *.str
 webtalk*.xml
 vivado_*.backup.jou
+vivado*.backup.*
 
 # ── Questa / ModelSim artifacts ──────────────────────────────────────
 work/

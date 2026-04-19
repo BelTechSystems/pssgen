@@ -24,7 +24,7 @@
 // Stimulus strategy  : Assert then deassert reset; read all 12 registers and compare each field to the reset value specified in Table 8-x.
 // Boundary values    : 12 register reset values per spec Table 8-x
 
-class seq_RCOV015_reset_values extends axi4_lite_base_seq;
+class seq_RCOV015_reset_values extends buffered_axi_lite_uart_base_seq;
 
     `uvm_object_utils(seq_RCOV015_reset_values)
 
@@ -35,16 +35,16 @@ class seq_RCOV015_reset_values extends axi4_lite_base_seq;
     virtual task body();
         uvm_reg_data_t rdata;
         // Step 1: WRITE
-        reg_write(reg_model.CTRL, 0x80);
+        axi_write(32'h00000000, 'h80);
         // Step 2: WAIT
-        repeat(10) @(posedge vif.clk);
+        repeat(10) @(posedge vif.ACLK);
         // Step 3: READ
-        reg_read(reg_model.CTRL, rdata);
+        axi_read(32'h00000000, rdata);
         // Step 4: READ
-        reg_read(reg_model.STATUS, rdata);
-        `uvm_info(get_name(), $sformatf("Read 0x%0h, expect 0x%0h", rdata, 0x01), UVM_LOW)
+        axi_read(32'h00000004, rdata);
+        `uvm_info(get_name(), $sformatf("Read 0x%0h, expect 0x%0h", rdata, 'h01), UVM_LOW)
         // Step 5: READ
-        reg_read(reg_model.BAUD, rdata);
+        axi_read(32'h00000008, rdata);
     endtask : body
 
 endclass

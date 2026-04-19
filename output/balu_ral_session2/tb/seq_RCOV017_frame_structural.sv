@@ -24,7 +24,7 @@
 // Stimulus strategy  : Structural inspection: verify 8-bit data frames transmitted and received, AXI data width=32, address width sufficient, single-beat transactions only.
 // Boundary values    : 8-bit frames; FIFO depth=G_FIFO_DEPTH; AXI data width=32; no burst transactions
 
-class seq_RCOV017_frame_structural extends axi4_lite_base_seq;
+class seq_RCOV017_frame_structural extends buffered_axi_lite_uart_base_seq;
 
     `uvm_object_utils(seq_RCOV017_frame_structural)
 
@@ -34,17 +34,19 @@ class seq_RCOV017_frame_structural extends axi4_lite_base_seq;
 
     virtual task body();
         uvm_reg_data_t rdata;
-        // Step 1: WRITE
-        reg_write(reg_model.FRAME, 0x08);
-        // Step 2: READ
-        reg_read(reg_model.FRAME, rdata);
-        `uvm_info(get_name(), $sformatf("Read 0x%0h, expect 0x%0h", rdata, 0x08), UVM_LOW)
-        // Step 3: WRITE
-        reg_write(reg_model.LOOPBACK, 0x01);
-        // Step 4: WRITE
-        reg_write(reg_model.CTRL, 0x03);
-        // Step 5: WRITE
-        reg_write(reg_model.TX_DATA, 0xA5);
+        // CTRL (0x00): UART_EN(7)+TX_EN(6)+RX_EN(5)+LOOP_EN(4)+STOP_BITS(1) = 0xF2
+        // Tests 2-stop-bit frame format in loopback
+        axi_write(32'h00000000, 32'hF2);
+        // Read CTRL back to verify frame config accepted
+        axi_read(32'h00000000, rdata);
+        `uvm_info(get_name(), $sformatf("CTRL = 0x%0h, expect 0x%0h", rdata, 'hF2), UVM_LOW)
+        // TX byte via TX_DATA (0x28)
+        axi_write(32'h00000028, 32'hA5);
+        // Poll STATUS (0x04): wait until RX_EMPTY(bit6) = 0; 1 byte at 115200 baud ≈ 8680 cycles
+        axi_poll(32'h00000004, 32'h40, 32'h00, 3000);
+        // Read RX_DATA (0x2C)
+        axi_read(32'h0000002C, rdata);
+        `uvm_info(get_name(), $sformatf("RX_DATA = 0x%0h, expect 0x%0h", rdata, 'hA5), UVM_LOW)
     endtask : body
 
 endclass

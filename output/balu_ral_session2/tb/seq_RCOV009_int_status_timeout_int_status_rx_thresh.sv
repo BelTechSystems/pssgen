@@ -24,7 +24,7 @@
 // Stimulus strategy  : Set TIMEOUT_VAL non-zero, fill RX FIFO above RX_THRESH, then idle until timeout fires; verify both INT_STATUS.TIMEOUT and INT_STATUS.RX_THRESH set simultaneously.
 // Boundary values    : RX FIFO > RX_THRESH (threshold set), then idle until timeout fires while threshold remains set
 
-class seq_RCOV009_int_status_timeout_int_status_rx_thresh extends axi4_lite_base_seq;
+class seq_RCOV009_int_status_timeout_int_status_rx_thresh extends buffered_axi_lite_uart_base_seq;
 
     `uvm_object_utils(seq_RCOV009_int_status_timeout_int_status_rx_thresh)
 
@@ -33,18 +33,18 @@ class seq_RCOV009_int_status_timeout_int_status_rx_thresh extends axi4_lite_base
     endfunction
 
     virtual task body();
-        // Step 1: WRITE
-        reg_write(reg_model.TIMEOUT, 0x0010);
-        // Step 2: WRITE
-        reg_write(reg_model.IER, 0x12);
-        // Step 3: WRITE
-        reg_write(reg_model.LOOPBACK, 0x01);
-        // Step 4: WRITE
-        reg_write(reg_model.CTRL, 0x03);
-        // Step 5: WRITE
-        reg_write(reg_model.TX_DATA, 0xAB);
-        // Step 6: POLL
-        reg_poll(reg_model.ISR, 0x10, 0x10, 2000);
+        // Step 1: TIMEOUT_VAL (0x14): set non-zero to enable timeout
+        axi_write(32'h00000014, 32'h0010);
+        // Step 2: FIFO_CTRL (0x0C): set RX_THRESH=1 so 1 received byte fires IS_RX_THRESH
+        axi_write(32'h0000000C, 32'h0801);
+        // Step 3: INT_ENABLE (0x18): IE_TIMEOUT(bit7=0x80) + IE_RX_THRESH(bit5=0x20)
+        axi_write(32'h00000018, 32'hA0);
+        // Step 4: CTRL (0x00): UART_EN(7)+TX_EN(6)+RX_EN(5)+LOOP_EN(4) = 0xF0
+        axi_write(32'h00000000, 32'hF0);
+        // Step 5: Write byte via TX_DATA (0x28) — loopback puts it in RX FIFO above thresh
+        axi_write(32'h00000028, 32'hAB);
+        // Step 6: Poll INT_STATUS (0x1C): wait for IS_RX_THRESH(bit5=0x20); 1 byte ≈ 8680 cycles
+        axi_poll(32'h0000001C, 32'h20, 32'h20, 3000);
     endtask : body
 
 endclass

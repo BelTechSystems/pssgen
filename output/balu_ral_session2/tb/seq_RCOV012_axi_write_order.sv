@@ -24,7 +24,7 @@
 // Stimulus strategy  : Issue AXI write with AWVALID first then WVALID, then repeat with WVALID first then AWVALID; verify correct response in both orderings.
 // Boundary values    : AWVALID_FIRST ordering, WVALID_FIRST ordering
 
-class seq_RCOV012_axi_write_order extends axi4_lite_base_seq;
+class seq_RCOV012_axi_write_order extends buffered_axi_lite_uart_base_seq;
 
     `uvm_object_utils(seq_RCOV012_axi_write_order)
 

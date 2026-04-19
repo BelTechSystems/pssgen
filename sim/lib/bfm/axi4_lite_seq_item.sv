@@ -24,29 +24,20 @@
 class axi4_lite_seq_item extends uvm_sequence_item;
 
     // ── Transaction kind ─────────────────────────────────────────────────────
-    typedef enum logic { READ = 1'b0, WRITE = 1'b1 } kind_e;
+    typedef enum bit { READ = 1'b0, WRITE = 1'b1 } kind_e;
 
     // ── Randomisable stimulus fields ─────────────────────────────────────────
     rand kind_e        kind;
-    rand logic [31:0]  addr;
-    rand logic [31:0]  data;
-    rand logic [3:0]   strb;
+    rand bit [31:0]  addr;
+    rand bit [31:0]  data;
+    rand bit [3:0]   strb;
 
     // ── Response (filled by driver / BFM) ────────────────────────────────────
-    logic [1:0]        resp;
+    bit [1:0]        resp;
 
-    // ── Constraints ──────────────────────────────────────────────────────────
-    // AXI-Lite registers are 32-bit aligned
-    constraint c_addr_align { addr[1:0] == 2'b00; }
-
-    // BALU register map: offsets 0x00 to 0x34
-    constraint c_addr_balu  { addr inside {[32'h0000_0000 : 32'h0000_0034]}; }
-
-    // Full-word strobe default for writes; zero for reads
-    constraint c_strb_by_kind {
-        if (kind == WRITE) strb == 4'hF;
-        else               strb == 4'h0;
-    }
+    // Constraints omitted: xelab 2025.1 crashes when a package contains two
+    // constrained uvm_sequence_item subclasses. RAL adapter sets fields
+    // directly; no stimulus randomization needed on this item.
 
     // ── UVM automation ────────────────────────────────────────────────────────
     `uvm_object_utils_begin(axi4_lite_seq_item)

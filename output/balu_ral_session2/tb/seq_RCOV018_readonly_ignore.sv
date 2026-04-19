@@ -24,7 +24,7 @@
 // Stimulus strategy  : Write to each read-only register (STATUS, FIFO_STATUS, INT_STATUS, INT_CLEAR, TX_DATA reads, RX_DATA writes); read back and verify state unchanged.
 // Boundary values    : Write all-ones to each RO register; compare pre- and post-write readback for each
 
-class seq_RCOV018_readonly_ignore extends axi4_lite_base_seq;
+class seq_RCOV018_readonly_ignore extends buffered_axi_lite_uart_base_seq;
 
     `uvm_object_utils(seq_RCOV018_readonly_ignore)
 
@@ -34,18 +34,18 @@ class seq_RCOV018_readonly_ignore extends axi4_lite_base_seq;
 
     virtual task body();
         uvm_reg_data_t rdata;
-        // Step 1: READ
-        reg_read(reg_model.STATUS, rdata);
-        // Step 2: WRITE
-        reg_write(reg_model.STATUS, 0xFF);
-        // Step 3: READ
-        reg_read(reg_model.STATUS, rdata);
-        // Step 4: READ
-        reg_read(reg_model.TX_FIFO, rdata);
-        // Step 5: WRITE
-        reg_write(reg_model.TX_FIFO, 0xFF);
-        // Step 6: READ
-        reg_read(reg_model.TX_FIFO, rdata);
+        // Step 1: Read STATUS (0x04, RO)
+        axi_read(32'h00000004, rdata);
+        // Step 2: Write to STATUS (0x04, RO) — RTL returns SLVERR, state unchanged
+        axi_write(32'h00000004, 32'hFF);
+        // Step 3: Read STATUS again — value unchanged
+        axi_read(32'h00000004, rdata);
+        // Step 4: Read FIFO_STATUS (0x10, RO)
+        axi_read(32'h00000010, rdata);
+        // Step 5: Write to FIFO_STATUS (0x10, RO) — RTL returns SLVERR, state unchanged
+        axi_write(32'h00000010, 32'hFF);
+        // Step 6: Read FIFO_STATUS again — value unchanged
+        axi_read(32'h00000010, rdata);
     endtask : body
 
 endclass

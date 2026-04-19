@@ -24,7 +24,7 @@
 // Stimulus strategy  : Assert UART_EN, write a new value to BAUD_TUNING, read back and verify original value unchanged; confirms silent-ignore while enabled.
 // Boundary values    : UART_EN=1, write new value, readback must equal original value
 
-class seq_RCOV013_baud_tuning_write_while_enabled extends axi4_lite_base_seq;
+class seq_RCOV013_baud_tuning_write_while_enabled extends buffered_axi_lite_uart_base_seq;
 
     `uvm_object_utils(seq_RCOV013_baud_tuning_write_while_enabled)
 
@@ -34,14 +34,14 @@ class seq_RCOV013_baud_tuning_write_while_enabled extends axi4_lite_base_seq;
 
     virtual task body();
         uvm_reg_data_t rdata;
-        // Step 1: WRITE
-        reg_write(reg_model.BAUD, 0x000010D6);
-        // Step 2: WRITE
-        reg_write(reg_model.CTRL, 0x03);
-        // Step 3: WRITE
-        reg_write(reg_model.BAUD, 0x00000001);
-        // Step 4: READ
-        reg_read(reg_model.BAUD, rdata);
+        // Step 1: WRITE BAUD_TUNING (0x08) before enabling
+        axi_write(32'h00000008, 32'h000010D6);
+        // Step 2: CTRL (0x00): set UART_EN(bit7=0x80) — blocks further BAUD_TUNING writes
+        axi_write(32'h00000000, 32'h80);
+        // Step 3: Attempt BAUD_TUNING write while UART_EN=1 — RTL silently ignores this
+        axi_write(32'h00000008, 32'h00000001);
+        // Step 4: Read BAUD_TUNING back — expect original value 0x000010D6 unchanged
+        axi_read(32'h00000008, rdata);
     endtask : body
 
 endclass

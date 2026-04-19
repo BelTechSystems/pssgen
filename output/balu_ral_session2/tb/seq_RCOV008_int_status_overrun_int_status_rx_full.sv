@@ -24,7 +24,7 @@
 // Stimulus strategy  : Fill RX FIFO to capacity then transmit additional byte to force overrun; verify overrun byte discarded and FIFO content unchanged.
 // Boundary values    : RX FIFO at exactly G_FIFO_DEPTH, then one additional received byte
 
-class seq_RCOV008_int_status_overrun_int_status_rx_full extends axi4_lite_base_seq;
+class seq_RCOV008_int_status_overrun_int_status_rx_full extends buffered_axi_lite_uart_base_seq;
 
     `uvm_object_utils(seq_RCOV008_int_status_overrun_int_status_rx_full)
 
@@ -34,18 +34,17 @@ class seq_RCOV008_int_status_overrun_int_status_rx_full extends axi4_lite_base_s
 
     virtual task body();
         uvm_reg_data_t rdata;
-        // Step 1: WRITE
-        reg_write(reg_model.LOOPBACK, 0x01);
-        // Step 2: WRITE
-        reg_write(reg_model.IER, 0x48);
-        // Step 3: WRITE
-        reg_write(reg_model.CTRL, 0x03);
-        // Step 4: WRITE
-        reg_write(reg_model.TX_DATA, 0xFF);
-        // Step 5: POLL
-        reg_poll(reg_model.STATUS, 0x08, 0x08, 2000);
-        // Step 6: READ
-        reg_read(reg_model.ISR, rdata);
+        // Step 1: INT_ENABLE (0x18): IE_RX_FULL(bit3=0x08) + IE_OVERRUN(bit0=0x01)
+        axi_write(32'h00000018, 32'h09);
+        // Step 2: CTRL (0x00): UART_EN(7)+TX_EN(6)+RX_EN(5)+LOOP_EN(4) = 0xF0
+        axi_write(32'h00000000, 32'hF0);
+        // Step 3: Write 17 bytes via TX_DATA (0x28); 16 fill RX FIFO, 17th causes overrun
+        repeat(17) axi_write(32'h00000028, 32'hFF);
+        // Step 4: Poll STATUS (0x04): wait for RX_FULL(bit7=0x80); 16 bytes * 8680 cycles
+        axi_poll(32'h00000004, 32'h80, 32'h80, 30000);
+        // Step 5: Read INT_STATUS (0x1C) to observe flags
+        axi_read(32'h0000001C, rdata);
+        `uvm_info(get_name(), $sformatf("INT_STATUS = 0x%0h", rdata), UVM_LOW)
     endtask : body
 
 endclass

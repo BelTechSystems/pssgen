@@ -24,7 +24,7 @@
 // Stimulus strategy  : All four parity modes (00/01/10/11) exercised independently in LOOP_EN loopback; inject parity error bit for odd and even modes.
 // Boundary values    : 2'b00 (none), 2'b01 (odd+error inject), 2'b10 (even+error inject), 2'b11 (mark)
 
-class seq_RCOV002_ctrl_parity extends axi4_lite_base_seq;
+class seq_RCOV002_ctrl_parity extends buffered_axi_lite_uart_base_seq;
 
     `uvm_object_utils(seq_RCOV002_ctrl_parity)
 
@@ -34,19 +34,15 @@ class seq_RCOV002_ctrl_parity extends axi4_lite_base_seq;
 
     virtual task body();
         uvm_reg_data_t rdata;
-        // Step 1: WRITE
-        reg_write(reg_model.LOOPBACK, 0x01);
-        // Step 2: WRITE
-        reg_write(reg_model.PARITY, 0x01);
-        // Step 3: WRITE
-        reg_write(reg_model.CTRL, 0x03);
-        // Step 4: WRITE
-        reg_write(reg_model.TX_DATA, 0x41);
-        // Step 5: POLL
-        reg_poll(reg_model.STATUS, 0x02, 0x02, 1000);
-        // Step 6: READ
-        reg_read(reg_model.RX_DATA, rdata);
-        `uvm_info(get_name(), $sformatf("Read 0x%0h, expect 0x%0h", rdata, 0x41), UVM_LOW)
+        // CTRL (0x00): UART_EN(7)+TX_EN(6)+RX_EN(5)+LOOP_EN(4)+ODD_PARITY(3:2=01) = 0xF4
+        axi_write(32'h00000000, 32'hF4);
+        // TX_DATA (0x28)
+        axi_write(32'h00000028, 32'h41);
+        // Poll STATUS (0x04): wait until RX_EMPTY(bit6) = 0; 1 byte at 115200 baud ≈ 8680 cycles
+        axi_poll(32'h00000004, 32'h40, 32'h00, 3000);
+        // Read RX_DATA (0x2C)
+        axi_read(32'h0000002C, rdata);
+        `uvm_info(get_name(), $sformatf("RX_DATA = 0x%0h, expect 0x%0h", rdata, 'h41), UVM_LOW)
     endtask : body
 
 endclass

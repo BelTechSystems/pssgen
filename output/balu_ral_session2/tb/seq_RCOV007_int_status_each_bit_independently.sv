@@ -24,7 +24,7 @@
 // Stimulus strategy  : Each of 8 interrupt sources set and cleared independently via directed stimulus; verify IRQ asserts and deasserts correctly for each bit.
 // Boundary values    : Each of 8 bits: TIMEOUT, TX_THRESH, RX_THRESH, TX_EMPTY, RX_FULL, PARITY_ERR, FRAME_ERR, OVERRUN — set and W1C cleared independently
 
-class seq_RCOV007_int_status_each_bit_independently extends axi4_lite_base_seq;
+class seq_RCOV007_int_status_each_bit_independently extends buffered_axi_lite_uart_base_seq;
 
     `uvm_object_utils(seq_RCOV007_int_status_each_bit_independently)
 
@@ -34,17 +34,17 @@ class seq_RCOV007_int_status_each_bit_independently extends axi4_lite_base_seq;
 
     virtual task body();
         uvm_reg_data_t rdata;
-        // Step 1: WRITE
-        reg_write(reg_model.IER, 0x01);
-        // Step 2: WRITE
-        reg_write(reg_model.CTRL, 0x01);
-        // Step 3: POLL
-        reg_poll(reg_model.ISR, 0x01, 0x01, 100);
-        // Step 4: WRITE
-        reg_write(reg_model.ISR, 0x01);
-        // Step 5: READ
-        reg_read(reg_model.ISR, rdata);
-        `uvm_info(get_name(), $sformatf("Read 0x%0h, expect 0x%0h", rdata, 0x00), UVM_LOW)
+        // Step 1: INT_ENABLE (0x18): IE_TX_EMPTY(bit4=0x10)
+        axi_write(32'h00000018, 32'h10);
+        // Step 2: CTRL (0x00): UART_EN(7)+TX_EN(6) = 0xC0; TX FIFO empty on reset fires TX_EMPTY
+        axi_write(32'h00000000, 32'hC0);
+        // Step 3: Poll INT_STATUS (0x1C): wait for IS_TX_EMPTY(bit4=0x10)
+        axi_poll(32'h0000001C, 32'h10, 32'h10, 100);
+        // Step 4: INT_CLEAR (0x20): clear IS_TX_EMPTY bit
+        axi_write(32'h00000020, 32'h10);
+        // Step 5: Read INT_STATUS (0x1C): verify cleared
+        axi_read(32'h0000001C, rdata);
+        `uvm_info(get_name(), $sformatf("INT_STATUS = 0x%0h, expect 0x%0h", rdata, 'h00), UVM_LOW)
     endtask : body
 
 endclass

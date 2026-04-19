@@ -24,7 +24,7 @@
 // Stimulus strategy  : RX FIFO occupancy driven to 0, RX_THRESH-1, RX_THRESH, RX_THRESH+1, and G_FIFO_DEPTH to verify status flags and overrun discard.
 // Boundary values    : 0 (RX_EMPTY), RX_THRESH-1, RX_THRESH, RX_THRESH+1 (interrupt fires), G_FIFO_DEPTH (full/overrun)
 
-class seq_RCOV004_fifo_status_rx_level extends axi4_lite_base_seq;
+class seq_RCOV004_fifo_status_rx_level extends buffered_axi_lite_uart_base_seq;
 
     `uvm_object_utils(seq_RCOV004_fifo_status_rx_level)
 
@@ -34,16 +34,15 @@ class seq_RCOV004_fifo_status_rx_level extends axi4_lite_base_seq;
 
     virtual task body();
         uvm_reg_data_t rdata;
-        // Step 1: WRITE
-        reg_write(reg_model.LOOPBACK, 0x01);
-        // Step 2: WRITE
-        reg_write(reg_model.CTRL, 0x03);
-        // Step 3: WRITE
-        reg_write(reg_model.TX_DATA, 0xAA);
-        // Step 4: POLL
-        reg_poll(reg_model.STATUS, 0x02, 0x02, 1000);
-        // Step 5: READ
-        reg_read(reg_model.RX_FIFO, rdata);
+        // CTRL (0x00): UART_EN(7)+TX_EN(6)+RX_EN(5)+LOOP_EN(4) = 0xF0
+        axi_write(32'h00000000, 32'hF0);
+        // TX_DATA (0x28)
+        axi_write(32'h00000028, 32'hAA);
+        // Poll STATUS (0x04): wait until RX_EMPTY(bit6) = 0; 1 byte at 115200 baud ≈ 8680 cycles
+        axi_poll(32'h00000004, 32'h40, 32'h00, 3000);
+        // Read FIFO_STATUS (0x10): RX_LEVEL in [7:0]
+        axi_read(32'h00000010, rdata);
+        `uvm_info(get_name(), $sformatf("FIFO_STATUS = 0x%0h (RX_LEVEL=%0d)", rdata, rdata[7:0]), UVM_LOW)
     endtask : body
 
 endclass

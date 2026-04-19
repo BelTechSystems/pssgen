@@ -24,7 +24,7 @@
 // Stimulus strategy  : Deassert UART_EN and verify TX/RX halt; then independently gate TX_EN and RX_EN with UART_EN=1 to verify path isolation; set LOOP_EN and verify loopback active.
 // Boundary values    : UART_EN=0 (halt), TX_EN=0 (TX off/RX active), RX_EN=0 (RX off/TX active), LOOP_EN=1 with UART_EN=1
 
-class seq_RCOV016_uart_en_control extends axi4_lite_base_seq;
+class seq_RCOV016_uart_en_control extends buffered_axi_lite_uart_base_seq;
 
     `uvm_object_utils(seq_RCOV016_uart_en_control)
 
@@ -34,18 +34,18 @@ class seq_RCOV016_uart_en_control extends axi4_lite_base_seq;
 
     virtual task body();
         uvm_reg_data_t rdata;
-        // Step 1: WRITE
-        reg_write(reg_model.CTRL, 0x01);
-        // Step 2: READ
-        reg_read(reg_model.STATUS, rdata);
-        // Step 3: WRITE
-        reg_write(reg_model.CTRL, 0x02);
-        // Step 4: READ
-        reg_read(reg_model.STATUS, rdata);
-        // Step 5: WRITE
-        reg_write(reg_model.CTRL, 0x03);
-        // Step 6: READ
-        reg_read(reg_model.STATUS, rdata);
+        // Step 1: CTRL (0x00): TX_EN only (bit6=0x40)
+        axi_write(32'h00000000, 32'h40);
+        // Step 2: Read STATUS (0x04)
+        axi_read(32'h00000004, rdata);
+        // Step 3: CTRL (0x00): RX_EN only (bit5=0x20)
+        axi_write(32'h00000000, 32'h20);
+        // Step 4: Read STATUS (0x04)
+        axi_read(32'h00000004, rdata);
+        // Step 5: CTRL (0x00): UART_EN(7)+TX_EN(6)+RX_EN(5) = 0xE0
+        axi_write(32'h00000000, 32'hE0);
+        // Step 6: Read STATUS (0x04)
+        axi_read(32'h00000004, rdata);
     endtask : body
 
 endclass
