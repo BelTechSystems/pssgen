@@ -37,10 +37,12 @@ class seq_RCOV007_int_status_each_bit_independently extends buffered_axi_lite_ua
         reset_dut();
         // Step 1: INT_ENABLE (0x18): IE_TX_EMPTY(bit4=0x10)
         axi_write(32'h00000018, 32'h10);
-        // Step 2: CTRL (0x00): UART_EN(7)+TX_EN(6) = 0xC0; TX FIFO empty on reset fires TX_EMPTY
+        // Step 2: CTRL (0x00): UART_EN(7)+TX_EN(6) = 0xC0
         axi_write(32'h00000000, 32'hC0);
-        // Step 3: Poll INT_STATUS (0x1C): wait for IS_TX_EMPTY(bit4=0x10)
-        axi_poll(32'h0000001C, 32'h10, 32'h10, 100);
+        // Step 2b: TX_DATA (0x28): send byte — ev_tx_empty_s fires after FIFO drains
+        axi_write(32'h00000028, 32'hA5);
+        // Step 3: Poll INT_STATUS (0x1C): wait for IS_TX_EMPTY(bit4=0x10); 1 byte ≈ 8680 cycles
+        axi_poll(32'h0000001C, 32'h10, 32'h10, 3000);
         // Step 4: INT_CLEAR (0x20): clear IS_TX_EMPTY bit
         axi_write(32'h00000020, 32'h10);
         // Step 5: Read INT_STATUS (0x1C): verify cleared
