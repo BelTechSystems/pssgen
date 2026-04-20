@@ -35,6 +35,7 @@ class seq_RCOV017_frame_structural extends buffered_axi_lite_uart_base_seq;
     virtual task body();
         uvm_reg_data_t rdata;
         reset_dut();
+        axi_write(32'h00000008, 32'h000010D6); // re-init BAUD_TUNING after reset
         // CTRL (0x00): UART_EN(7)+TX_EN(6)+RX_EN(5)+LOOP_EN(4)+STOP_BITS(1) = 0xF2
         // Tests 2-stop-bit frame format in loopback
         axi_write(32'h00000000, 32'hF2);

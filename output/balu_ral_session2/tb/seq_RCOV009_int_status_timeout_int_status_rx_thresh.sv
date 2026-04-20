@@ -34,6 +34,7 @@ class seq_RCOV009_int_status_timeout_int_status_rx_thresh extends buffered_axi_l
 
     virtual task body();
         reset_dut();
+        axi_write(32'h00000008, 32'h000010D6); // re-init BAUD_TUNING after reset
         // Step 1: TIMEOUT_VAL (0x14): set non-zero to enable timeout
         axi_write(32'h00000014, 32'h0010);
         // Step 2: FIFO_CTRL (0x0C): set RX_THRESH=1 so 1 received byte fires IS_RX_THRESH

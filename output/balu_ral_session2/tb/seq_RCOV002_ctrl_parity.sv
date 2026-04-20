@@ -35,6 +35,7 @@ class seq_RCOV002_ctrl_parity extends buffered_axi_lite_uart_base_seq;
     virtual task body();
         uvm_reg_data_t rdata;
         reset_dut();
+        axi_write(32'h00000008, 32'h000010D6); // re-init BAUD_TUNING after reset
         // CTRL (0x00): UART_EN(7)+TX_EN(6)+RX_EN(5)+LOOP_EN(4)+ODD_PARITY(3:2=01) = 0xF4
         axi_write(32'h00000000, 32'hF4);
         // TX_DATA (0x28)

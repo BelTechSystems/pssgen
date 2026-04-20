@@ -35,6 +35,7 @@ class seq_RCOV008_int_status_overrun_int_status_rx_full extends buffered_axi_lit
     virtual task body();
         uvm_reg_data_t rdata;
         reset_dut();
+        axi_write(32'h00000008, 32'h000010D6); // re-init BAUD_TUNING after reset
         // Step 1: INT_ENABLE (0x18): IE_RX_FULL(bit3=0x08) + IE_OVERRUN(bit0=0x01)
         axi_write(32'h00000018, 32'h09);
         // Step 2: CTRL (0x00): UART_EN(7)+TX_EN(6)+RX_EN(5)+LOOP_EN(4) = 0xF0
