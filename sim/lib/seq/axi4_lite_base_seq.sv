@@ -28,9 +28,23 @@ class axi4_lite_base_seq extends uvm_reg_sequence #(uvm_sequence);
 
     `uvm_object_utils(axi4_lite_base_seq)
 
+    // Typed register model handle — populated in pre_body() from config_db.
+    balu_reg_model              reg_model;
+    // Virtual interface handle — populated in pre_body() from config_db.
+    virtual axi4_lite_if        vif;
+
     function new(string name = "axi4_lite_base_seq");
         super.new(name);
     endfunction
+
+    task pre_body();
+        if (!uvm_config_db #(balu_reg_model)::get(
+                null, get_full_name(), "reg_model", reg_model))
+            `uvm_fatal(get_name(), "pre_body: balu_reg_model not in config_db")
+        if (!uvm_config_db #(virtual axi4_lite_if)::get(
+                null, get_full_name(), "vif", vif))
+            `uvm_fatal(get_name(), "pre_body: virtual axi4_lite_if not in config_db")
+    endtask
 
     // ── Write one register and assert UVM_IS_OK ───────────────────────────────
     virtual task reg_write(

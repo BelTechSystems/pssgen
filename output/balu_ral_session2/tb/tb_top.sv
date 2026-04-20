@@ -39,6 +39,10 @@ module tb_top;
     // UART loopback — connect uart_tx directly to uart_rx for Phase 1 testing
     logic uart_loopback;
 
+    // DUT reset: hardware reset AND sequence-driven reset (for inter-sequence cleanup)
+    logic dut_rst_n;
+    assign dut_rst_n = rst_n & axi_if.ARESETn_seq;
+
     // AXI4-Lite interface from sim/lib
     balu_axi_if axi_if (
         .ACLK   (clk),
@@ -48,7 +52,7 @@ module tb_top;
     // DUT instantiation — BALU RTL AXI-Lite slave port names
     buffered_axi_lite_uart dut (
         .axi_aclk   (clk),
-        .axi_aresetn(rst_n),
+        .axi_aresetn(dut_rst_n),
         .s_axi_awaddr (axi_if.AWADDR[7:0]),
         .s_axi_awvalid(axi_if.AWVALID),
         .s_axi_awready(axi_if.AWREADY),

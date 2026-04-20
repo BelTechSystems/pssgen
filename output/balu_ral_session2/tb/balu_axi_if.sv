@@ -18,6 +18,8 @@ interface balu_axi_if (
     input logic ACLK,
     input logic ARESETn
 );
+    // Driven by sequences via reset_dut(); ANDed with tb_top rst_n before DUT.
+    logic ARESETn_seq = 1'b1;
     // Write address channel
     logic        AWVALID;
     logic        AWREADY;

@@ -29,9 +29,10 @@ package bfm_pkg;
     `include "uvm_macros.svh"
 
     `include "sim/lib/bfm/axi4_lite_seq_item.sv"
-    `include "sim/lib/bfm/axi4_lite_master_bfm.sv"
+    // axi4_lite_master_bfm omitted: parameterized class crashes xelab 2025.1
     `include "sim/lib/ral/axi4_lite_reg_adapter.sv"
+    // axi4_lite_predictor omitted: parameterized class with user type crashes xelab 2025.1
     `include "sim/lib/ral/balu_reg_model.sv"
-    `include "sim/lib/seq/axi4_lite_base_seq.sv"
+    // axi4_lite_base_seq omitted: uvm_reg_sequence parameterization crashes xelab 2025.1
 
 endpackage
