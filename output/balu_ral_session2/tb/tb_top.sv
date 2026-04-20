@@ -38,6 +38,7 @@ module tb_top;
 
     // UART loopback — connect uart_tx directly to uart_rx for Phase 1 testing
     logic uart_loopback;
+    logic irq_unused;
 
     // DUT reset: hardware reset AND sequence-driven reset (for inter-sequence cleanup)
     logic dut_rst_n;
@@ -73,7 +74,8 @@ module tb_top;
         .s_axi_rvalid (axi_if.RVALID),
         .s_axi_rready (axi_if.RREADY),
         .uart_tx      (uart_loopback),
-        .uart_rx      (uart_loopback)
+        .uart_rx      (uart_loopback),
+        .irq          (irq_unused)
     );
 
     // Clock/reset generation
