@@ -34,6 +34,7 @@ class seq_RCOV005_fifo_status_tx_level extends buffered_axi_lite_uart_base_seq;
 
     virtual task body();
         uvm_reg_data_t rdata;
+        reset_dut();
         // CTRL (0x00): UART_EN(7) only — TX_EN not set so TX FIFO does not drain
         axi_write(32'h00000000, 32'h80);
         // Write 3 bytes to TX_DATA (0x28); with TX_EN=0 they queue in TX FIFO

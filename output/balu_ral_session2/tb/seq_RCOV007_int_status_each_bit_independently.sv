@@ -34,6 +34,7 @@ class seq_RCOV007_int_status_each_bit_independently extends buffered_axi_lite_ua
 
     virtual task body();
         uvm_reg_data_t rdata;
+        reset_dut();
         // Step 1: INT_ENABLE (0x18): IE_TX_EMPTY(bit4=0x10)
         axi_write(32'h00000018, 32'h10);
         // Step 2: CTRL (0x00): UART_EN(7)+TX_EN(6) = 0xC0; TX FIFO empty on reset fires TX_EMPTY

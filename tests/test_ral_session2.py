@@ -74,7 +74,7 @@ def test_generated_env_contains_uvm_config_db_reg_model():
 
 def test_generated_tb_top_contains_axi4_lite_if():
     content = _read(f"{SESSION2_TB}/tb_top.sv")
-    assert "axi4_lite_if" in content
+    assert "balu_axi_if" in content
 
 
 def test_generated_tb_top_contains_uart_loopback():

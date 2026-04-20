@@ -34,6 +34,7 @@ class seq_RCOV004_fifo_status_rx_level extends buffered_axi_lite_uart_base_seq;
 
     virtual task body();
         uvm_reg_data_t rdata;
+        reset_dut();
         // CTRL (0x00): UART_EN(7)+TX_EN(6)+RX_EN(5)+LOOP_EN(4) = 0xF0
         axi_write(32'h00000000, 32'hF0);
         // TX_DATA (0x28)

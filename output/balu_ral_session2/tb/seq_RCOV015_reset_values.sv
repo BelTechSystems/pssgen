@@ -34,6 +34,7 @@ class seq_RCOV015_reset_values extends buffered_axi_lite_uart_base_seq;
 
     virtual task body();
         uvm_reg_data_t rdata;
+        reset_dut();
         // Step 1: WRITE
         axi_write(32'h00000000, 'h80);
         // Step 2: WAIT

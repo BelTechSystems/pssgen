@@ -34,6 +34,7 @@ class seq_RCOV001_baud_tuning extends buffered_axi_lite_uart_base_seq;
 
     virtual task body();
         uvm_reg_data_t rdata;
+        reset_dut();
         // Step 1: WRITE BAUD_TUNING (0x08)
         axi_write(32'h00000008, 32'h000010D6);
         // Step 2: WAIT

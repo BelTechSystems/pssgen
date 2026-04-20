@@ -34,6 +34,7 @@ class seq_RCOV014_scratch extends buffered_axi_lite_uart_base_seq;
 
     virtual task body();
         uvm_reg_data_t rdata;
+        reset_dut();
         // Step 1: WRITE SCRATCH (0x24)
         axi_write(32'h00000024, 32'h00000001);
         // Step 2: READ SCRATCH (0x24)

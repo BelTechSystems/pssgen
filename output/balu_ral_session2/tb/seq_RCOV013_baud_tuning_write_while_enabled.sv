@@ -34,6 +34,7 @@ class seq_RCOV013_baud_tuning_write_while_enabled extends buffered_axi_lite_uart
 
     virtual task body();
         uvm_reg_data_t rdata;
+        reset_dut();
         // Step 1: WRITE BAUD_TUNING (0x08) before enabling
         axi_write(32'h00000008, 32'h000010D6);
         // Step 2: CTRL (0x00): set UART_EN(bit7=0x80) — blocks further BAUD_TUNING writes

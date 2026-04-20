@@ -33,6 +33,7 @@ class seq_RCOV012_axi_write_order extends buffered_axi_lite_uart_base_seq;
     endfunction
 
     virtual task body();
+        reset_dut();
         `uvm_info("SEQ_PENDING",
             "seq_RCOV012_axi_write_order: body not yet implemented — see VPR COV-012",
             UVM_MEDIUM)

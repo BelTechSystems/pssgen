@@ -34,6 +34,7 @@ class seq_RCOV018_readonly_ignore extends buffered_axi_lite_uart_base_seq;
 
     virtual task body();
         uvm_reg_data_t rdata;
+        reset_dut();
         // Step 1: Read STATUS (0x04, RO)
         axi_read(32'h00000004, rdata);
         // Step 2: Write to STATUS (0x04, RO) — RTL returns SLVERR, state unchanged

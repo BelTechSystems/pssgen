@@ -58,6 +58,9 @@ interface axi4_lite_if #(
     logic [DATA_WIDTH-1:0]    RDATA;
     logic [1:0]               RRESP;
 
+    // Sequence-driven reset; ANDed with ARESETn in tb_top before DUT.
+    logic ARESETn_seq = 1'b1;
+
     // ── Master clocking block — drives all master-side outputs ───────────────
     clocking master_cb @(posedge ACLK);
         default input #1step output #1;

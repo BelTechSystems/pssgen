@@ -34,6 +34,7 @@ class seq_RCOV006_timeout_val extends buffered_axi_lite_uart_base_seq;
 
     virtual task body();
         uvm_reg_data_t rdata;
+        reset_dut();
         // Step 1: WRITE TIMEOUT_VAL (0x14)
         axi_write(32'h00000014, 32'h0001);
         // Step 2: READ TIMEOUT_VAL

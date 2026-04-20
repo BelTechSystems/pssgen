@@ -34,6 +34,7 @@ class seq_RCOV003_ctrl_stop_bits extends buffered_axi_lite_uart_base_seq;
 
     virtual task body();
         uvm_reg_data_t rdata;
+        reset_dut();
         // CTRL (0x00): UART_EN(7)+TX_EN(6)+RX_EN(5)+LOOP_EN(4)+STOP_BITS(1) = 0xF2
         axi_write(32'h00000000, 32'hF2);
         // TX_DATA (0x28)

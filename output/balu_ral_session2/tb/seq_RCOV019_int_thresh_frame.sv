@@ -33,6 +33,7 @@ class seq_RCOV019_int_thresh_frame extends buffered_axi_lite_uart_base_seq;
     endfunction
 
     virtual task body();
+        reset_dut();
         // Step 1: INT_ENABLE (0x18): IE_FRAME_ERR(bit1=0x02) + IE_PARITY_ERR(bit2=0x04)
         axi_write(32'h00000018, 32'h06);
         // Step 2: CTRL (0x00): UART_EN(7)+TX_EN(6)+RX_EN(5)+LOOP_EN(4)+ODD_PARITY(3:2=01)+STOP_BITS(1) = 0xF6

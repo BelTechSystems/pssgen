@@ -59,13 +59,13 @@ class buffered_axi_lite_uart_base_seq extends
         rdata = item.data;
     endtask
 
-    // Pulse ARESETn_seq low for `cycles` clocks then release; restores DUT
+    // Pulse ARESETn_seq low for 10 clocks then release; restores DUT
     // to power-on state (BAUD_TUNING, FIFOs, CTRL all reset to defaults).
-    virtual task reset_dut(int unsigned cycles = 10);
-        vif.ARESETn_seq = 1'b0;
-        repeat(cycles) @(posedge vif.ACLK);
-        vif.ARESETn_seq = 1'b1;
-        @(posedge vif.ACLK);
+    task reset_dut();
+        vif.ARESETn_seq = 0;
+        repeat(10) @(posedge vif.ACLK);
+        vif.ARESETn_seq = 1;
+        repeat(5) @(posedge vif.ACLK);
     endtask
 
     // Poll addr until (rdata & mask) == expected, or timeout cycles elapsed.

@@ -34,6 +34,7 @@ class seq_RCOV016_uart_en_control extends buffered_axi_lite_uart_base_seq;
 
     virtual task body();
         uvm_reg_data_t rdata;
+        reset_dut();
         // Step 1: CTRL (0x00): TX_EN only (bit6=0x40)
         axi_write(32'h00000000, 32'h40);
         // Step 2: Read STATUS (0x04)
