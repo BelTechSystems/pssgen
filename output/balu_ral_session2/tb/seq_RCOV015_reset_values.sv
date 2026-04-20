@@ -43,7 +43,7 @@ class seq_RCOV015_reset_values extends buffered_axi_lite_uart_base_seq;
         axi_read(32'h00000000, rdata);
         // Step 4: READ
         axi_read(32'h00000004, rdata);
-        `uvm_info(get_name(), $sformatf("Read 0x%0h, expect 0x%0h", rdata, 'h01), UVM_LOW)
+        `uvm_info(get_name(), $sformatf("Read 0x%0h, expect 0x%0h", rdata, 'h140), UVM_LOW)
         // Step 5: READ
         axi_read(32'h00000008, rdata);
     endtask : body
