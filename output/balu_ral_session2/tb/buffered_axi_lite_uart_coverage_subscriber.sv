@@ -25,7 +25,18 @@ class buffered_axi_lite_uart_coverage_subscriber extends
             bins READ  = {axi4_lite_seq_item::READ};
         }
         cp_addr: coverpoint item_s.addr[7:0] {
-            bins addr_default = default;
+            bins addr_CTRL      = {8'h00};
+            bins addr_STATUS    = {8'h04};
+            bins addr_BAUD      = {8'h08};
+            bins addr_TX_DATA   = {8'h0C};
+            bins addr_RX_DATA   = {8'h10};
+            bins addr_TX_FIFO   = {8'h14};
+            bins addr_RX_FIFO   = {8'h18};
+            bins addr_IER       = {8'h1C};
+            bins addr_ISR       = {8'h20};
+            bins addr_PARITY    = {8'h24};
+            bins addr_FRAME     = {8'h28};
+            bins addr_SCRATCH   = {8'h2C};
         }
         cp_resp: coverpoint item_s.resp {
             bins OKAY   = {2'b00};
@@ -52,7 +63,7 @@ class buffered_axi_lite_uart_coverage_subscriber extends
         `uvm_info("COV",
             $sformatf("axi_transaction_cg coverage: %.1f%%",
                 axi_transaction_cg.get_coverage()),
-            UVM_MEDIUM)
+            UVM_LOW)
     endfunction
 
 endclass
