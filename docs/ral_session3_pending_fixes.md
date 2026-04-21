@@ -50,3 +50,15 @@ Harmless warning but clean it up
 Fix: Tie s_axi_awprot = 3'b000 in tb_top
 
 ## Target: 0 UVM_ERROR, 0 UVM_FATAL, 0 UVM_WARNING (except SB disabled)
+
+### Fix 12 REVISED — correct BAUD_TUNING value
+Root cause confirmed: BAUD_TUNING must have bits[31:28]=0000
+for correct 16x oversampling relationship.
+Fix 8 (0x10000000) and Fix 11 (0x10100000) both have
+bits[31:28]=0001 — RX engine broken by NCO design constraint.
+
+Correct value: 0x00800000
+  - bits[31:28] = 0000 ✓
+  - baud pulse every 512 cycles
+  - byte frame = 5,120 cycles
+  - poll window = 15,000 cycles (2.9x margin) ✓
