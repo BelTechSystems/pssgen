@@ -836,15 +836,15 @@ begin
         rx_sync_s <= rx_sync_s(0) & rx_in_s;
 
         if ctrl_s(5) = '1' and ctrl_s(7) = '1' then
-          if baud_pulse_16x_s = '1' then
-            if rx_busy_s = '0' then
-              if rx_sync_s(1) = '0' and rx_sync_s(0) = '1' then
-                rx_os_cnt_s  <= to_unsigned(1, 4);
-                rx_bit_cnt_s <= (others => '0');
-                rx_busy_s    <= '1';
-              end if;
-            else
-              if rx_os_cnt_s = to_unsigned(15, 4) then
+          if rx_busy_s = '0' then
+            -- Start-bit detection: ungated so the 1-cycle "01" window is never missed
+            if rx_sync_s(1) = '0' and rx_sync_s(0) = '1' then
+              rx_os_cnt_s  <= to_unsigned(1, 4);
+              rx_bit_cnt_s <= (others => '0');
+              rx_busy_s    <= '1';
+            end if;
+          elsif baud_pulse_16x_s = '1' then
+            if rx_os_cnt_s = to_unsigned(15, 4) then
                 rx_os_cnt_s <= (others => '0');
                 if rx_bit_cnt_s < to_unsigned(8, 4) then
                   -- Data bits 0..7: shift in MSB-first via synchroniser
@@ -906,7 +906,6 @@ begin
               else
                 rx_os_cnt_s <= rx_os_cnt_s + 1;
               end if;
-            end if;
           end if;
         end if;
       end if;
