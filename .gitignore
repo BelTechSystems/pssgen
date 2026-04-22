@@ -80,11 +80,27 @@ desktop.ini
 dfx_runtime.txt
 xsim.covdb/
 
+# Claude Code and prompt engineering
+Claude.*
+.claude/
+*.prompt.md
+prompt_engineering_guide.local.md
+
+# BelTech internal standards
+docs/internal/
+docs/beltech/
+docs/style_guides/
+BelTech-*.md
+
+# Local development overrides
+pssgen.local.toml
+pssgen_state.local.toml
+.env.local
+
 # Orphaned files (see Task 1 cleanup)
 gen_sds.js
 hdl_style_old.md
 
-.claude/
 
 # Microsoft Office temporary lock files
 ~$*
