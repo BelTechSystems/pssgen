@@ -1,0 +1,233 @@
+{
+  "sim_log": "output/balu_ral_session2/tb/scripts/vivado/xsim.log",
+  "parsed_at": "2026-04-23T19:12:33.469933+00:00",
+  "simulation_time_ns": 1439065.0,
+  "uvm_counts": {
+    "info": 24,
+    "warning": 3,
+    "error": 0,
+    "fatal": 0
+  },
+  "coverage_pct": 94.8,
+  "sequences": [
+    {
+      "seq_id": "COV-001",
+      "tag": "cov001",
+      "status": "PASS",
+      "messages": [
+        "BAUD_TUNING = 0x10d6, expect 0x10d6"
+      ],
+      "timeouts": [],
+      "completion_time_ns": 3085.0
+    },
+    {
+      "seq_id": "COV-002",
+      "tag": "cov002",
+      "status": "PASS",
+      "messages": [
+        "RX_DATA = 0x41, expect 0x41"
+      ],
+      "timeouts": [],
+      "completion_time_ns": 64465.0
+    },
+    {
+      "seq_id": "COV-003",
+      "tag": "cov003",
+      "status": "PASS",
+      "messages": [
+        "RX_DATA = 0x55, expect 0x55"
+      ],
+      "timeouts": [],
+      "completion_time_ns": 120695.0
+    },
+    {
+      "seq_id": "COV-004",
+      "tag": "cov004",
+      "status": "PASS",
+      "messages": [
+        "FIFO_STATUS = 0x1 (RX_LEVEL=1)"
+      ],
+      "timeouts": [],
+      "completion_time_ns": 182075.0
+    },
+    {
+      "seq_id": "COV-005",
+      "tag": "cov005",
+      "status": "PASS",
+      "messages": [
+        "FIFO_STATUS = 0x300 (TX_LEVEL=3)"
+      ],
+      "timeouts": [],
+      "completion_time_ns": 182465.0
+    },
+    {
+      "seq_id": "COV-006",
+      "tag": "cov006",
+      "status": "PASS",
+      "messages": [
+        "TIMEOUT_VAL = 0x1, expect 0x1",
+        "TIMEOUT_VAL = 0xffff, expect 0xffff"
+      ],
+      "timeouts": [],
+      "completion_time_ns": 182795.0
+    },
+    {
+      "seq_id": "COV-007",
+      "tag": "cov007",
+      "status": "PASS",
+      "messages": [
+        "INT_STATUS = 0x40, expect 0x0"
+      ],
+      "timeouts": [],
+      "completion_time_ns": 278525.0
+    },
+    {
+      "seq_id": "COV-008",
+      "tag": "cov008",
+      "status": "PASS",
+      "messages": [
+        "INT_STATUS = 0x68"
+      ],
+      "timeouts": [],
+      "completion_time_ns": 1179555.0
+    },
+    {
+      "seq_id": "COV-009",
+      "tag": "cov009",
+      "status": "TIMEOUT",
+      "messages": [],
+      "timeouts": [
+        {
+          "addr": "0x0000001c",
+          "mask": "0x00000020",
+          "expected": "0x00000020",
+          "got": "0x000000d0"
+        }
+      ],
+      "completion_time_ns": 1330005.0
+    },
+    {
+      "seq_id": "COV-010",
+      "tag": "cov010",
+      "status": "PASS",
+      "messages": [
+        "Read 0x808, expect 0x0"
+      ],
+      "timeouts": [],
+      "completion_time_ns": 1330245.0
+    },
+    {
+      "seq_id": "COV-011",
+      "tag": "cov011",
+      "status": "PASS",
+      "messages": [
+        "Read 0x3, expect 0x3"
+      ],
+      "timeouts": [],
+      "completion_time_ns": 1330485.0
+    },
+    {
+      "seq_id": "COV-012",
+      "tag": "RCOV012",
+      "status": "NOT_RUN",
+      "messages": [],
+      "timeouts": [],
+      "completion_time_ns": 0.0
+    },
+    {
+      "seq_id": "COV-013",
+      "tag": "RCOV013",
+      "status": "NOT_RUN",
+      "messages": [],
+      "timeouts": [],
+      "completion_time_ns": 0.0
+    },
+    {
+      "seq_id": "COV-014",
+      "tag": "cov014",
+      "status": "PASS",
+      "messages": [
+        "SCRATCH = 0x1, expect 0x1"
+      ],
+      "timeouts": [],
+      "completion_time_ns": 1331295.0
+    },
+    {
+      "seq_id": "COV-015",
+      "tag": "cov015",
+      "status": "PASS",
+      "messages": [
+        "Read 0x140, expect 0x140"
+      ],
+      "timeouts": [],
+      "completion_time_ns": 1331675.0
+    },
+    {
+      "seq_id": "COV-016",
+      "tag": "RCOV016",
+      "status": "NOT_RUN",
+      "messages": [],
+      "timeouts": [],
+      "completion_time_ns": 0.0
+    },
+    {
+      "seq_id": "COV-017",
+      "tag": "cov017",
+      "status": "PASS",
+      "messages": [
+        "CTRL = 0xf2, expect 0xf2",
+        "RX_DATA = 0xa5, expect 0xa5"
+      ],
+      "timeouts": [],
+      "completion_time_ns": 1388355.0
+    },
+    {
+      "seq_id": "COV-018",
+      "tag": "RCOV018",
+      "status": "NOT_RUN",
+      "messages": [],
+      "timeouts": [],
+      "completion_time_ns": 0.0
+    },
+    {
+      "seq_id": "COV-019",
+      "tag": "cov019",
+      "status": "TIMEOUT",
+      "messages": [],
+      "timeouts": [
+        {
+          "addr": "0x0000001c",
+          "mask": "0x00000002",
+          "expected": "0x00000002",
+          "got": "0x00000040"
+        }
+      ],
+      "completion_time_ns": 1439065.0
+    }
+  ],
+  "slverr_events": [
+    {
+      "direction": "read",
+      "addr": "0x00000034",
+      "resp": "10",
+      "time_ns": 1330555.0
+    },
+    {
+      "direction": "write",
+      "addr": "0x00000004",
+      "resp": "10",
+      "time_ns": 1388585.0
+    },
+    {
+      "direction": "write",
+      "addr": "0x00000010",
+      "resp": "10",
+      "time_ns": 1388715.0
+    }
+  ],
+  "scoreboard": {
+    "errors": 0,
+    "disabled": true
+  },
+  "assertions_fired": []
+}

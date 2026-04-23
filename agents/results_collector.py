@@ -17,6 +17,9 @@
 # FUNCTIONS:
 #   parse_xsim_log(log_path)
 #     Parse an xsim.log file and return a SimResult dataclass.
+#   parse_coverage_data(sim_log_path)
+#     Parse xsim.log for detailed CAE coverage data; return dict with
+#     sequences, SLVERR events, scoreboard, and per-sequence timeouts.
 #   write_vpr_results(vplan_path, sim_result, req_ids)
 #     Write RTL_* columns back to VPR Tab 1; return count of rows updated.
 #   generate_gap_report_json(vplan_path, sim_result, out_path)
@@ -30,6 +33,7 @@
 # HISTORY:
 #   v1a  2026-04-16  SB  Initial implementation; --collect-results pipeline (OI-29)
 #   v1b  2026-04-17  SB  Add family_summary block to gap_report.json (Grafana bar chart)
+#   v1c  2026-04-23  SB  Add parse_coverage_data() — CAE-002 sequence/SLVERR parser
 #
 # ===========================================================
 """agents/results_collector.py — Simulation results collection and VPR write-back.
@@ -47,7 +51,7 @@ import os
 import re
 import subprocess
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, datetime, timezone
 from typing import Optional
 
 import openpyxl
@@ -437,3 +441,201 @@ def generate_gap_report_json(
         json.dump(report, fh, indent=2)
 
     return out_path
+
+
+# ── Regex patterns for parse_coverage_data ───────────────────────────────────
+
+# Full UVM message line — optional file-path token before @.
+# Handles both "UVM_INFO @ 0:" and "UVM_INFO path/file.sv(N) @ 0:".
+_RE_UVM_MSG = re.compile(
+    r"^(UVM_INFO|UVM_WARNING|UVM_ERROR|UVM_FATAL)\s+"
+    r"(?:[^@\s]\S*\s+)?"       # optional file-path token (must not start with @)
+    r"@\s*([\d.]+)\s*:\s+"     # @ <time_ps>:
+    r"(\S+)\s+"                # component
+    r"\[([^\]]+)\]\s*(.*)",    # [tag] message
+    re.IGNORECASE,
+)
+# Sequence number from component path: @@cov<NNN>
+_RE_SEQ_NUM = re.compile(r"@@cov(\d+)", re.IGNORECASE)
+# Severity summary line from UVM Report Summary block
+_RE_SEV_SUMMARY = re.compile(r"^UVM_(INFO|WARNING|ERROR|FATAL)\s*:\s+(\d+)\s*$")
+# Poll timeout fields — handles both em-dash and hyphen separators
+_RE_TIMEOUT = re.compile(
+    r"axi_poll\s+timeout.*?addr=(0x[\da-fA-F]+)\s+"
+    r"mask=(0x[\da-fA-F]+)\s+exp=(0x[\da-fA-F]+)\s+got=(0x[\da-fA-F]+)",
+    re.IGNORECASE,
+)
+# SLVERR event: [SB] read|write SLVERR — addr=0x... resp=...
+_RE_SLVERR = re.compile(
+    r"\[SB\]\s+(read|write)\s+SLVERR\s*(?:—|-+)\s*"
+    r"addr=(0x[\da-fA-F]+)\s+resp=(\S+)",
+    re.IGNORECASE,
+)
+# Scoreboard check_phase error count
+_RE_SB_ERRORS = re.compile(r"Scoreboard check_phase:\s*(\d+)\s*error", re.IGNORECASE)
+# Shadow register map disabled warning — matches truncated "availabl..." in BALU log
+_RE_SHADOW = re.compile(r"Shadow register map not avail", re.IGNORECASE)
+
+
+def parse_coverage_data(sim_log_path: str) -> dict:
+    """Parse an xsim.log file and return detailed CAE coverage data.
+
+    Extracts UVM severity counts, coverage percentage, per-sequence status
+    (PASS/TIMEOUT/ERROR/NOT_RUN), poll-timeout details, SLVERR events,
+    and scoreboard state. Always returns entries for all 19 sequences
+    (COV-001 through COV-019), using NOT_RUN for those with no log activity.
+
+    UVM message timestamps are in picoseconds; completion_time_ns divides
+    by 1000. simulation_time_ns is read directly from the $finish line (ns).
+
+    Args:
+        sim_log_path: Path to the xsim.log file to parse.
+
+    Returns:
+        Dict conforming to the CAE-002 schema.
+    """
+    # Per-sequence accumulator: keys 1–19
+    seq_state: dict[int, dict] = {
+        n: {
+            "tag": None,
+            "messages": [],
+            "timeouts": [],
+            "has_error": False,
+            "last_time_ps": 0.0,
+        }
+        for n in range(1, 20)
+    }
+
+    uvm_counts: dict[str, int] = {"INFO": 0, "WARNING": 0, "ERROR": 0, "FATAL": 0}
+    simulation_time_ns: float = 0.0
+    coverage_pct: float = -1.0
+    slverr_events: list[dict] = []
+    sb_errors: int = 0
+    sb_disabled: bool = False
+    assertions_fired: list[dict] = []
+    in_summary: bool = False
+
+    with open(sim_log_path, "r", encoding="utf-8", errors="replace") as fh:
+        for raw_line in fh:
+            line = raw_line.rstrip()
+
+            # ── UVM Report Summary block ──────────────────────────────────
+            if "--- UVM Report Summary ---" in line:
+                in_summary = True
+
+            if in_summary:
+                sm = _RE_SEV_SUMMARY.match(line)
+                if sm:
+                    uvm_counts[sm.group(1)] = int(sm.group(2))
+
+            # ── Simulation end time ($finish line) ────────────────────────
+            m = _RE_SIM_TIME.search(line)
+            if m:
+                simulation_time_ns = float(m.group(1))
+
+            # ── Coverage percentage ───────────────────────────────────────
+            m = _RE_COVERAGE.search(line)
+            if m:
+                coverage_pct = float(m.group(1))
+
+            # ── Shadow register map disabled ──────────────────────────────
+            if _RE_SHADOW.search(line):
+                sb_disabled = True
+
+            # ── Parse UVM message lines ───────────────────────────────────
+            m = _RE_UVM_MSG.match(line)
+            if not m:
+                continue
+
+            sev = m.group(1)          # e.g. "UVM_INFO"
+            time_ps = float(m.group(2)) if m.group(2) else 0.0
+            component = m.group(3)
+            tag = m.group(4)
+            msg = m.group(5)
+
+            # ── Scoreboard check_phase ────────────────────────────────────
+            sbm = _RE_SB_ERRORS.search(msg)
+            if sbm:
+                sb_errors = int(sbm.group(1))
+
+            # ── SLVERR event ──────────────────────────────────────────────
+            slv = _RE_SLVERR.search(line)
+            if slv:
+                slverr_events.append({
+                    "direction": slv.group(1).lower(),
+                    "addr": slv.group(2),
+                    "resp": slv.group(3),
+                    "time_ns": time_ps / 1000.0,
+                })
+
+            # ── Sequence data (component must contain @@covNNN) ───────────
+            seq_m = _RE_SEQ_NUM.search(component)
+            if not seq_m:
+                continue
+            n = int(seq_m.group(1))
+            if not (1 <= n <= 19):
+                continue
+
+            ss = seq_state[n]
+            if ss["tag"] is None:
+                ss["tag"] = tag
+            ss["last_time_ps"] = max(ss["last_time_ps"], time_ps)
+
+            if sev == "UVM_INFO":
+                ss["messages"].append(msg)
+            elif sev in ("UVM_ERROR", "UVM_FATAL"):
+                ss["has_error"] = True
+
+            # Timeout in this line?
+            tm = _RE_TIMEOUT.search(line)
+            if tm:
+                ss["timeouts"].append({
+                    "addr": tm.group(1),
+                    "mask": tm.group(2),
+                    "expected": tm.group(3),
+                    "got": tm.group(4),
+                })
+
+    # ── Build ordered sequences list (COV-001 through COV-019) ───────────────
+    sequences: list[dict] = []
+    for n in range(1, 20):
+        ss = seq_state[n]
+        tag = ss["tag"] or f"RCOV{n:03d}"
+
+        if ss["has_error"]:
+            status = "ERROR"
+        elif ss["timeouts"]:
+            status = "TIMEOUT"
+        elif ss["messages"]:
+            status = "PASS"
+        else:
+            status = "NOT_RUN"
+
+        sequences.append({
+            "seq_id": f"COV-{n:03d}",
+            "tag": tag,
+            "status": status,
+            "messages": ss["messages"],
+            "timeouts": ss["timeouts"],
+            "completion_time_ns": ss["last_time_ps"] / 1000.0,
+        })
+
+    return {
+        "sim_log": sim_log_path,
+        "parsed_at": datetime.now(timezone.utc).isoformat(),
+        "simulation_time_ns": simulation_time_ns,
+        "uvm_counts": {
+            "info": uvm_counts["INFO"],
+            "warning": uvm_counts["WARNING"],
+            "error": uvm_counts["ERROR"],
+            "fatal": uvm_counts["FATAL"],
+        },
+        "coverage_pct": coverage_pct,
+        "sequences": sequences,
+        "slverr_events": slverr_events,
+        "scoreboard": {
+            "errors": sb_errors,
+            "disabled": sb_disabled,
+        },
+        "assertions_fired": assertions_fired,
+    }
