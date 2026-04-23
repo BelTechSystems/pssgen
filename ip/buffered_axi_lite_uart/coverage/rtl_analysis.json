@@ -1,0 +1,1473 @@
+{
+  "file": "ip/buffered_axi_lite_uart/vhdl/buffered_axi_lite_uart.vhd",
+  "analyzed_at": "2026-04-23T18:38:50.630096+00:00",
+  "entity_name": "buffered_axi_lite_uart",
+  "architecture_name": "rtl",
+  "total_lines": 1009,
+  "code_lines": 653,
+  "processes": [
+    {
+      "name": "NCO_ACCUM_p",
+      "sensitivity_list": [
+        "axi_aclk"
+      ],
+      "line_start": 417,
+      "line_end": 435,
+      "branch_count": 3
+    },
+    {
+      "name": "AXI_AW_LATCH_p",
+      "sensitivity_list": [
+        "axi_aclk"
+      ],
+      "line_start": 443,
+      "line_end": 459,
+      "branch_count": 5
+    },
+    {
+      "name": "AXI_W_LATCH_p",
+      "sensitivity_list": [
+        "axi_aclk"
+      ],
+      "line_start": 467,
+      "line_end": 485,
+      "branch_count": 5
+    },
+    {
+      "name": "AXI_WRITE_RESP_p",
+      "sensitivity_list": [
+        "axi_aclk"
+      ],
+      "line_start": 494,
+      "line_end": 527,
+      "branch_count": 8
+    },
+    {
+      "name": "AXI_READ_p",
+      "sensitivity_list": [
+        "axi_aclk"
+      ],
+      "line_start": 536,
+      "line_end": 605,
+      "branch_count": 19
+    },
+    {
+      "name": "REG_WRITE_p",
+      "sensitivity_list": [
+        "axi_aclk"
+      ],
+      "line_start": 616,
+      "line_end": 655,
+      "branch_count": 13
+    },
+    {
+      "name": "TX_FIFO_p",
+      "sensitivity_list": [
+        "axi_aclk"
+      ],
+      "line_start": 663,
+      "line_end": 684,
+      "branch_count": 5
+    },
+    {
+      "name": "RX_FIFO_p",
+      "sensitivity_list": [
+        "axi_aclk"
+      ],
+      "line_start": 693,
+      "line_end": 722,
+      "branch_count": 8
+    },
+    {
+      "name": "TX_ENGINE_p",
+      "sensitivity_list": [
+        "axi_aclk"
+      ],
+      "line_start": 731,
+      "line_end": 803,
+      "branch_count": 18
+    },
+    {
+      "name": "RX_ENGINE_p",
+      "sensitivity_list": [
+        "axi_aclk"
+      ],
+      "line_start": 813,
+      "line_end": 913,
+      "branch_count": 24
+    },
+    {
+      "name": "INT_CTRL_p",
+      "sensitivity_list": [
+        "axi_aclk"
+      ],
+      "line_start": 925,
+      "line_end": 938,
+      "branch_count": 3
+    },
+    {
+      "name": "TIMEOUT_p",
+      "sensitivity_list": [
+        "axi_aclk"
+      ],
+      "line_start": 948,
+      "line_end": 978,
+      "branch_count": 9
+    },
+    {
+      "name": "STATUS_p",
+      "sensitivity_list": [
+        "all"
+      ],
+      "line_start": 990,
+      "line_end": 1007,
+      "branch_count": 0
+    }
+  ],
+  "branches": [
+    {
+      "branch_id": "BR-001",
+      "type": "if",
+      "condition": "rising_edge(axi_aclk)",
+      "process_name": "NCO_ACCUM_p",
+      "line_number": 421,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-002",
+      "type": "if",
+      "condition": "axi_aresetn = '0'",
+      "process_name": "NCO_ACCUM_p",
+      "line_number": 422,
+      "risk_hint": "reset"
+    },
+    {
+      "branch_id": "BR-003",
+      "type": "else",
+      "condition": "else",
+      "process_name": "NCO_ACCUM_p",
+      "line_number": 426,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-004",
+      "type": "if",
+      "condition": "rising_edge(axi_aclk)",
+      "process_name": "AXI_AW_LATCH_p",
+      "line_number": 445,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-005",
+      "type": "if",
+      "condition": "axi_aresetn = '0'",
+      "process_name": "AXI_AW_LATCH_p",
+      "line_number": 446,
+      "risk_hint": "reset"
+    },
+    {
+      "branch_id": "BR-006",
+      "type": "else",
+      "condition": "else",
+      "process_name": "AXI_AW_LATCH_p",
+      "line_number": 449,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-007",
+      "type": "if",
+      "condition": "s_axi_awvalid = '1' and aw_valid_lat_s = '0'",
+      "process_name": "AXI_AW_LATCH_p",
+      "line_number": 450,
+      "risk_hint": "protocol"
+    },
+    {
+      "branch_id": "BR-008",
+      "type": "if",
+      "condition": "bvalid_s = '1' and s_axi_bready = '1'",
+      "process_name": "AXI_AW_LATCH_p",
+      "line_number": 454,
+      "risk_hint": "protocol"
+    },
+    {
+      "branch_id": "BR-009",
+      "type": "if",
+      "condition": "rising_edge(axi_aclk)",
+      "process_name": "AXI_W_LATCH_p",
+      "line_number": 469,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-010",
+      "type": "if",
+      "condition": "axi_aresetn = '0'",
+      "process_name": "AXI_W_LATCH_p",
+      "line_number": 470,
+      "risk_hint": "reset"
+    },
+    {
+      "branch_id": "BR-011",
+      "type": "else",
+      "condition": "else",
+      "process_name": "AXI_W_LATCH_p",
+      "line_number": 474,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-012",
+      "type": "if",
+      "condition": "s_axi_wvalid = '1' and w_valid_lat_s = '0'",
+      "process_name": "AXI_W_LATCH_p",
+      "line_number": 475,
+      "risk_hint": "protocol"
+    },
+    {
+      "branch_id": "BR-013",
+      "type": "if",
+      "condition": "bvalid_s = '1' and s_axi_bready = '1'",
+      "process_name": "AXI_W_LATCH_p",
+      "line_number": 480,
+      "risk_hint": "protocol"
+    },
+    {
+      "branch_id": "BR-014",
+      "type": "if",
+      "condition": "rising_edge(axi_aclk)",
+      "process_name": "AXI_WRITE_RESP_p",
+      "line_number": 496,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-015",
+      "type": "if",
+      "condition": "axi_aresetn = '0'",
+      "process_name": "AXI_WRITE_RESP_p",
+      "line_number": 497,
+      "risk_hint": "reset"
+    },
+    {
+      "branch_id": "BR-016",
+      "type": "else",
+      "condition": "else",
+      "process_name": "AXI_WRITE_RESP_p",
+      "line_number": 500,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-017",
+      "type": "if",
+      "condition": "bvalid_s = '1' and s_axi_bready = '1'",
+      "process_name": "AXI_WRITE_RESP_p",
+      "line_number": 501,
+      "risk_hint": "protocol"
+    },
+    {
+      "branch_id": "BR-018",
+      "type": "if",
+      "condition": "aw_valid_lat_s = '1' and w_valid_lat_s = '1' and bvalid_s = '0'",
+      "process_name": "AXI_WRITE_RESP_p",
+      "line_number": 505,
+      "risk_hint": "protocol"
+    },
+    {
+      "branch_id": "BR-019",
+      "type": "if",
+      "condition": "aw_addr_lat_s = REG_STATUS_c or aw_addr_lat_s = REG_FIFO_STATUS_c or aw_addr_lat",
+      "process_name": "AXI_WRITE_RESP_p",
+      "line_number": 507,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-020",
+      "type": "elsif",
+      "condition": "aw_addr_lat_s /= REG_CTRL_c and aw_addr_lat_s /= REG_BAUD_TUNING_c and aw_addr_l",
+      "process_name": "AXI_WRITE_RESP_p",
+      "line_number": 511,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-021",
+      "type": "else",
+      "condition": "else",
+      "process_name": "AXI_WRITE_RESP_p",
+      "line_number": 520,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-022",
+      "type": "if",
+      "condition": "rising_edge(axi_aclk)",
+      "process_name": "AXI_READ_p",
+      "line_number": 538,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-023",
+      "type": "if",
+      "condition": "axi_aresetn = '0'",
+      "process_name": "AXI_READ_p",
+      "line_number": 539,
+      "risk_hint": "reset"
+    },
+    {
+      "branch_id": "BR-024",
+      "type": "else",
+      "condition": "else",
+      "process_name": "AXI_READ_p",
+      "line_number": 545,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-025",
+      "type": "if",
+      "condition": "rvalid_s = '1' and s_axi_rready = '1'",
+      "process_name": "AXI_READ_p",
+      "line_number": 546,
+      "risk_hint": "protocol"
+    },
+    {
+      "branch_id": "BR-026",
+      "type": "if",
+      "condition": "s_axi_arvalid = '1' and arready_s = '1'",
+      "process_name": "AXI_READ_p",
+      "line_number": 550,
+      "risk_hint": "protocol"
+    },
+    {
+      "branch_id": "BR-027",
+      "type": "case_when",
+      "condition": "REG_CTRL_c",
+      "process_name": "AXI_READ_p",
+      "line_number": 555,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-028",
+      "type": "case_when",
+      "condition": "REG_STATUS_c",
+      "process_name": "AXI_READ_p",
+      "line_number": 558,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-029",
+      "type": "case_when",
+      "condition": "REG_BAUD_TUNING_c",
+      "process_name": "AXI_READ_p",
+      "line_number": 561,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-030",
+      "type": "case_when",
+      "condition": "REG_FIFO_CTRL_c",
+      "process_name": "AXI_READ_p",
+      "line_number": 564,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-031",
+      "type": "case_when",
+      "condition": "REG_FIFO_STATUS_c",
+      "process_name": "AXI_READ_p",
+      "line_number": 567,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-032",
+      "type": "case_when",
+      "condition": "REG_TIMEOUT_VAL_c",
+      "process_name": "AXI_READ_p",
+      "line_number": 572,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-033",
+      "type": "case_when",
+      "condition": "REG_INT_ENABLE_c",
+      "process_name": "AXI_READ_p",
+      "line_number": 575,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-034",
+      "type": "case_when",
+      "condition": "REG_INT_STATUS_c",
+      "process_name": "AXI_READ_p",
+      "line_number": 578,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-035",
+      "type": "case_when",
+      "condition": "REG_INT_CLEAR_c",
+      "process_name": "AXI_READ_p",
+      "line_number": 581,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-036",
+      "type": "case_when",
+      "condition": "REG_SCRATCH_c",
+      "process_name": "AXI_READ_p",
+      "line_number": 584,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-037",
+      "type": "case_when",
+      "condition": "REG_TX_DATA_c",
+      "process_name": "AXI_READ_p",
+      "line_number": 587,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-038",
+      "type": "case_when",
+      "condition": "REG_RX_DATA_c",
+      "process_name": "AXI_READ_p",
+      "line_number": 590,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-039",
+      "type": "case_others",
+      "condition": "others",
+      "process_name": "AXI_READ_p",
+      "line_number": 596,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-040",
+      "type": "else",
+      "condition": "else",
+      "process_name": "AXI_READ_p",
+      "line_number": 600,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-041",
+      "type": "if",
+      "condition": "rising_edge(axi_aclk)",
+      "process_name": "REG_WRITE_p",
+      "line_number": 618,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-042",
+      "type": "if",
+      "condition": "axi_aresetn = '0'",
+      "process_name": "REG_WRITE_p",
+      "line_number": 619,
+      "risk_hint": "reset"
+    },
+    {
+      "branch_id": "BR-043",
+      "type": "else",
+      "condition": "else",
+      "process_name": "REG_WRITE_p",
+      "line_number": 628,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-044",
+      "type": "if",
+      "condition": "aw_valid_lat_s = '1' and w_valid_lat_s = '1' and bvalid_s = '0'",
+      "process_name": "REG_WRITE_p",
+      "line_number": 630,
+      "risk_hint": "protocol"
+    },
+    {
+      "branch_id": "BR-045",
+      "type": "case_when",
+      "condition": "REG_CTRL_c",
+      "process_name": "REG_WRITE_p",
+      "line_number": 633,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-046",
+      "type": "case_when",
+      "condition": "REG_BAUD_TUNING_c",
+      "process_name": "REG_WRITE_p",
+      "line_number": 635,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-047",
+      "type": "if",
+      "condition": "ctrl_s(7) = '0'",
+      "process_name": "REG_WRITE_p",
+      "line_number": 636,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-048",
+      "type": "case_when",
+      "condition": "REG_FIFO_CTRL_c",
+      "process_name": "REG_WRITE_p",
+      "line_number": 639,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-049",
+      "type": "case_when",
+      "condition": "REG_TIMEOUT_VAL_c",
+      "process_name": "REG_WRITE_p",
+      "line_number": 641,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-050",
+      "type": "case_when",
+      "condition": "REG_INT_ENABLE_c",
+      "process_name": "REG_WRITE_p",
+      "line_number": 643,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-051",
+      "type": "case_when",
+      "condition": "REG_INT_CLEAR_c",
+      "process_name": "REG_WRITE_p",
+      "line_number": 645,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-052",
+      "type": "case_when",
+      "condition": "REG_SCRATCH_c",
+      "process_name": "REG_WRITE_p",
+      "line_number": 647,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-053",
+      "type": "case_others",
+      "condition": "others",
+      "process_name": "REG_WRITE_p",
+      "line_number": 649,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-054",
+      "type": "if",
+      "condition": "rising_edge(axi_aclk)",
+      "process_name": "TX_FIFO_p",
+      "line_number": 665,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-055",
+      "type": "if",
+      "condition": "axi_aresetn = '0'",
+      "process_name": "TX_FIFO_p",
+      "line_number": 666,
+      "risk_hint": "reset"
+    },
+    {
+      "branch_id": "BR-056",
+      "type": "else",
+      "condition": "else",
+      "process_name": "TX_FIFO_p",
+      "line_number": 669,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-057",
+      "type": "if",
+      "condition": "aw_valid_lat_s = '1' and w_valid_lat_s = '1' and bvalid_s = '0' and aw_addr_lat_",
+      "process_name": "TX_FIFO_p",
+      "line_number": 670,
+      "risk_hint": "protocol"
+    },
+    {
+      "branch_id": "BR-058",
+      "type": "if",
+      "condition": "tx_fifo_pop_s = '1' and tx_empty_s = '0'",
+      "process_name": "TX_FIFO_p",
+      "line_number": 679,
+      "risk_hint": "boundary"
+    },
+    {
+      "branch_id": "BR-059",
+      "type": "if",
+      "condition": "rising_edge(axi_aclk)",
+      "process_name": "RX_FIFO_p",
+      "line_number": 695,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-060",
+      "type": "if",
+      "condition": "axi_aresetn = '0'",
+      "process_name": "RX_FIFO_p",
+      "line_number": 696,
+      "risk_hint": "reset"
+    },
+    {
+      "branch_id": "BR-061",
+      "type": "else",
+      "condition": "else",
+      "process_name": "RX_FIFO_p",
+      "line_number": 701,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-062",
+      "type": "if",
+      "condition": "rx_fifo_push_s = '1'",
+      "process_name": "RX_FIFO_p",
+      "line_number": 704,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-063",
+      "type": "if",
+      "condition": "rx_full_s = '0'",
+      "process_name": "RX_FIFO_p",
+      "line_number": 705,
+      "risk_hint": "boundary"
+    },
+    {
+      "branch_id": "BR-064",
+      "type": "if",
+      "condition": "rx_level_s = to_unsigned(G_FIFO_DEPTH - 1, 8)",
+      "process_name": "RX_FIFO_p",
+      "line_number": 710,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-065",
+      "type": "else",
+      "condition": "else",
+      "process_name": "RX_FIFO_p",
+      "line_number": 713,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-066",
+      "type": "if",
+      "condition": "rx_fifo_pop_s = '1' and rx_empty_s = '0'",
+      "process_name": "RX_FIFO_p",
+      "line_number": 717,
+      "risk_hint": "boundary"
+    },
+    {
+      "branch_id": "BR-067",
+      "type": "if",
+      "condition": "rising_edge(axi_aclk)",
+      "process_name": "TX_ENGINE_p",
+      "line_number": 735,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-068",
+      "type": "if",
+      "condition": "axi_aresetn = '0'",
+      "process_name": "TX_ENGINE_p",
+      "line_number": 736,
+      "risk_hint": "reset"
+    },
+    {
+      "branch_id": "BR-069",
+      "type": "else",
+      "condition": "else",
+      "process_name": "TX_ENGINE_p",
+      "line_number": 743,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-070",
+      "type": "if",
+      "condition": "baud_pulse_s = '1'",
+      "process_name": "TX_ENGINE_p",
+      "line_number": 747,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-071",
+      "type": "if",
+      "condition": "tx_busy_s = '0'",
+      "process_name": "TX_ENGINE_p",
+      "line_number": 748,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-072",
+      "type": "if",
+      "condition": "tx_empty_s = '0' and ctrl_s(6) = '1' and ctrl_s(7) = '1'",
+      "process_name": "TX_ENGINE_p",
+      "line_number": 749,
+      "risk_hint": "boundary"
+    },
+    {
+      "branch_id": "BR-073",
+      "type": "if",
+      "condition": "ctrl_s(3 downto 2) = \"01\"",
+      "process_name": "TX_ENGINE_p",
+      "line_number": 754,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-074",
+      "type": "elsif",
+      "condition": "ctrl_s(3 downto 2) = \"11\"",
+      "process_name": "TX_ENGINE_p",
+      "line_number": 756,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-075",
+      "type": "if",
+      "condition": "ctrl_s(3 downto 2) = \"00\"",
+      "process_name": "TX_ENGINE_p",
+      "line_number": 766,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-076",
+      "type": "if",
+      "condition": "ctrl_s(1) = '0'",
+      "process_name": "TX_ENGINE_p",
+      "line_number": 770,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-077",
+      "type": "else",
+      "condition": "else",
+      "process_name": "TX_ENGINE_p",
+      "line_number": 772,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-078",
+      "type": "else",
+      "condition": "else",
+      "process_name": "TX_ENGINE_p",
+      "line_number": 775,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-079",
+      "type": "if",
+      "condition": "ctrl_s(1) = '0'",
+      "process_name": "TX_ENGINE_p",
+      "line_number": 778,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-080",
+      "type": "else",
+      "condition": "else",
+      "process_name": "TX_ENGINE_p",
+      "line_number": 780,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-081",
+      "type": "else",
+      "condition": "else",
+      "process_name": "TX_ENGINE_p",
+      "line_number": 787,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-082",
+      "type": "if",
+      "condition": "tx_bit_cnt_s = to_unsigned(1, 4)",
+      "process_name": "TX_ENGINE_p",
+      "line_number": 790,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-083",
+      "type": "if",
+      "condition": "tx_empty_s = '1'",
+      "process_name": "TX_ENGINE_p",
+      "line_number": 792,
+      "risk_hint": "boundary"
+    },
+    {
+      "branch_id": "BR-084",
+      "type": "if",
+      "condition": "tx_level_s < unsigned(fifo_ctrl_s(15 downto 8))",
+      "process_name": "TX_ENGINE_p",
+      "line_number": 796,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-085",
+      "type": "if",
+      "condition": "rising_edge(axi_aclk)",
+      "process_name": "RX_ENGINE_p",
+      "line_number": 817,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-086",
+      "type": "if",
+      "condition": "axi_aresetn = '0'",
+      "process_name": "RX_ENGINE_p",
+      "line_number": 818,
+      "risk_hint": "reset"
+    },
+    {
+      "branch_id": "BR-087",
+      "type": "else",
+      "condition": "else",
+      "process_name": "RX_ENGINE_p",
+      "line_number": 829,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-088",
+      "type": "if",
+      "condition": "ctrl_s(5) = '1' and ctrl_s(7) = '1'",
+      "process_name": "RX_ENGINE_p",
+      "line_number": 838,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-089",
+      "type": "if",
+      "condition": "rx_busy_s = '0'",
+      "process_name": "RX_ENGINE_p",
+      "line_number": 839,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-090",
+      "type": "if",
+      "condition": "rx_sync_s(1) = '0' and rx_sync_s(0) = '1'",
+      "process_name": "RX_ENGINE_p",
+      "line_number": 841,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-091",
+      "type": "elsif",
+      "condition": "baud_pulse_16x_s = '1'",
+      "process_name": "RX_ENGINE_p",
+      "line_number": 846,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-092",
+      "type": "if",
+      "condition": "rx_os_cnt_s = to_unsigned(15, 4)",
+      "process_name": "RX_ENGINE_p",
+      "line_number": 847,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-093",
+      "type": "if",
+      "condition": "rx_bit_cnt_s < to_unsigned(8, 4)",
+      "process_name": "RX_ENGINE_p",
+      "line_number": 849,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-094",
+      "type": "elsif",
+      "condition": "rx_bit_cnt_s = to_unsigned(8, 4)",
+      "process_name": "RX_ENGINE_p",
+      "line_number": 854,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-095",
+      "type": "if",
+      "condition": "ctrl_s(3 downto 2) = \"00\"",
+      "process_name": "RX_ENGINE_p",
+      "line_number": 855,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-096",
+      "type": "if",
+      "condition": "rx_sync_s(1) = '0'",
+      "process_name": "RX_ENGINE_p",
+      "line_number": 857,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-097",
+      "type": "if",
+      "condition": "rx_level_s >= unsigned(fifo_ctrl_s(7 downto 0))",
+      "process_name": "RX_ENGINE_p",
+      "line_number": 864,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-098",
+      "type": "else",
+      "condition": "else",
+      "process_name": "RX_ENGINE_p",
+      "line_number": 868,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-099",
+      "type": "if",
+      "condition": "ctrl_s(3 downto 2) = \"10\"",
+      "process_name": "RX_ENGINE_p",
+      "line_number": 872,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-100",
+      "type": "if",
+      "condition": "parity_chk_v = '1'",
+      "process_name": "RX_ENGINE_p",
+      "line_number": 874,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-101",
+      "type": "elsif",
+      "condition": "ctrl_s(3 downto 2) = \"01\"",
+      "process_name": "RX_ENGINE_p",
+      "line_number": 877,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-102",
+      "type": "if",
+      "condition": "parity_chk_v = '0'",
+      "process_name": "RX_ENGINE_p",
+      "line_number": 879,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-103",
+      "type": "else",
+      "condition": "else",
+      "process_name": "RX_ENGINE_p",
+      "line_number": 882,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-104",
+      "type": "if",
+      "condition": "rx_sync_s(1) = '0'",
+      "process_name": "RX_ENGINE_p",
+      "line_number": 886,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-105",
+      "type": "elsif",
+      "condition": "rx_bit_cnt_s = to_unsigned(9, 4)",
+      "process_name": "RX_ENGINE_p",
+      "line_number": 892,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-106",
+      "type": "if",
+      "condition": "rx_sync_s(1) = '0'",
+      "process_name": "RX_ENGINE_p",
+      "line_number": 894,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-107",
+      "type": "if",
+      "condition": "rx_level_s >= unsigned(fifo_ctrl_s(7 downto 0))",
+      "process_name": "RX_ENGINE_p",
+      "line_number": 901,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-108",
+      "type": "else",
+      "condition": "else",
+      "process_name": "RX_ENGINE_p",
+      "line_number": 906,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-109",
+      "type": "if",
+      "condition": "rising_edge(axi_aclk)",
+      "process_name": "INT_CTRL_p",
+      "line_number": 927,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-110",
+      "type": "if",
+      "condition": "axi_aresetn = '0'",
+      "process_name": "INT_CTRL_p",
+      "line_number": 928,
+      "risk_hint": "reset"
+    },
+    {
+      "branch_id": "BR-111",
+      "type": "else",
+      "condition": "else",
+      "process_name": "INT_CTRL_p",
+      "line_number": 930,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-112",
+      "type": "if",
+      "condition": "rising_edge(axi_aclk)",
+      "process_name": "TIMEOUT_p",
+      "line_number": 950,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-113",
+      "type": "if",
+      "condition": "axi_aresetn = '0'",
+      "process_name": "TIMEOUT_p",
+      "line_number": 951,
+      "risk_hint": "reset"
+    },
+    {
+      "branch_id": "BR-114",
+      "type": "else",
+      "condition": "else",
+      "process_name": "TIMEOUT_p",
+      "line_number": 955,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-115",
+      "type": "if",
+      "condition": "baud_pulse_s = '1'",
+      "process_name": "TIMEOUT_p",
+      "line_number": 957,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-116",
+      "type": "if",
+      "condition": "rx_busy_s = '0' and rx_empty_s = '0'",
+      "process_name": "TIMEOUT_p",
+      "line_number": 958,
+      "risk_hint": "boundary"
+    },
+    {
+      "branch_id": "BR-117",
+      "type": "if",
+      "condition": "timeout_val_s /= (timeout_val_s'range => '0') and timeout_cnt_s < unsigned(timeo",
+      "process_name": "TIMEOUT_p",
+      "line_number": 959,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-118",
+      "type": "elsif",
+      "condition": "timeout_val_s /= (timeout_val_s'range => '0') and timeout_cnt_s >= unsigned(time",
+      "process_name": "TIMEOUT_p",
+      "line_number": 962,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-119",
+      "type": "else",
+      "condition": "else",
+      "process_name": "TIMEOUT_p",
+      "line_number": 968,
+      "risk_hint": "normal"
+    },
+    {
+      "branch_id": "BR-120",
+      "type": "if",
+      "condition": "rx_empty_s = '1'",
+      "process_name": "TIMEOUT_p",
+      "line_number": 972,
+      "risk_hint": "boundary"
+    }
+  ],
+  "fsm_states": [],
+  "assertions": [
+    {
+      "assertion_id": "ASSERT-001",
+      "condition": "(G_FIFO_DEPTH >= 8 and G_FIFO_DEPTH <= 256)",
+      "severity": "failure",
+      "line_number": 316
+    },
+    {
+      "assertion_id": "ASSERT-002",
+      "condition": "(2 ** FIFO_ADDR_WIDTH_c = G_FIFO_DEPTH)",
+      "severity": "failure",
+      "line_number": 322
+    },
+    {
+      "assertion_id": "ASSERT-003",
+      "condition": "(G_CLK_FREQ_HZ >= 1_000_000 and",
+      "severity": "failure",
+      "line_number": 328
+    },
+    {
+      "assertion_id": "ASSERT-004",
+      "condition": "(G_DEFAULT_BAUD >= 1 and",
+      "severity": "failure",
+      "line_number": 335
+    },
+    {
+      "assertion_id": "ASSERT-005",
+      "condition": "(G_TIMEOUT_DEFAULT >= 0 and",
+      "severity": "failure",
+      "line_number": 342
+    }
+  ],
+  "registers": [
+    {
+      "name": "nco_accum_s",
+      "width": 32,
+      "has_reset": true,
+      "reset_value": "BAUD_TUNING_RESET_c",
+      "line_number": 423
+    },
+    {
+      "name": "baud_pulse_s",
+      "width": 1,
+      "has_reset": true,
+      "reset_value": "'0'",
+      "line_number": 424
+    },
+    {
+      "name": "baud_pulse_16x_s",
+      "width": 1,
+      "has_reset": true,
+      "reset_value": "'0'",
+      "line_number": 425
+    },
+    {
+      "name": "aw_valid_lat_s",
+      "width": 1,
+      "has_reset": true,
+      "reset_value": "'0'",
+      "line_number": 447
+    },
+    {
+      "name": "aw_addr_lat_s",
+      "width": 8,
+      "has_reset": true,
+      "reset_value": "(others => '0')",
+      "line_number": 448
+    },
+    {
+      "name": "w_valid_lat_s",
+      "width": 1,
+      "has_reset": true,
+      "reset_value": "'0'",
+      "line_number": 471
+    },
+    {
+      "name": "w_data_lat_s",
+      "width": 32,
+      "has_reset": true,
+      "reset_value": "(others => '0')",
+      "line_number": 472
+    },
+    {
+      "name": "w_strb_lat_s",
+      "width": 4,
+      "has_reset": true,
+      "reset_value": "(others => '0')",
+      "line_number": 473
+    },
+    {
+      "name": "bvalid_s",
+      "width": 1,
+      "has_reset": true,
+      "reset_value": "'0'",
+      "line_number": 498
+    },
+    {
+      "name": "bresp_s",
+      "width": 2,
+      "has_reset": true,
+      "reset_value": "AXI_OKAY_c",
+      "line_number": 499
+    },
+    {
+      "name": "arready_s",
+      "width": 1,
+      "has_reset": true,
+      "reset_value": "'1'",
+      "line_number": 540
+    },
+    {
+      "name": "rvalid_s",
+      "width": 1,
+      "has_reset": true,
+      "reset_value": "'0'",
+      "line_number": 541
+    },
+    {
+      "name": "rdata_s",
+      "width": 32,
+      "has_reset": true,
+      "reset_value": "(others => '0')",
+      "line_number": 542
+    },
+    {
+      "name": "rresp_s",
+      "width": 2,
+      "has_reset": true,
+      "reset_value": "AXI_OKAY_c",
+      "line_number": 543
+    },
+    {
+      "name": "rx_fifo_pop_s",
+      "width": 1,
+      "has_reset": true,
+      "reset_value": "'0'",
+      "line_number": 544
+    },
+    {
+      "name": "ctrl_s",
+      "width": 8,
+      "has_reset": true,
+      "reset_value": "(others => '0')",
+      "line_number": 620
+    },
+    {
+      "name": "baud_tuning_s",
+      "width": 32,
+      "has_reset": true,
+      "reset_value": "BAUD_TUNING_RESET_c",
+      "line_number": 621
+    },
+    {
+      "name": "fifo_ctrl_s",
+      "width": 16,
+      "has_reset": true,
+      "reset_value": "FIFO_THRESH_RESET_c & FIFO_THRESH_RESET_c",
+      "line_number": 622
+    },
+    {
+      "name": "int_enable_s",
+      "width": 8,
+      "has_reset": true,
+      "reset_value": "(others => '0')",
+      "line_number": 625
+    },
+    {
+      "name": "scratch_s",
+      "width": 32,
+      "has_reset": true,
+      "reset_value": "(others => '0')",
+      "line_number": 626
+    },
+    {
+      "name": "w1c_mask_s",
+      "width": 8,
+      "has_reset": true,
+      "reset_value": "(others => '0')",
+      "line_number": 627
+    },
+    {
+      "name": "timeout_val_s",
+      "width": 16,
+      "has_reset": false,
+      "reset_value": "",
+      "line_number": 642
+    },
+    {
+      "name": "tx_wr_ptr_s",
+      "width": 1,
+      "has_reset": true,
+      "reset_value": "(others => '0')",
+      "line_number": 667
+    },
+    {
+      "name": "tx_rd_ptr_s",
+      "width": 1,
+      "has_reset": true,
+      "reset_value": "(others => '0')",
+      "line_number": 668
+    },
+    {
+      "name": "rx_wr_ptr_s",
+      "width": 1,
+      "has_reset": true,
+      "reset_value": "(others => '0')",
+      "line_number": 697
+    },
+    {
+      "name": "rx_rd_ptr_s",
+      "width": 1,
+      "has_reset": true,
+      "reset_value": "(others => '0')",
+      "line_number": 698
+    },
+    {
+      "name": "ev_overrun_s",
+      "width": 1,
+      "has_reset": true,
+      "reset_value": "'0'",
+      "line_number": 699
+    },
+    {
+      "name": "ev_rx_full_s",
+      "width": 1,
+      "has_reset": true,
+      "reset_value": "'0'",
+      "line_number": 700
+    },
+    {
+      "name": "tx_shift_s",
+      "width": 12,
+      "has_reset": true,
+      "reset_value": "(others => '1')",
+      "line_number": 737
+    },
+    {
+      "name": "tx_bit_cnt_s",
+      "width": 4,
+      "has_reset": true,
+      "reset_value": "(others => '0')",
+      "line_number": 738
+    },
+    {
+      "name": "tx_busy_s",
+      "width": 1,
+      "has_reset": true,
+      "reset_value": "'0'",
+      "line_number": 739
+    },
+    {
+      "name": "tx_fifo_pop_s",
+      "width": 1,
+      "has_reset": true,
+      "reset_value": "'0'",
+      "line_number": 740
+    },
+    {
+      "name": "ev_tx_thresh_s",
+      "width": 1,
+      "has_reset": true,
+      "reset_value": "'0'",
+      "line_number": 741
+    },
+    {
+      "name": "ev_tx_empty_s",
+      "width": 1,
+      "has_reset": true,
+      "reset_value": "'0'",
+      "line_number": 742
+    },
+    {
+      "name": "rx_sync_s",
+      "width": 2,
+      "has_reset": true,
+      "reset_value": "\"11\"",
+      "line_number": 819
+    },
+    {
+      "name": "rx_busy_s",
+      "width": 1,
+      "has_reset": true,
+      "reset_value": "'0'",
+      "line_number": 820
+    },
+    {
+      "name": "rx_bit_cnt_s",
+      "width": 4,
+      "has_reset": true,
+      "reset_value": "(others => '0')",
+      "line_number": 821
+    },
+    {
+      "name": "rx_shift_s",
+      "width": 8,
+      "has_reset": true,
+      "reset_value": "(others => '0')",
+      "line_number": 822
+    },
+    {
+      "name": "rx_os_cnt_s",
+      "width": 4,
+      "has_reset": true,
+      "reset_value": "(others => '0')",
+      "line_number": 823
+    },
+    {
+      "name": "rx_fifo_push_s",
+      "width": 1,
+      "has_reset": true,
+      "reset_value": "'0'",
+      "line_number": 824
+    },
+    {
+      "name": "rx_fifo_wdata_s",
+      "width": 8,
+      "has_reset": true,
+      "reset_value": "(others => '0')",
+      "line_number": 825
+    },
+    {
+      "name": "ev_parity_err_s",
+      "width": 1,
+      "has_reset": true,
+      "reset_value": "'0'",
+      "line_number": 826
+    },
+    {
+      "name": "ev_frame_err_s",
+      "width": 1,
+      "has_reset": true,
+      "reset_value": "'0'",
+      "line_number": 827
+    },
+    {
+      "name": "ev_rx_thresh_s",
+      "width": 1,
+      "has_reset": true,
+      "reset_value": "'0'",
+      "line_number": 828
+    },
+    {
+      "name": "int_status_s",
+      "width": 8,
+      "has_reset": true,
+      "reset_value": "(others => '0')",
+      "line_number": 929
+    },
+    {
+      "name": "timeout_cnt_s",
+      "width": 16,
+      "has_reset": true,
+      "reset_value": "(others => '0')",
+      "line_number": 952
+    },
+    {
+      "name": "timeout_flag_s",
+      "width": 1,
+      "has_reset": true,
+      "reset_value": "'0'",
+      "line_number": 953
+    },
+    {
+      "name": "ev_timeout_s",
+      "width": 1,
+      "has_reset": true,
+      "reset_value": "'0'",
+      "line_number": 954
+    }
+  ],
+  "summary": {
+    "total_branches": 120,
+    "reset_branches": 12,
+    "error_branches": 0,
+    "boundary_branches": 7,
+    "protocol_branches": 10,
+    "normal_branches": 91,
+    "unknown_branches": 0,
+    "total_processes": 13,
+    "total_assertions": 5,
+    "total_fsm_states": 0,
+    "estimated_line_coverage_denominator": 653
+  }
+}
