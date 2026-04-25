@@ -21,6 +21,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import sys
 from unittest.mock import MagicMock, patch
@@ -28,7 +29,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 import toml
 
-from agents.sim_runner import generate_build_cov_tcl, run_simulate
+from agents.sim_runner import generate_build_cov_tcl, parse_xcrg_results, run_simulate
 
 # ---------------------------------------------------------------------------
 # Minimal build.tcl content used by TCL generation tests
@@ -165,9 +166,8 @@ def test_state_updated_after_simulate(tmp_path) -> None:
     toml_path = _write_pssgen_toml(str(tmp_path), tool="vivado", vivado_bin=fake_bin)
 
     mock_proc = MagicMock()
-    mock_proc.stdout = iter(["Simulation complete.\n"])
+    mock_proc.communicate.return_value = ("Simulation complete.\n", None)
     mock_proc.returncode = 0
-    mock_proc.wait.return_value = None
 
     with patch("agents.sim_runner.subprocess.Popen", return_value=mock_proc):
         result = run_simulate(str(tmp_path), toml_path)
@@ -179,3 +179,83 @@ def test_state_updated_after_simulate(tmp_path) -> None:
     state = toml.load(state_path)
     assert state["simulator"]["tool"] == "vivado"
     assert state["simulator"]["coverage_dir"] != ""
+
+
+# ---------------------------------------------------------------------------
+# parse_xcrg_results tests
+# ---------------------------------------------------------------------------
+
+
+def test_parse_xcrg_functional_coverage(tmp_path) -> None:
+    """parse_xcrg_results extracts functional_coverage_pct from dashboard.html."""
+    func_dir = os.path.join(str(tmp_path), "html", "functionalCoverageReport")
+    os.makedirs(func_dir, exist_ok=True)
+    with open(os.path.join(func_dir, "dashboard.html"), "w", encoding="utf-8") as fh:
+        fh.write("<html><body><td>Score</td><td>41.6667</td></body></html>")
+
+    result = parse_xcrg_results(str(tmp_path))
+    assert result["functional_coverage_pct"] == pytest.approx(41.6667)
+
+
+def test_parse_xcrg_covergroups(tmp_path) -> None:
+    """parse_xcrg_results returns non-empty covergroups list from groups.html."""
+    func_dir = os.path.join(str(tmp_path), "html", "functionalCoverageReport")
+    os.makedirs(func_dir, exist_ok=True)
+    with open(os.path.join(func_dir, "groups.html"), "w", encoding="utf-8") as fh:
+        fh.write(
+            "<html><body><table>"
+            "<tr><td>axi_transaction_cg</td><td>41.6667</td><td>24</td><td>10</td></tr>"
+            "</table></body></html>"
+        )
+
+    result = parse_xcrg_results(str(tmp_path))
+    assert len(result["covergroups"]) > 0
+    assert result["covergroups"][0]["name"] == "axi_transaction_cg"
+    assert result["covergroups"][0]["expected"] == 24
+    assert result["covergroups"][0]["covered"] == 10
+
+
+def test_parse_xcrg_missing_code_coverage(tmp_path) -> None:
+    """code_coverage_pct is None when codeCoverageReport directory is absent."""
+    result = parse_xcrg_results(str(tmp_path))
+    assert result["code_coverage_pct"] is None
+
+
+def test_vivado_coverage_results_json_written(tmp_path) -> None:
+    """run_simulate writes vivado_coverage_results.json after successful simulation."""
+    fake_bin = os.path.join(str(tmp_path), "vivado_bin")
+    os.makedirs(fake_bin)
+    fake_exe = os.path.join(fake_bin, "vivado.bat" if sys.platform == "win32" else "vivado")
+    open(fake_exe, "w").close()
+
+    scripts_dir = os.path.join(str(tmp_path), "tb", "scripts", "vivado")
+    os.makedirs(scripts_dir, exist_ok=True)
+    _write_build_tcl(scripts_dir)
+
+    toml_path = _write_pssgen_toml(str(tmp_path), tool="vivado", vivado_bin=fake_bin)
+
+    mock_proc = MagicMock()
+    mock_proc.communicate.return_value = ("Simulation complete.\n", None)
+    mock_proc.returncode = 0
+
+    mock_xcrg = {
+        "functional_coverage_pct": 41.67,
+        "covergroups": [
+            {"name": "axi_transaction_cg", "score": 41.67, "expected": 24, "covered": 10}
+        ],
+        "code_coverage_pct": None,
+        "report_dir": "",
+        "parsed_at": "2026-04-25T00:00:00+00:00",
+    }
+
+    with patch("agents.sim_runner.subprocess.Popen", return_value=mock_proc):
+        with patch("agents.sim_runner.parse_xcrg_results", return_value=mock_xcrg):
+            result = run_simulate(str(tmp_path), toml_path)
+
+    assert result["success"] is True
+    json_path = os.path.join(str(tmp_path), "coverage", "vivado_coverage_results.json")
+    assert os.path.isfile(json_path)
+    data = json.load(open(json_path, encoding="utf-8"))
+    assert data["functional_coverage_pct"] == pytest.approx(41.67)
+    assert "covergroups" in data
+    assert data["simulator"] == "vivado"
