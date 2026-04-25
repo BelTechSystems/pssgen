@@ -440,6 +440,7 @@ def main() -> None:
         else:
             print("No sim_coverage.json found.")
             print("Run --collect-results first.")
+        sys.exit(0)
 
     # ------------------------------------------------------------------
     # Merge pssgen.toml config into args (CLI flags take priority)
