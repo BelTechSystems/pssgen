@@ -345,6 +345,18 @@ def main() -> None:
         dest="simulate",
         help="Run Vivado simulation with coverage collection using build_cov.tcl.",
     )
+    parser.add_argument(
+        "--effort",
+        choices=["low", "medium", "high"],
+        default=None,
+        dest="effort",
+        metavar="LEVEL",
+        help=(
+            "Coverage improvement effort level used with --simulate: "
+            "low (1 pass, 95%% target), medium (3 passes, 98%%), "
+            "high (5 passes, 100%%). Default: low."
+        ),
+    )
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args()
 
@@ -448,15 +460,35 @@ def main() -> None:
             print("Run --collect-results first.")
         sys.exit(0)
 
+    if getattr(args, "effort", None) and not getattr(args, "simulate", False):
+        print(
+            "[pssgen] --effort requires --simulate. "
+            "Run with --simulate --effort <level>",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
     if getattr(args, "simulate", False):
         if not config_path:
             print("[pssgen] ERROR: --simulate requires a pssgen.toml.", file=sys.stderr)
             sys.exit(1)
         ip_dir = os.path.dirname(os.path.abspath(config_path))
-        from agents.sim_runner import run_simulate
-        result = run_simulate(ip_dir, config_path)
-        if result["success"]:
-            print(f"Simulation complete. Coverage: {result['coverage_dir']}")
+        effort_level = getattr(args, "effort", None)
+        if effort_level is not None:
+            from agents.effort_controller import run_effort_loop
+            result = run_effort_loop(ip_dir, config_path, level=effort_level)
+            print(
+                f"Effort complete. Passes: {result['passes_run']}. "
+                f"Coverage: {result['final_coverage_pct']:.1f}%. "
+                f"Verdict: {result['verdict']}"
+            )
+            if result["convergence_guard"]:
+                print(result["report_note"])
+        else:
+            from agents.sim_runner import run_simulate
+            result = run_simulate(ip_dir, config_path)
+            if result["success"]:
+                print(f"Simulation complete. Coverage: {result['coverage_dir']}")
         sys.exit(0)
 
     # ------------------------------------------------------------------
