@@ -52,9 +52,10 @@ _VIVADO_BIN_CANDIDATES = ("vivado.bat",) if sys.platform == "win32" else ("vivad
 _XCRG_BLOCK = (
     '\nputs "--- Collecting coverage ---"\n'
     "run_cmd [list xcrg \\\n"
-    "    -report_format html \\\n"
-    "    -dir ./coverage_db/${DESIGN}_cov.covdb \\\n"
-    "    -output ./coverage_db/html]\n"
+    "    -cov_db_dir ./coverage_db \\\n"
+    "    -cov_db_name ${DESIGN}_cov \\\n"
+    "    -report_dir ./coverage_db/html \\\n"
+    "    -report_format html]\n"
     'puts "Coverage report written to ./coverage_db/html"'
 )
 
