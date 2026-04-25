@@ -383,7 +383,7 @@ def main() -> None:
         from agents.assertion_coverage_analyzer import analyze_assertion_coverage
         from agents.coverage_analyzer import analyze_coverage
         from agents.report_generator import generate_coverage_report
-        import glob, os
+        import glob
 
         vplan = args.vplan
         ip_dir = os.path.dirname(os.path.abspath(vplan))
