@@ -1,6 +1,6 @@
 {
-  "file": "ip/buffered_axi_lite_uart/vhdl/buffered_axi_lite_uart.vhd",
-  "analyzed_at": "2026-04-25T04:53:02.963422+00:00",
+  "file": "E:\\Users\\Steve\\Apps\\beltech-systems\\pssgen\\ip\\buffered_axi_lite_uart\\vhdl\\buffered_axi_lite_uart.vhd",
+  "analyzed_at": "2026-04-25T04:54:25.481222+00:00",
   "entity_name": "buffered_axi_lite_uart",
   "architecture_name": "rtl",
   "total_lines": 1009,

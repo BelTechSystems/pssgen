@@ -62,3 +62,15 @@ Correct value: 0x00800000
   - baud pulse every 512 cycles
   - byte frame = 5,120 cycles
   - poll window = 15,000 cycles (2.9x margin) ✓
+
+## CAE-011: BALU Coverage Assessment — Final Answer
+
+### Is 94.8% the finish line?
+See ip/buffered_axi_lite_uart/coverage_assessment.md
+for full analysis. Summary recorded here.
+
+### Next steps
+- Enrich CAE-004 functional_coverage_analyzer with
+  family and category breakdown (currently empty lists)
+- Run D-038 one-pass auto-improvement against easy wins
+- Re-run regression after easy wins applied
