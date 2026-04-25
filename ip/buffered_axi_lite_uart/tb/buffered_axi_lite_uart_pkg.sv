@@ -13,6 +13,24 @@ package buffered_axi_lite_uart_pkg;
     `include "buffered_axi_lite_uart_base_seq.sv"            // depends on seq_item
     `include "buffered_axi_lite_uart_smoke_seq.sv"           // depends on base_seq
     `include "seq_RCOV001_baud_tuning.sv"                    // depends on base_seq
+    `include "seq_RCOV002_ctrl_parity.sv"                    // depends on base_seq
+    `include "seq_RCOV003_ctrl_stop_bits.sv"                 // depends on base_seq
+    `include "seq_RCOV004_fifo_status_rx_level.sv"           // depends on base_seq
+    `include "seq_RCOV005_fifo_status_tx_level.sv"           // depends on base_seq
+    `include "seq_RCOV006_timeout_val.sv"                    // depends on base_seq
+    `include "seq_RCOV007_int_status_each_bit_independently.sv" // depends on base_seq
+    `include "seq_RCOV008_int_status_overrun_int_status_rx_full.sv" // depends on base_seq
+    `include "seq_RCOV009_int_status_timeout_int_status_rx_thresh.sv" // depends on base_seq
+    `include "seq_RCOV010_axi_bresp.sv"                      // depends on base_seq
+    `include "seq_RCOV011_axi_rresp.sv"                      // depends on base_seq
+    `include "seq_RCOV012_axi_write_order.sv"                // depends on base_seq
+    `include "seq_RCOV013_baud_tuning_write_while_enabled.sv" // depends on base_seq
+    `include "seq_RCOV014_scratch.sv"                        // depends on base_seq
+    `include "seq_RCOV015_reset_values.sv"                   // depends on base_seq
+    `include "seq_RCOV016_uart_en_control.sv"                // depends on base_seq
+    `include "seq_RCOV017_frame_structural.sv"               // depends on base_seq
+    `include "seq_RCOV018_readonly_ignore.sv"                // depends on base_seq
+    `include "seq_RCOV019_int_thresh_frame.sv"               // depends on base_seq
     `include "buffered_axi_lite_uart_agent.sv"               // depends on drv/mon/seqr
     `include "buffered_axi_lite_uart_env.sv"                 // depends on agent/sb/cov
     `include "buffered_axi_lite_uart_test.sv"                // depends on env
