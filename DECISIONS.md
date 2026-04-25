@@ -2136,73 +2136,6 @@ Alternatives considered:
 
 ---
 
-## D-036: --effort flag and coverage effort levels
-
-Status: DECIDED
-Date: 2026-04-25
-
-Decision:
-pssgen supports three effort levels via --effort flag (default: low):
-
-  --effort low    Up to 1 pass.  Target: 95% coverage.
-  --effort medium Up to 3 passes. Target: 98% coverage.
-  --effort high   Up to 5 passes. Target: 100% or maximum achievable.
-
-All effort levels produce a CAE verdict. The effort level controls
-how hard pssgen tries, not what it reports. The verdict is always
-objective and simulator-derived.
-
---effort high convergence guard: if target is not reached after 5
-passes, verdict still issues. Report notes: "Maximum passes reached
-— N branches remain unexercised. Review for structural
-unreachability." Unexercised branches are flagged as
-UNREACHABLE_CANDIDATE for Certifiable user documentation.
-
-Last-used effort level persists in pssgen_state.toml. CLI flag
-overrides toml value.
-
-Rationale:
-Serves all three user profiles without forcing the Certifiable
-profile on the Explorer. Uniform verdict keeps the process
-consistent and trustworthy across all effort levels.
-
----
-
-## D-037: --simulate CLI flag and simulator integration
-
-Status: DECIDED
-Date: 2026-04-25
-
-Decision:
-pssgen supports --simulate flag to run simulation and collect
-coverage data from a recognized external tool. Simulator is
-specified in pssgen_state.toml — not as a CLI flag.
-
-Supported simulators:
-
-  vivado    Simulate + assess coverage. FULLY SUPPORTED.
-  verilator Simulate + assess coverage. TODO.
-  icarus    Simulate + assess coverage. TODO.
-  questa    Simulate only. Coverage assessment not available.
-            Emits: "Coverage assessment requires Vivado,
-            Verilator, or Icarus. Skipping --assess-coverage."
-
-pssgen never self-assesses coverage. CAE requires a
-simulator-generated coverage database as input. If --simulate
-has not been run, --assess-coverage emits:
-"Coverage source required — run --simulate first."
-
-Coverage source is always recorded in the CAE report footer,
-e.g.: "Coverage source: Vivado 2024.1 xcrg"
-
-Rationale:
-Self-assessed coverage has no credibility for aerospace and
-high-reliability users. An independent, recognized tool must
-be the coverage source. The CAE is an analysis and
-interpretation layer, not a measurement tool.
-
----
-
 ## D-036: pssgen_state.toml persistent tool state
 
 Status: DECIDED
@@ -2246,6 +2179,38 @@ Simulator selection and effort level are project-level settings,
 not per-invocation flags. Persisting them reduces CLI friction
 and ensures reproducible runs. Downstream decisions D-030 and
 D-035 depend on this file being the authoritative project state.
+
+---
+
+## D-037: --effort flag and coverage effort levels
+
+Status: DECIDED
+Date: 2026-04-25
+
+Decision:
+pssgen supports three effort levels via --effort flag (default: low):
+
+  --effort low    Up to 1 pass.  Target: 95% coverage.
+  --effort medium Up to 3 passes. Target: 98% coverage.
+  --effort high   Up to 5 passes. Target: 100% or maximum achievable.
+
+All effort levels produce a CAE verdict. The effort level controls
+how hard pssgen tries, not what it reports. The verdict is always
+objective and simulator-derived.
+
+--effort high convergence guard: if target is not reached after 5
+passes, verdict still issues. Report notes: "Maximum passes reached
+— N branches remain unexercised. Review for structural
+unreachability." Unexercised branches are flagged as
+UNREACHABLE_CANDIDATE for Certifiable user documentation.
+
+Last-used effort level persists in pssgen_state.toml. CLI flag
+overrides toml value.
+
+Rationale:
+Serves all three user profiles without forcing the Certifiable
+profile on the Explorer. Uniform verdict keeps the process
+consistent and trustworthy across all effort levels.
 
 ---
 
