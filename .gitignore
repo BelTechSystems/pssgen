@@ -97,6 +97,9 @@ pssgen.local.toml
 pssgen_state.local.toml
 .env.local
 
+# pssgen machine-managed runtime state (D-036)
+pssgen_state.toml
+
 # Orphaned files (see Task 1 cleanup)
 gen_sds.js
 hdl_style_old.md
