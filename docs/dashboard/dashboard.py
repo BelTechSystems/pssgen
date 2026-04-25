@@ -61,6 +61,29 @@ def load_coverage_results() -> dict:
     return r.json()
 
 
+@st.cache_data(ttl=300)
+def load_coverage_assessment() -> dict:
+    import requests
+    url = "https://raw.githubusercontent.com/BelTechSystems/pssgen/main/ip/buffered_axi_lite_uart/coverage/coverage_assessment.json"
+    try:
+        r = requests.get(url, timeout=10)
+        r.raise_for_status()
+        return r.json()
+    except Exception:
+        return {}
+
+@st.cache_data(ttl=300)
+def load_code_coverage() -> dict:
+    import requests
+    url = "https://raw.githubusercontent.com/BelTechSystems/pssgen/main/ip/buffered_axi_lite_uart/coverage/code_coverage.json"
+    try:
+        r = requests.get(url, timeout=10)
+        r.raise_for_status()
+        return r.json()
+    except Exception:
+        return {}
+
+
 def fetch_data():
     gap, cov = None, None
     gap_ok, cov_ok = True, True
@@ -313,6 +336,80 @@ with st.expander("Requirements Detail", expanded=False):
 
 st.markdown("---")
 
+
+st.markdown("---")
+with st.expander(
+    "Coverage Assessment Engine", expanded=True):
+    ca = load_coverage_assessment()
+    cc = load_code_coverage()
+    if ca:
+        verdict = ca.get("verdict", "UNKNOWN")
+        emoji = {"PRODUCTION_READY": "✅",
+                 "NEEDS_WORK": "⚠️",
+                 "CRITICAL_GAPS": "❌"
+                 }.get(verdict, "❓")
+        m = ca.get("coverage_metrics", {})
+        rm = ca.get("risk_matrix", {})
+        easy = ca.get("easy_wins", [])
+
+        st.subheader(f"{emoji} Verdict: {verdict}")
+        st.caption(ca.get("verdict_rationale", ""))
+
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric("Address Coverage",
+            f"{m.get('address_coverage_pct',0):.1f}%")
+        col2.metric("Branch Coverage",
+            f"{m.get('adjusted_branch_pct',0):.1f}%")
+        col3.metric("Functional Coverage",
+            f"{m.get('functional_coverage_pct',0):.1f}%")
+        col4.metric("Overall",
+            f"{m.get('overall_pct',0):.1f}%")
+
+        col5, col6, col7 = st.columns(3)
+        col5.metric("High Risk Gaps",
+            rm.get("high_risk_gaps", 0),
+            delta_color="inverse")
+        col6.metric("Real RTL Gaps",
+            rm.get("real_rtl_gaps", 0),
+            delta_color="inverse")
+        col7.metric("Easy Wins",
+            len(easy))
+
+        if cc:
+            st.markdown("**RTL Branch Classification**")
+            cls = cc.get(
+                "uncovered_by_classification", {})
+            if cls:
+                import pandas as pd
+                df = pd.DataFrame([
+                    {"Classification": k,
+                     "Count": v}
+                    for k, v in cls.items()
+                    if v > 0])
+                if not df.empty:
+                    st.dataframe(df,
+                        use_container_width=True,
+                        hide_index=True)
+
+        if easy:
+            st.markdown("**Easy Wins**")
+            import pandas as pd
+            df = pd.DataFrame(easy)
+            cols = [c for c in
+                ["req_id","family","covered_by",
+                 "seq_status","recommended_action"]
+                if c in df.columns]
+            st.dataframe(df[cols],
+                use_container_width=True,
+                hide_index=True)
+        else:
+            st.info(
+                "No easy wins in current assessment. "
+                "CAE-004 enrichment pending.")
+    else:
+        st.warning(
+            "Coverage assessment data not available. "
+            "Run --assess-coverage to generate.")
 
 # ── Section 6: Footer ─────────────────────────────────────────────────────────
 
