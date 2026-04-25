@@ -1,0 +1,58 @@
+{
+  "analyzed_at": "2026-04-25T01:35:42.995414+00:00",
+  "total_assertions": 5,
+  "fired": 0,
+  "never_fired": 5,
+  "failures": 0,
+  "dead_code": 5,
+  "untested": 0,
+  "assertion_coverage_pct": 0.0,
+  "adjusted_assertion_coverage_pct": 100.0,
+  "assertions": [
+    {
+      "assertion_id": "ASSERT-001",
+      "condition": "(G_FIFO_DEPTH >= 8 and G_FIFO_DEPTH <= 256)",
+      "severity": "failure",
+      "line_number": 316,
+      "status": "NEVER_FIRED",
+      "classification": "DEAD_CODE",
+      "time_ns": 0.0
+    },
+    {
+      "assertion_id": "ASSERT-002",
+      "condition": "(2 ** FIFO_ADDR_WIDTH_c = G_FIFO_DEPTH)",
+      "severity": "failure",
+      "line_number": 322,
+      "status": "NEVER_FIRED",
+      "classification": "DEAD_CODE",
+      "time_ns": 0.0
+    },
+    {
+      "assertion_id": "ASSERT-003",
+      "condition": "(G_CLK_FREQ_HZ >= 1_000_000 and",
+      "severity": "failure",
+      "line_number": 328,
+      "status": "NEVER_FIRED",
+      "classification": "DEAD_CODE",
+      "time_ns": 0.0
+    },
+    {
+      "assertion_id": "ASSERT-004",
+      "condition": "(G_DEFAULT_BAUD >= 1 and",
+      "severity": "failure",
+      "line_number": 335,
+      "status": "NEVER_FIRED",
+      "classification": "DEAD_CODE",
+      "time_ns": 0.0
+    },
+    {
+      "assertion_id": "ASSERT-005",
+      "condition": "(G_TIMEOUT_DEFAULT >= 0 and",
+      "severity": "failure",
+      "line_number": 342,
+      "status": "NEVER_FIRED",
+      "classification": "DEAD_CODE",
+      "time_ns": 0.0
+    }
+  ]
+}
