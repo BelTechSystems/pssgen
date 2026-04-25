@@ -190,17 +190,31 @@ def parse_xcrg_results(coverage_db_dir: str) -> dict[str, Any]:
             with open(groups_path, "r", encoding="utf-8", errors="replace") as fh:
                 html = fh.read()
             for m in re.finditer(
-                r"<td[^>]*>([\w_:]+)</td>\s*<td[^>]*>\s*(\d+\.\d+)\s*%?\s*</td>"
-                r"\s*<td[^>]*>\s*(\d+)\s*</td>\s*<td[^>]*>\s*(\d+)\s*</td>",
+                r'<td>\s*<a href="(grp\d+\.html)">\s*(.*?)\s*</a></td>'
+                r"\s*<td[^>]*>\s*(\d+\.?\d*)\s*</td>",
                 html,
                 re.DOTALL,
             ):
+                grp_href, name, score_str = m.group(1), m.group(2), m.group(3)
+                expected, covered = 0, 0
+                grp_path = os.path.join(func_report, grp_href)
+                if os.path.isfile(grp_path):
+                    with open(grp_path, "r", encoding="utf-8", errors="replace") as gfh:
+                        grp_html = gfh.read()
+                    vm = re.search(
+                        r"<td[^>]*>Variables</td>\s*<td[^>]*>\s*(\d+)\s*</td>"
+                        r"\s*<td[^>]*>\s*\d+\s*</td>\s*<td[^>]*>\s*(\d+)\s*</td>",
+                        grp_html,
+                        re.DOTALL,
+                    )
+                    if vm:
+                        expected, covered = int(vm.group(1)), int(vm.group(2))
                 covergroups.append(
                     {
-                        "name": m.group(1),
-                        "score": float(m.group(2)),
-                        "expected": int(m.group(3)),
-                        "covered": int(m.group(4)),
+                        "name": name,
+                        "score": float(score_str),
+                        "expected": expected,
+                        "covered": covered,
                     }
                 )
         except OSError:
@@ -331,6 +345,7 @@ def run_simulate(ip_dir: str, pssgen_toml_path: str) -> dict[str, Any]:
         effort = state.get("effort", {})
         effort_level = effort.get("level", "low")
         target_pct = float(effort.get("target_pct", 95.0))
+        max_passes = {"low": 1, "medium": 3, "high": 5}.get(effort_level, 1)
         func_pct = xcrg["functional_coverage_pct"]
         target_reached = func_pct >= target_pct
 
@@ -349,6 +364,7 @@ def run_simulate(ip_dir: str, pssgen_toml_path: str) -> dict[str, Any]:
             "coverage_source": coverage_source,
             "effort_level": effort_level,
             "passes_run": 1,
+            "max_passes": max_passes,
             "target_pct": target_pct,
             "target_reached": target_reached,
             "functional_coverage_pct": func_pct,
