@@ -1,10 +1,11 @@
 {
   "file": "ip/buffered_axi_lite_uart/vhdl/buffered_axi_lite_uart.vhd",
-  "analyzed_at": "2026-04-23T18:38:50.630096+00:00",
+  "analyzed_at": "2026-04-25T04:53:02.963422+00:00",
   "entity_name": "buffered_axi_lite_uart",
   "architecture_name": "rtl",
   "total_lines": 1009,
   "code_lines": 653,
+  "total_branches": 120,
   "processes": [
     {
       "name": "NCO_ACCUM_p",

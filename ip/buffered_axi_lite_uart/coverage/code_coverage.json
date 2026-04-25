@@ -1,8 +1,8 @@
 {
   "rtl_analysis": "ip/buffered_axi_lite_uart/coverage/rtl_analysis.json",
   "sim_coverage": "ip/buffered_axi_lite_uart/coverage/sim_coverage.json",
-  "vplan": null,
-  "analyzed_at": "2026-04-23T21:46:10.790975+00:00",
+  "vplan": "ip/buffered_axi_lite_uart/buffered_axi_lite_uart_vplan.xlsx",
+  "analyzed_at": "2026-04-25T04:53:02.966658+00:00",
   "total_rtl_branches": 120,
   "total_assertions": 5,
   "total_branches": 125,
@@ -1544,5 +1544,19 @@
       "BR-120"
     ],
     "unknown": []
+  },
+  "summary": {
+    "branch_coverage_pct": 94.17,
+    "adjusted_coverage_pct": 94.17,
+    "real_gaps": 7,
+    "dead_code": 5,
+    "not_run_seq": 0
+  },
+  "uncovered_by_classification": {
+    "dead_code": 5,
+    "defensive": 0,
+    "not_run_seq": 0,
+    "real_gap": 7,
+    "unknown": 0
   }
 }

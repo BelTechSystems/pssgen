@@ -1,31 +1,31 @@
 {
-  "analyzed_at": "2026-04-25T04:42:30.520704+00:00",
+  "analyzed_at": "2026-04-25T04:53:02.971769+00:00",
   "coverage_metrics": {
     "address_coverage_pct": 94.8,
-    "branch_coverage_pct": 0.0,
-    "adjusted_branch_pct": 0.0,
+    "branch_coverage_pct": 94.17,
+    "adjusted_branch_pct": 94.17,
     "functional_coverage_pct": 98.6,
     "assertion_coverage_pct": 100.0,
-    "overall_pct": 64.5
+    "overall_pct": 95.9
   },
   "risk_matrix": {
     "high_risk_gaps": 0,
     "medium_risk_gaps": 0,
     "low_risk_gaps": 0,
-    "real_rtl_gaps": 0,
+    "real_rtl_gaps": 7,
     "phase2_gaps": 1
   },
   "easy_wins": [],
   "medium_gaps": [],
   "hard_gaps": [],
-  "verdict": "CRITICAL_GAPS",
-  "verdict_rationale": "Overall 64.5% coverage. 0 high-risk gaps. 0 real RTL branch gaps. 0 easy wins available.",
+  "verdict": "NEEDS_WORK",
+  "verdict_rationale": "Overall 95.9% coverage. 0 high-risk gaps. 7 real RTL branch gaps. 0 easy wins available.",
   "summary": {
-    "overall_pct": 64.5,
-    "verdict": "CRITICAL_GAPS",
+    "overall_pct": 95.9,
+    "verdict": "NEEDS_WORK",
     "easy_wins": 0,
     "high_risk_gaps": 0,
-    "real_rtl_gaps": 0,
-    "recommendation": "Critical gaps require immediate attention"
+    "real_rtl_gaps": 7,
+    "recommendation": "Address easy wins then re-assess"
   }
 }

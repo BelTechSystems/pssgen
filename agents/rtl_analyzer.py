@@ -500,6 +500,7 @@ def analyze_vhdl(vhdl_path: str) -> dict[str, Any]:
         "architecture_name": arch_name,
         "total_lines": total_lines,
         "code_lines": code_lines,
+        "total_branches": len(branches),
         "processes": processes,
         "branches": branches,
         "fsm_states": fsm_states,

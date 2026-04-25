@@ -309,4 +309,14 @@ def analyze_code_coverage(
         "inference_rules_applied": _INFERENCE_RULES,
         "branches":                output_branches,
         "gap_summary":             gap_summary,
+        "summary": {
+            "branch_coverage_pct":   branch_coverage_pct,
+            "adjusted_coverage_pct": adjusted_coverage_pct,
+            "real_gaps":             real_gap_count,
+            "dead_code":             dead_code_count,
+            "not_run_seq":           not_run_seq_count,
+        },
+        "uncovered_by_classification": {
+            k: len(v) for k, v in gap_summary.items()
+        },
     }
