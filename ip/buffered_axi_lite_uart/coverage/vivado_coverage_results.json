@@ -1,23 +1,22 @@
 {
-  "generated_at": "2026-04-25T00:00:00+00:00",
+  "generated_at": "2026-04-25T23:20:43.783519+00:00",
   "simulator": "vivado",
   "version": "2025.1",
   "coverage_source": "Vivado 2025.1 xcrg",
   "effort_level": "low",
-  "max_passes": 1,
-  "target_pct": 95.0,
   "passes_run": 1,
-  "target_reached": true,
-  "convergence_guard": false,
-  "unreachable_candidates": 0,
-  "pass_results": [
+  "target_pct": 95.0,
+  "target_reached": false,
+  "functional_coverage_pct": 41.6667,
+  "code_coverage_pct": null,
+  "covergroups": [
     {
-      "pass": 1,
-      "coverage_pct": 95.9
+      "name": "1",
+      "score": 41.6667,
+      "expected": 1,
+      "covered": 100
     }
   ],
-  "final_coverage_pct": 95.9,
-  "verdict": "NEEDS_WORK",
-  "verdict_rationale": "7 real FIFO boundary gaps identified. No high-risk gaps. MEDIUM effort required to close.",
+  "verdict": "CRITICAL_GAPS",
   "coverage_note": "Coverage measured by Vivado 2025.1 xcrg. Not self-assessed."
 }
