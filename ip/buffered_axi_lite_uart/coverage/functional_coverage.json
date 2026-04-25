@@ -1,0 +1,22 @@
+{
+  "analyzed_at": "2026-04-25T04:42:14.592336+00:00",
+  "total_requirements": 141,
+  "covered_requirements": 139,
+  "waived_requirements": 2,
+  "gap_requirements": 0,
+  "functional_coverage_pct": 98.6,
+  "coverage_by_family": [],
+  "coverage_by_category": [],
+  "gaps": [],
+  "cov_item_summary": [],
+  "summary": {
+    "functional_coverage_pct": 98.6,
+    "high_risk_gaps": 0,
+    "medium_risk_gaps": 0,
+    "low_risk_gaps": 0,
+    "easy_wins": 0,
+    "timeout_gaps": 0,
+    "not_run_gaps": 0,
+    "phase2_gaps": 1
+  }
+}
