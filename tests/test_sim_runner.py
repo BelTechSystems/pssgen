@@ -22,6 +22,7 @@
 from __future__ import annotations
 
 import os
+import sys
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -154,7 +155,7 @@ def test_state_updated_after_simulate(tmp_path) -> None:
     """run_simulate updates pssgen_state.toml via state_manager on success."""
     fake_bin = os.path.join(str(tmp_path), "vivado_bin")
     os.makedirs(fake_bin)
-    fake_exe = os.path.join(fake_bin, "vivado.exe")
+    fake_exe = os.path.join(fake_bin, "vivado.bat" if sys.platform == "win32" else "vivado")
     open(fake_exe, "w").close()
 
     scripts_dir = os.path.join(str(tmp_path), "tb", "scripts", "vivado")
