@@ -79,7 +79,7 @@ def generate_coverage_report(
         "## RTL Branch Coverage",
         "",
         f"- Total branches: {cc.get('total_branches', 0)}",
-        f"- Exercised: {cc.get('exercised_branches', 0)}",
+        f"- Exercised: {cc.get('exercised_count', 0)}",
         f"- Unexercised: "
         f"{cc.get('unexercised_branches', 0)}",
         "",
