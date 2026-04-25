@@ -1827,20 +1827,13 @@ Alternatives considered:
 
 ---
 
-Add D-034 to DECISIONS.md
-
-BEFORE WRITING ANY CODE read DECISIONS.md in full.
-Find the actual last entry — do not assume it is D-033.
-Match the established format exactly — plain prose, no markdown
-tables, no bold, no bullets except in Alternatives considered
-blocks, --- separator between entries. Match the voice and style
-of D-001 through the current last entry precisely.
+## D-034 
 
 TASK — Append D-034 to DECISIONS.md
 --------------------------------------
 Author: S. Belvin, BelTech Systems LLC
 
-Decision statement:
+Decision:
   pssgen generates UVM sequence bodies from VPR Coverage_Goals
   content using a two-tier model: mechanical generation from VSL
   rules when present, LLM-assisted generation from Stimulus_Strategy
@@ -2091,3 +2084,58 @@ Alternatives considered:
     in aerospace verification closure documentation and is
     immediately understood by lead engineers, program managers,
     and DO-254 auditors without translation.
+
+---
+
+D-038: One-Pass Autonomous Coverage Improvement
+Status: Planned
+Depends on: D-035, D-036, CAE-006, CAE-007
+Target: Block 2 or post-Block 2
+Summary:
+pssgen automatically identifies easy coverage wins after simulation, extends VSL sequences by the minimum steps required, re-simulates once, and stops. Human review is required for all subsequent passes.
+CLI:
+python cli.py --vplan <vpr> --simulate --sim-tool vivado --auto-improve
+pssgen.toml additions:
+toml[coverage]
+auto_improve    = true   # enable one-pass auto-improvement
+max_auto_passes = 1      # hard ceiling, never automated beyond 1
+easy_wins_only  = true   # never auto-extend MEDIUM or HARD gaps
+min_improvement = 1.0    # skip pass if gain < 1.0%
+Behavior:
+Step 1: Simulate → collect results → analyze coverage
+Step 2: Identify EASY gaps only
+Step 3: If no easy wins OR gain < min_improvement → skip to report
+Step 4: Auto-extend VSL in VPR (additive only, never delete)
+Step 5: Re-simulate once
+Step 6: Commit "CAE: one-pass auto-improvement +N.N%"
+Step 7: Generate full assessment report
+Step 8: STOP — present report to engineer
+Stopping conditions (any one triggers immediate stop):
+
+One pass completed
+No easy wins found
+Coverage gain < min_improvement threshold
+Any regression detected → abort and restore prior VPR from git
+New UVM_ERROR introduced → abort and restore prior VPR from git
+
+Report output after auto-improvement:
+Coverage Assessment — One-Pass Auto-Improvement Complete
+========================================================
+Before: 94.8%
+After:  97.2%
+Gain:   +2.4%
+
+Easy wins applied (3):
+  COV-015: added warm reset verification (+2 VSL steps)
+  COV-007: added TX_EMPTY isolation check (+1 VSL step)
+  COV-004: added RX boundary poll (+1 VSL step)
+
+Remaining gaps requiring human review:
+  MEDIUM (4): back-pressure, interrupt co-occurrence,
+              FIFO overflow, timeout retry
+  HARD (2):   AXI write ordering, fault injection
+  PHASE_2 (1): COV-012 AXI_WRITE_ORDER (grammar gap)
+
+No further auto-improvement will run.
+Run --assess-coverage for full gap analysis.
+Human review required to proceed.
