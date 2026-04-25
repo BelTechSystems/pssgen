@@ -37,6 +37,10 @@ BALU_COVERAGE_URL = (
     "https://raw.githubusercontent.com/BelTechSystems/pssgen/main"
     "/ip/buffered_axi_lite_uart/results/balu_coverage_results.json"
 )
+VIVADO_COVERAGE_URL = (
+    "https://raw.githubusercontent.com/BelTechSystems/pssgen/main"
+    "/ip/buffered_axi_lite_uart/coverage/vivado_coverage_results.json"
+)
 
 st.set_page_config(
     page_title="pssgen — FPGA Verification Dashboard",
@@ -84,6 +88,16 @@ def load_code_coverage() -> dict:
         return {}
 
 
+@st.cache_data(ttl=300)
+def load_vivado_coverage() -> dict:
+    try:
+        r = requests.get(VIVADO_COVERAGE_URL, timeout=10)
+        r.raise_for_status()
+        return r.json()
+    except Exception:
+        return {}
+
+
 def fetch_data():
     gap, cov = None, None
     gap_ok, cov_ok = True, True
@@ -121,6 +135,7 @@ if st.sidebar.button("Refresh Data"):
 st.sidebar.markdown("**Data sources**")
 st.sidebar.markdown(f"[gap\\_report.json]({GAP_REPORT_URL})")
 st.sidebar.markdown(f"[balu\\_coverage\\_results.json]({BALU_COVERAGE_URL})")
+st.sidebar.markdown(f"[vivado\\_coverage\\_results.json]({VIVADO_COVERAGE_URL})")
 st.sidebar.markdown("---")
 st.sidebar.info("Data cached for up to 5 minutes")
 
@@ -411,7 +426,69 @@ with st.expander(
             "Coverage assessment data not available. "
             "Run --assess-coverage to generate.")
 
-# ── Section 6: Footer ─────────────────────────────────────────────────────────
+# ── Section 6: Vivado Coverage Results ───────────────────────────────────────
+
+st.markdown("---")
+with st.expander("Vivado Coverage Results", expanded=True):
+    vc = load_vivado_coverage()
+    if vc:
+        _verdict_emoji = {
+            "PRODUCTION_READY": "✅",
+            "NEEDS_WORK": "⚠️",
+            "CRITICAL_GAPS": "❌",
+        }
+
+        # Row 1 — source / effort / passes / target reached
+        r1c1, r1c2, r1c3, r1c4 = st.columns(4)
+        r1c1.metric("Coverage Source", vc.get("coverage_source", "—"))
+        r1c2.metric("Effort Level", vc.get("effort_level", "—").upper())
+        r1c3.metric(
+            "Passes Run",
+            f"{vc.get('passes_run', 0)} of {vc.get('max_passes', 0)}",
+        )
+        reached = vc.get("target_reached", False)
+        r1c4.metric("Target Reached", "✅ Yes" if reached else "⚠️ No")
+
+        # Row 2 — coverage numbers / verdict
+        r2c1, r2c2, r2c3 = st.columns(3)
+        r2c1.metric(
+            "Final Coverage",
+            f"{vc.get('final_coverage_pct', 0.0):.1f}%",
+        )
+        r2c2.metric("Target", f"{vc.get('target_pct', 0.0):.1f}%")
+        vc_verdict = vc.get("verdict", "UNKNOWN")
+        vc_emoji = _verdict_emoji.get(vc_verdict, "❓")
+        r2c3.metric("Verdict", f"{vc_emoji} {vc_verdict}")
+
+        # Row 3 — pass-by-pass table (only when more than one pass was run)
+        pass_results = vc.get("pass_results", [])
+        if vc.get("passes_run", 0) > 1 and pass_results:
+            st.markdown("**Pass-by-Pass Results**")
+            target = vc.get("target_pct", 0.0)
+            pass_df = pd.DataFrame([
+                {
+                    "Pass": p["pass"],
+                    "Coverage %": f"{p['coverage_pct']:.1f}%",
+                    "vs Target": f"{p['coverage_pct'] - target:+.1f}%",
+                }
+                for p in pass_results
+            ])
+            st.dataframe(pass_df, use_container_width=True, hide_index=True)
+
+        # Row 4 — coverage note
+        if vc.get("coverage_note"):
+            st.info(vc["coverage_note"])
+
+        # Row 5 — verdict rationale
+        if vc.get("verdict_rationale"):
+            st.caption(vc["verdict_rationale"])
+    else:
+        st.warning(
+            "Vivado coverage results not available. "
+            "Run --simulate to generate."
+        )
+
+# ── Section 7: Footer ─────────────────────────────────────────────────────────
 
 st.markdown(
     "MIT Licensed | Open Source | "
