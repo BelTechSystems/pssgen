@@ -310,6 +310,8 @@ compliance before the tool produces useful output.
 This is a human judgment about adoption behavior and
 tool design philosophy.
 
+---
+
 ## D-013: File resolution verbose reporting
 
 Decision: In verbose mode, pssgen reports the resolved
@@ -365,7 +367,6 @@ professional judgment about the adoption lifecycle of
 tools in aerospace programs where projects run for years
 and the same IP blocks are verified repeatedly across
 program phases.
-```
 
 ---
 
@@ -424,6 +425,8 @@ tagging use identical syntax — just tag what matters
 — reduces the barrier to starting with selective
 tagging and graduating to full requirements as the
 program matures.
+
+---
 
 ## D-016: Two-mode requirements workflow
 
@@ -557,11 +560,10 @@ independently by an engineer with RAL generation in mind.
 All six passed validation with no structural issues,
 confirming that the 15-column baseline matches actual
 engineering practice.
-  
- ---
-  
- ## D-020: One _reg_block.sv per block rather than
-           one monolithic RAL file
+
+---
+
+## D-020: One _reg_block.sv per block rather than one monolithic RAL file
 
 Decision: pssgen generates one SystemVerilog file per
 design block (_reg_block.sv) rather than combining all
@@ -614,8 +616,7 @@ Alternatives considered:
 
 ---
 
-## D-021: System assembly uses add_submap() rather
-          than a flat unified address map
+## D-021: System assembly uses add_submap() rather than a flat unified address map
 
 Decision: The system-level register assembly
 (<project>_reg_map.sv) instantiates each block's
@@ -698,6 +699,8 @@ import once, review carefully, then iterate many
 times on verification. The subcommand boundary
 makes the review step explicit and mandatory.
 
+---
+
 ## D-023: shall as the requirement discriminator
 
 Decision: The Word document extractor uses "shall"
@@ -731,8 +734,7 @@ contaminate the traceability chain.
 
 ---
 
-## D-024: .req file represents verification cross-reference,
-          not requirements document content
+## D-024: .req file represents verification cross-reference, not requirements document content
 
 Decision: The pssgen .req file is a verification
 cross-reference artifact maintained by the verification
@@ -775,8 +777,7 @@ program without rework.
 
 ---
 
-## D-025: .req file is optional; waivers split by
-          what is being waived, not by file type
+## D-025: .req file is optional; waivers split by what is being waived, not by file type
 
 Decision: The .req file is not required for pssgen
 to run. The .intent file is the only required input
@@ -870,11 +871,10 @@ Alternatives considered:
     philosophy that makes pssgen accessible
     to engineers who are not already operating
     in formal verification programs.
-	
+
 ---
 
-## D-026: IP data sheet contains only information not
-          available in any other artifact
+## D-026: IP data sheet contains only information not available in any other artifact
 
 Decision: The DATASHEET.md for each IP block is kept
 deliberately short and contains only information that
@@ -964,7 +964,7 @@ Alternatives considered:
     which have no other natural home. Makes IP
     adoption harder for engineers who need a quick
     reference without reading a full specification.
-	
+
 The data sheet is generated automatically by pssgen on
 each pipeline run (agents/datasheet_gen.py). Sections
 derived from the IR and artifact set are fully
@@ -979,9 +979,7 @@ that produces a changed output.
 
 ---
 
-## D-027: VHDL and SystemVerilog implementations share
-          a fixed interface contract but are free to
-          diverge internally
+## D-027: VHDL and SystemVerilog implementations share a fixed interface contract but are free to diverge internally
 
 Decision: When both a VHDL and SystemVerilog
 implementation exist for the same IP block, the two
@@ -1083,11 +1081,10 @@ Alternatives considered:
     is undetectable until system integration fails.
     Incompatible with the pssgen single-source model
     where either file must produce equivalent IR.
-	
+
 ---
 
-## D-028: All IP artifacts co-located under a single
-          IP project directory
+## D-028: All IP artifacts co-located under a single IP project directory
 
 Decision: Every artifact belonging to an IP block —
 source HDL, requirements, verification intent, register
@@ -1176,8 +1173,7 @@ Alternatives considered:
 
 ---
 
-## D-029: Testbench script organization under
-          tb/scripts/<tool>/
+## D-029: Testbench script organization under tb/scripts/<tool>/
 
 Decision: Simulator-specific scripts that execute the
 UVM testbench are located under tb/scripts/<tool>/
@@ -1279,6 +1275,7 @@ Alternatives considered:
     which files are hand-authored versus tool-specific.
     Makes it harder to identify what needs updating
     when a simulator version changes.
+
 ---
 
 ## D-030: ModelSim as a named simulator target
@@ -1344,8 +1341,7 @@ is the IP block directory structure.
 
 ---
 
-## D-031: VPR spreadsheet replaces .req / .intent as the
-          requirements and verification intent source of truth
+## D-031: VPR spreadsheet replaces .req / .intent as the requirements and verification intent source of truth
 
 Decision: Retire the .req and .intent plain-text sidecar
 files. The VPR spreadsheet (.xlsx, five-tab schema) is
@@ -1488,10 +1484,7 @@ the .req file's function.
 
 ---
 
-## D-032: Retire Jinja2 template-based UVM generation;
-          replace with Python string generation in
-          scaffold_gen.py; establish BALU tb/ as the
-          reference implementation
+## D-032: Retire Jinja2 template-based UVM generation; replace with Python string generation in scaffold_gen.py; establish BALU tb/ as the reference implementation
 
 Decision: Retire Jinja2 template-based UVM generation.
 Replace with Python string generation functions in
@@ -1690,9 +1683,7 @@ Alternatives considered:
 
 ---
 
-## D-033: scaffold_gen.generate_uvm_tb() implementation decisions —
-          VPR-driven shadow, verbatim stub headers, never-overwrite,
-          programmatic pkg include order
+## D-033: scaffold_gen.generate_uvm_tb() implementation decisions — VPR-driven shadow, verbatim stub headers, never-overwrite, programmatic pkg include order
 
 Decision: scaffold_gen.generate_uvm_tb() uses Python string
 generation to produce the STD-003B required file set.
@@ -1827,11 +1818,7 @@ Alternatives considered:
 
 ---
 
-## D-034 
-
-TASK — Append D-034 to DECISIONS.md
---------------------------------------
-Author: S. Belvin, BelTech Systems LLC
+## D-034: Generate UVM sequence Bodies from VPR Coverage_Goals
 
 Decision:
   pssgen generates UVM sequence bodies from VPR Coverage_Goals
@@ -1844,6 +1831,8 @@ Decision:
   Stimulus_VSL are properties of COV items, not of individual
   requirements. The feature can be disabled entirely via
   pssgen.toml.
+
+Author: S. Belvin, BelTech Systems LLC
 
 Context points to cover:
 
@@ -2087,10 +2076,185 @@ Alternatives considered:
 
 ---
 
-D-038: One-Pass Autonomous Coverage Improvement
+## D-035: --simulate CLI flag and simulator integration
+
+Decision: pssgen supports a --simulate flag to run simulation
+and collect coverage data from a recognized external tool.
+Simulator is specified in pssgen_state.toml — not as a CLI flag.
+
+Supported simulators:
+
+  vivado    Simulate + assess coverage. FULLY SUPPORTED.
+  verilator Simulate + assess coverage. TODO.
+  icarus    Simulate + assess coverage. TODO.
+  questa    Simulate only. Coverage assessment not available.
+            Emits: "Coverage assessment requires Vivado,
+            Verilator, or Icarus. Skipping --assess-coverage."
+
+pssgen never self-assesses coverage. CAE requires a
+simulator-generated coverage database as input. If --simulate
+has not been run, --assess-coverage emits:
+"Coverage source required — run --simulate first."
+
+Coverage source is always recorded in the CAE report footer,
+e.g.: "Coverage source: Vivado 2024.1 xcrg"
+
+Author: S. Belvin, BelTech Systems LLC
+
+Rationale: Self-assessed coverage has no credibility for
+aerospace and high-reliability users. An independent,
+recognized tool must be the coverage source. The CAE is
+an analysis and interpretation layer, not a measurement tool.
+
+Domain knowledge required: Direct experience with DO-254
+verification evidence requirements and peer review of
+coverage assessment credibility in aerospace programs.
+
+Why AI could not have made this decision alone: The
+determination that self-assessment is categorically
+insufficient came from peer feedback grounded in aerospace
+program experience. An AI optimizing for tool completeness
+would have retained self-assessment as a fallback. The
+judgment that no fallback is better than a credibility-
+compromised fallback required professional domain knowledge.
+
+Consequences:
+--assess-coverage requires prior --simulate run.
+CAE input source changes from self-generated JSON to
+simulator-produced coverage database.
+D-036 (pssgen_state.toml) is a prerequisite.
+D-037 (—effort) depends on this decision.
+
+Alternatives considered:
+  Option A (chosen): Simulator-only coverage source.
+    No self-assessment under any circumstance.
+  Option B (rejected): Self-assessment as fallback when
+    no simulator is available. Rejected on credibility
+    grounds — a fallback that undermines the tool's
+    credibility with its primary user base is not a
+    fallback, it is a liability.
+
+---
+
+## D-036: --effort flag and coverage effort levels
+
+Status: DECIDED
+Date: 2026-04-25
+
+Decision:
+pssgen supports three effort levels via --effort flag (default: low):
+
+  --effort low    Up to 1 pass.  Target: 95% coverage.
+  --effort medium Up to 3 passes. Target: 98% coverage.
+  --effort high   Up to 5 passes. Target: 100% or maximum achievable.
+
+All effort levels produce a CAE verdict. The effort level controls
+how hard pssgen tries, not what it reports. The verdict is always
+objective and simulator-derived.
+
+--effort high convergence guard: if target is not reached after 5
+passes, verdict still issues. Report notes: "Maximum passes reached
+— N branches remain unexercised. Review for structural
+unreachability." Unexercised branches are flagged as
+UNREACHABLE_CANDIDATE for Certifiable user documentation.
+
+Last-used effort level persists in pssgen_state.toml. CLI flag
+overrides toml value.
+
+Rationale:
+Serves all three user profiles without forcing the Certifiable
+profile on the Explorer. Uniform verdict keeps the process
+consistent and trustworthy across all effort levels.
+
+---
+
+## D-037: --simulate CLI flag and simulator integration
+
+Status: DECIDED
+Date: 2026-04-25
+
+Decision:
+pssgen supports --simulate flag to run simulation and collect
+coverage data from a recognized external tool. Simulator is
+specified in pssgen_state.toml — not as a CLI flag.
+
+Supported simulators:
+
+  vivado    Simulate + assess coverage. FULLY SUPPORTED.
+  verilator Simulate + assess coverage. TODO.
+  icarus    Simulate + assess coverage. TODO.
+  questa    Simulate only. Coverage assessment not available.
+            Emits: "Coverage assessment requires Vivado,
+            Verilator, or Icarus. Skipping --assess-coverage."
+
+pssgen never self-assesses coverage. CAE requires a
+simulator-generated coverage database as input. If --simulate
+has not been run, --assess-coverage emits:
+"Coverage source required — run --simulate first."
+
+Coverage source is always recorded in the CAE report footer,
+e.g.: "Coverage source: Vivado 2024.1 xcrg"
+
+Rationale:
+Self-assessed coverage has no credibility for aerospace and
+high-reliability users. An independent, recognized tool must
+be the coverage source. The CAE is an analysis and
+interpretation layer, not a measurement tool.
+
+---
+
+## D-036: pssgen_state.toml persistent tool state
+
+Status: DECIDED
+Date: 2026-04-25
+
+Decision:
+pssgen maintains pssgen_state.toml in the project root as a
+persistent tool state file. Not user-editable during normal
+operation — managed by pssgen CLI.
+
+pssgen_state.toml is the tool runtime state file. It is distinct
+from pssgen.toml which holds user configuration. Engineers
+edit pssgen.toml. pssgen manages pssgen_state.toml.
+
+Schema:
+
+[simulator]
+tool = "vivado"     # vivado | verilator | icarus | questa
+version = ""        # auto-detected on first --simulate run
+xcrg_path = ""      # vivado only — auto-detected
+coverage_dir = ""   # vivado only
+
+[effort]
+level = "low"       # low | medium | high — persists last used
+max_passes = 1      # derived from level, not user-editable
+target_pct = 95.0   # derived from level, not user-editable
+
+[project]
+ip_name = ""
+last_run = ""
+last_verdict = ""
+
+Rules:
+- tool is the only user-initiated setting — set once at project init
+- version and xcrg_path auto-populated on first --simulate run
+- effort block derived and written by pssgen after each run
+- project block updated after every CLI invocation
+
+Rationale:
+Simulator selection and effort level are project-level settings,
+not per-invocation flags. Persisting them reduces CLI friction
+and ensures reproducible runs. Downstream decisions D-030 and
+D-035 depend on this file being the authoritative project state.
+
+---
+
+## D-038: One-Pass Autonomous Coverage Improvement
+
 Status: Planned
 Depends on: D-035, D-036, CAE-006, CAE-007
 Target: Block 2 or post-Block 2
+
 Summary:
 pssgen automatically identifies easy coverage wins after simulation, extends VSL sequences by the minimum steps required, re-simulates once, and stops. Human review is required for all subsequent passes.
 CLI:
@@ -2139,3 +2303,5 @@ Remaining gaps requiring human review:
 No further auto-improvement will run.
 Run --assess-coverage for full gap analysis.
 Human review required to proceed.
+
+---
