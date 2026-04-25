@@ -38,13 +38,14 @@ from __future__ import annotations
 import os
 import re
 import subprocess
+import sys
 from datetime import datetime, timezone
 from typing import Any
 
 import toml
 
 _UNSUPPORTED_TOOLS = {"modelsim", "questa", "icarus"}
-_VIVADO_BIN_CANDIDATES = ("vivado.exe", "vivado")
+_VIVADO_BIN_CANDIDATES = ("vivado.bat",) if sys.platform == "win32" else ("vivado",)
 
 # ── TCL snippets injected into the coverage build script ──────────────
 
