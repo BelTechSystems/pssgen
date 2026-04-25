@@ -191,7 +191,8 @@ def main() -> None:
         config_path = os.path.abspath(pre_args.config)
         config_source = "explicit"
     elif pre_args.input:
-        start_dir = os.path.dirname(os.path.abspath(pre_args.input))
+        abs_input = os.path.abspath(pre_args.input)
+        start_dir = abs_input if os.path.isdir(abs_input) else os.path.dirname(abs_input)
         config_path = find_project_config(start_dir)
         if config_path:
             config_source = "auto-detected"
