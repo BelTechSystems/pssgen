@@ -77,14 +77,12 @@ _CODE_COV_BLOCK = (
 def generate_build_cov_tcl(build_tcl_path: str) -> str:
     """Read existing build.tcl, inject coverage flags, write build_cov.tcl.
 
-    Makes seven targeted changes:
-      1. xvhdl gains ``--cov``
-      2. xvlog gains ``--cov``
-      3. xelab gains ``-cov_db_name ${DESIGN}_cov``
-      4. xsim gains ``-cov_db_dir ./coverage_db``
-      5. Functional xcrg invocation appended after "Simulation complete."
-      6. Code coverage xcrg invocation appended after functional xcrg
-      7. ``exit 0`` appended to prevent Vivado hanging at prompt
+    Makes five targeted changes:
+      1. xelab gains ``-cov_db_name ${DESIGN}_cov``
+      2. xsim gains ``-cov_db_dir ./coverage_db``
+      3. Functional xcrg invocation appended after "Simulation complete."
+      4. Code coverage xcrg invocation appended after functional xcrg
+      5. ``exit 0`` appended to prevent Vivado hanging at prompt
 
     The original build.tcl is never modified.
 
@@ -97,38 +95,26 @@ def generate_build_cov_tcl(build_tcl_path: str) -> str:
     with open(build_tcl_path, "r", encoding="utf-8") as fh:
         content = fh.read()
 
-    # 1. Add --cov to xvhdl compile
-    content = content.replace(
-        "run_cmd [list xvhdl --2008 --work work \\\n",
-        "run_cmd [list xvhdl --2008 --work work --cov \\\n",
-    )
-
-    # 2. Add --cov to xvlog compile
-    content = content.replace(
-        "run_cmd [list xvlog --sv --uvm_version 1.2 -L uvm --work work \\\n",
-        "run_cmd [list xvlog --sv --uvm_version 1.2 -L uvm --work work --cov \\\n",
-    )
-
-    # 3. Add coverage DB name to xelab
+    # 1. Add coverage DB name to xelab
     content = content.replace(
         "    -debug typical]",
         "    -debug typical \\\n    -cov_db_name ${DESIGN}_cov]",
     )
 
-    # 4. Add coverage DB dir to xsim
+    # 2. Add coverage DB dir to xsim
     content = content.replace(
         "    -log xsim.log]",
         "    -log xsim.log \\\n    -cov_db_dir ./coverage_db]",
     )
 
-    # 5+6. Append functional then code coverage xcrg calls after sim complete
+    # 3+4. Append functional then code coverage xcrg calls after sim complete
     sim_complete_line = 'puts "Simulation complete. Log: xsim.log"'
     content = content.replace(
         sim_complete_line,
         sim_complete_line + _XCRG_BLOCK + _CODE_COV_BLOCK,
     )
 
-    # 7. Ensure Vivado exits cleanly
+    # 5. Ensure Vivado exits cleanly
     content += "\nexit 0\n"
 
     out_dir = os.path.dirname(os.path.abspath(build_tcl_path))
