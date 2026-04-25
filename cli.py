@@ -44,6 +44,7 @@ config with CLI flags (CLI takes priority), and dispatches one orchestrator
 run.
 """
 import argparse
+import json
 import os
 import sys
 
@@ -325,6 +326,19 @@ def main() -> None:
         metavar="PATH",
         help="Path to xsim.log; required with --collect-results.",
     )
+    parser.add_argument(
+        "--assess-coverage",
+        action="store_true",
+        dest="assess_coverage",
+        help="Run full coverage assessment pipeline and generate a markdown report.",
+    )
+    parser.add_argument(
+        "--coverage-report",
+        default="coverage_assessment.md",
+        dest="coverage_report",
+        metavar="FILE",
+        help="Output filename for the coverage report (default: coverage_assessment.md).",
+    )
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args()
 
@@ -343,6 +357,89 @@ def main() -> None:
             file=sys.stderr,
         )
         sys.exit(1)
+
+    if args.assess_coverage:
+        from agents.rtl_analyzer import analyze_vhdl
+        from agents.code_coverage_analyzer import analyze_code_coverage
+        from agents.functional_coverage_analyzer import analyze_functional_coverage
+        from agents.assertion_coverage_analyzer import analyze_assertion_coverage
+        from agents.coverage_analyzer import analyze_coverage
+        from agents.report_generator import generate_coverage_report
+        import glob, os
+
+        vplan = args.vplan
+        ip_dir = os.path.dirname(os.path.abspath(vplan))
+        cov_dir = os.path.join(ip_dir, "coverage")
+        os.makedirs(cov_dir, exist_ok=True)
+
+        vhdl_files = glob.glob(
+            os.path.join(ip_dir, "vhdl", "*.vhd"))
+        if vhdl_files:
+            rtl_result = analyze_vhdl(vhdl_files[0])
+            with open(os.path.join(cov_dir,
+                "rtl_analysis.json"), "w",
+                encoding="utf-8") as f:
+                json.dump(rtl_result, f, indent=2)
+
+        gap_report = os.path.join(ip_dir, "gap_report.json")
+        sim_log = os.path.join(ip_dir, "coverage",
+            "sim_coverage.json")
+
+        if os.path.exists(sim_log):
+            cc = analyze_code_coverage(
+                os.path.join(cov_dir, "rtl_analysis.json"),
+                sim_log, vplan)
+            with open(os.path.join(cov_dir,
+                "code_coverage.json"), "w",
+                encoding="utf-8") as f:
+                json.dump(cc, f, indent=2)
+
+            fc = analyze_functional_coverage(
+                sim_log, gap_report, vplan,
+                os.path.join(cov_dir, "code_coverage.json"))
+            with open(os.path.join(cov_dir,
+                "functional_coverage.json"), "w",
+                encoding="utf-8") as f:
+                json.dump(fc, f, indent=2)
+
+            ac = analyze_assertion_coverage(
+                os.path.join(cov_dir, "rtl_analysis.json"),
+                sim_log)
+            with open(os.path.join(cov_dir,
+                "assertion_coverage.json"), "w",
+                encoding="utf-8") as f:
+                json.dump(ac, f, indent=2)
+
+            ca = analyze_coverage(
+                os.path.join(cov_dir, "rtl_analysis.json"),
+                sim_log, gap_report, vplan,
+                os.path.join(cov_dir, "code_coverage.json"),
+                os.path.join(cov_dir,
+                    "functional_coverage.json"),
+                os.path.join(cov_dir,
+                    "assertion_coverage.json"))
+            with open(os.path.join(cov_dir,
+                "coverage_assessment.json"), "w",
+                encoding="utf-8") as f:
+                json.dump(ca, f, indent=2)
+
+            report_path = os.path.join(
+                ip_dir, args.coverage_report)
+            generate_coverage_report(
+                os.path.join(cov_dir,
+                    "coverage_assessment.json"),
+                os.path.join(cov_dir, "code_coverage.json"),
+                os.path.join(cov_dir,
+                    "functional_coverage.json"),
+                os.path.join(cov_dir,
+                    "assertion_coverage.json"),
+                report_path)
+            print(f"Coverage report: {report_path}")
+            print(f"Verdict: {ca['verdict']}")
+            print(f"Overall: {ca['coverage_metrics']['overall_pct']}%")
+        else:
+            print("No sim_coverage.json found.")
+            print("Run --collect-results first.")
 
     # ------------------------------------------------------------------
     # Merge pssgen.toml config into args (CLI flags take priority)

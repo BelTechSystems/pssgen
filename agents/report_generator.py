@@ -147,6 +147,6 @@ def generate_coverage_report(
     ]
 
     report = "\n".join(lines)
-    with open(output_path, "w") as f:
+    with open(output_path, "w", encoding="utf-8") as f:
         f.write(report)
     return report
