@@ -156,7 +156,7 @@ def _parse_coverage_pct(html_path: str) -> float:
     try:
         with open(html_path, "r", encoding="utf-8", errors="replace") as fh:
             html = fh.read()
-        m = re.search(r"Score.*?(\d+\.\d+)", html, re.DOTALL | re.IGNORECASE)
+        m = re.search(r"Score.*?(\d+\.?\d*)", html, re.DOTALL | re.IGNORECASE)
         if m:
             return float(m.group(1))
     except OSError:
