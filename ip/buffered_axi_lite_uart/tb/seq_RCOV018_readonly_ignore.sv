@@ -20,21 +20,21 @@ class seq_RCOV018_readonly_ignore extends buffered_axi_lite_uart_base_seq;
     endfunction
 
     virtual task body();
-        bit [31:0] before, after;
+        bit [31:0] orig_val, after;
         // STATUS (0x04) — read-only, write returns SLVERR (hits cp_resp SLVERR bin)
-        axi_read (32'h00000004, before, "STATUS");
+        axi_read (32'h00000004, orig_val, "STATUS");
         axi_write(32'h00000004, 32'hFFFFFFFF, 4'hF, "STATUS");  // SLVERR response
-        axi_read (32'h00000004, after,  "STATUS");
-        if (before !== after)
+        axi_read (32'h00000004, after,    "STATUS");
+        if (orig_val !== after)
             `uvm_error("RCOV018", "STATUS changed after write-to-RO attempt")
         // FIFO_STATUS (0x10) — read-only, write returns SLVERR
-        axi_read (32'h00000010, before, "FIFO_STATUS");
+        axi_read (32'h00000010, orig_val, "FIFO_STATUS");
         axi_write(32'h00000010, 32'hFFFFFFFF, 4'hF, "FIFO_STATUS");  // SLVERR response
-        axi_read (32'h00000010, after,  "FIFO_STATUS");
-        if (before !== after)
+        axi_read (32'h00000010, after,    "FIFO_STATUS");
+        if (orig_val !== after)
             `uvm_error("RCOV018", "FIFO_STATUS changed after write-to-RO attempt")
         // INT_STATUS (0x1C) — W1C only via INT_CLEAR; direct write returns SLVERR
-        axi_read (32'h0000001C, before, "INT_STATUS");
+        axi_read (32'h0000001C, orig_val, "INT_STATUS");
         axi_write(32'h0000001C, 32'hFFFFFFFF, 4'hF, "INT_STATUS"); // SLVERR response
         axi_read (32'h0000001C, after,  "INT_STATUS");
         // RX_DATA (0x2C) — read-only, write returns SLVERR
