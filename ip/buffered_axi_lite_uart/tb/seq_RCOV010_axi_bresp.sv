@@ -20,9 +20,10 @@ class seq_RCOV010_axi_bresp extends buffered_axi_lite_uart_base_seq;
     endfunction
 
     virtual task body();
-        `uvm_info("SEQ_PENDING",
-            "seq_RCOV010_axi_bresp: body not yet implemented — see VPR COV-010",
-            UVM_MEDIUM)
+        // Valid write → BRESP=OKAY
+        axi_write(32'h00000024, 32'hA5A5A5A5, 4'hF, "SCRATCH");
+        // Undefined offset 0x30 → BRESP=SLVERR (hits cp_resp SLVERR bin)
+        axi_write(32'h00000030, 32'hDEADBEEF, 4'hF, "INVALID_ADDR");
     endtask
 
 endclass

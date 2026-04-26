@@ -20,9 +20,28 @@ class seq_RCOV005_fifo_status_tx_level extends buffered_axi_lite_uart_base_seq;
     endfunction
 
     virtual task body();
-        `uvm_info("SEQ_PENDING",
-            "seq_RCOV005_fifo_status_tx_level: body not yet implemented — see VPR COV-005",
+        bit [31:0] rdata;
+        // Read initial TX level (TX_EMPTY at reset)
+        axi_read(32'h00000010, rdata, "FIFO_STATUS");
+        `uvm_info("RCOV005", $sformatf("FIFO_STATUS before writes = 0x%08h", rdata), UVM_MEDIUM)
+        // Write 4 bytes to TX FIFO — TX_LEVEL increases only when UART_EN=0 (no drain)
+        axi_write(32'h00000028, 32'h00000055, 4'hF, "TX_DATA");
+        axi_write(32'h00000028, 32'h000000AA, 4'hF, "TX_DATA");
+        axi_write(32'h00000028, 32'h000000FF, 4'hF, "TX_DATA");
+        axi_write(32'h00000028, 32'h00000000, 4'hF, "TX_DATA");
+        // Read FIFO_STATUS to observe TX_LEVEL
+        axi_read(32'h00000010, rdata, "FIFO_STATUS");
+        `uvm_info("RCOV005",
+            $sformatf("FIFO_STATUS after 4 TX writes = 0x%08h (TX_LEVEL[15:8] = 0x%02h)",
+                rdata, rdata[15:8]),
             UVM_MEDIUM)
+        // Enable UART to drain the TX FIFO, then read status again
+        axi_write(32'h00000000, 32'h000000E0, 4'hF, "CTRL"); // UART_EN=1, TX_EN=1, RX_EN=1
+        axi_read(32'h00000010, rdata, "FIFO_STATUS");
+        `uvm_info("RCOV005",
+            $sformatf("FIFO_STATUS with UART enabled = 0x%08h", rdata), UVM_MEDIUM)
+        // Disable UART
+        axi_write(32'h00000000, 32'h00000000, 4'hF, "CTRL");
     endtask
 
 endclass

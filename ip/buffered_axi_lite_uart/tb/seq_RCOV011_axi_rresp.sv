@@ -20,9 +20,11 @@ class seq_RCOV011_axi_rresp extends buffered_axi_lite_uart_base_seq;
     endfunction
 
     virtual task body();
-        `uvm_info("SEQ_PENDING",
-            "seq_RCOV011_axi_rresp: body not yet implemented — see VPR COV-011",
-            UVM_MEDIUM)
+        bit [31:0] rdata;
+        // Valid read → RRESP=OKAY
+        axi_read(32'h00000000, rdata, "CTRL");
+        // Undefined offset 0x30 → RRESP=SLVERR (hits cp_resp SLVERR bin)
+        axi_read(32'h00000030, rdata, "INVALID_ADDR");
     endtask
 
 endclass

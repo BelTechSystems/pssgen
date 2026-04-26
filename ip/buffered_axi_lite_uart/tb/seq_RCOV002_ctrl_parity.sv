@@ -20,9 +20,18 @@ class seq_RCOV002_ctrl_parity extends buffered_axi_lite_uart_base_seq;
     endfunction
 
     virtual task body();
-        `uvm_info("SEQ_PENDING",
-            "seq_RCOV002_ctrl_parity: body not yet implemented — see VPR COV-002",
-            UVM_MEDIUM)
+        bit [31:0] rdata;
+        // CTRL[3:2] = parity mode: 00=none, 01=odd, 10=even, 11=mark
+        // UART_EN=0 (reset default) — no restriction on CTRL writes
+        axi_write(32'h00000000, 32'h00000000, 4'hF, "CTRL"); // parity=none
+        axi_read (32'h00000000, rdata,              "CTRL");
+        axi_write(32'h00000000, 32'h00000004, 4'hF, "CTRL"); // parity=odd  (bits[3:2]=01)
+        axi_read (32'h00000000, rdata,              "CTRL");
+        axi_write(32'h00000000, 32'h00000008, 4'hF, "CTRL"); // parity=even (bits[3:2]=10)
+        axi_read (32'h00000000, rdata,              "CTRL");
+        axi_write(32'h00000000, 32'h0000000C, 4'hF, "CTRL"); // parity=mark (bits[3:2]=11)
+        axi_read (32'h00000000, rdata,              "CTRL");
+        axi_write(32'h00000000, 32'h00000000, 4'hF, "CTRL"); // restore: disable all
     endtask
 
 endclass

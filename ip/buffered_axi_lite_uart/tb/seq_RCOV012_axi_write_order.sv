@@ -20,9 +20,14 @@ class seq_RCOV012_axi_write_order extends buffered_axi_lite_uart_base_seq;
     endfunction
 
     virtual task body();
-        `uvm_info("SEQ_PENDING",
-            "seq_RCOV012_axi_write_order: body not yet implemented — see VPR COV-012",
-            UVM_MEDIUM)
+        // AXI-Lite write channel ordering (AWVALID vs WVALID) is a driver-level
+        // concern; the base_seq API does not expose the handshake ordering knob.
+        // This pass exercises multi-register write access to cover associated cp_addr
+        // bins while the write-ordering requirement is tracked in the VPR as pending
+        // driver enhancement.
+        axi_write(32'h00000024, 32'h00000001, 4'hF, "SCRATCH");
+        axi_write(32'h00000014, 32'h00000064, 4'hF, "TIMEOUT_VAL");
+        axi_write(32'h0000000C, 32'h00080004, 4'hF, "FIFO_CTRL");
     endtask
 
 endclass

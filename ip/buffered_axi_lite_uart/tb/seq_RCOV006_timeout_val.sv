@@ -20,9 +20,17 @@ class seq_RCOV006_timeout_val extends buffered_axi_lite_uart_base_seq;
     endfunction
 
     virtual task body();
-        `uvm_info("SEQ_PENDING",
-            "seq_RCOV006_timeout_val: body not yet implemented — see VPR COV-006",
-            UVM_MEDIUM)
+        bit [31:0] rdata;
+        // Five boundary values per VPR COV-006 (16-bit field, upper bits ignored)
+        bit [31:0] vals[5] = '{32'h00000000, 32'h00000001, 32'h00049A58, 32'h0000FFFE, 32'h0000FFFF};
+        // 0x00049A58 = 301656 — representative of a 3 ms timeout at 100 MHz
+        foreach (vals[i]) begin
+            axi_write(32'h00000014, vals[i], 4'hF, "TIMEOUT_VAL");
+            axi_read (32'h00000014, rdata,   "TIMEOUT_VAL");
+            `uvm_info("RCOV006",
+                $sformatf("TIMEOUT_VAL wrote 0x%08h readback 0x%08h", vals[i], rdata),
+                UVM_MEDIUM)
+        end
     endtask
 
 endclass

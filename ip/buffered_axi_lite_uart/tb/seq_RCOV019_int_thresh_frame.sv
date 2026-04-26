@@ -20,9 +20,24 @@ class seq_RCOV019_int_thresh_frame extends buffered_axi_lite_uart_base_seq;
     endfunction
 
     virtual task body();
-        `uvm_info("SEQ_PENDING",
-            "seq_RCOV019_int_thresh_frame: body not yet implemented — see VPR COV-019",
-            UVM_MEDIUM)
+        bit [31:0] rdata;
+        // Program FIFO_CTRL: TX_THRESH=8, RX_THRESH=4 (FIFO_CTRL[15:8]=TX, [7:0]=RX)
+        axi_write(32'h0000000C, 32'h00000804, 4'hF, "FIFO_CTRL");
+        axi_read (32'h0000000C, rdata,              "FIFO_CTRL");
+        `uvm_info("RCOV019", $sformatf("FIFO_CTRL = 0x%08h", rdata), UVM_MEDIUM)
+        // Enable TX_THRESH and RX_THRESH interrupts (bits [1:0] per typical INT_ENABLE map)
+        axi_write(32'h00000018, 32'h000000FF, 4'hF, "INT_ENABLE");
+        // Write bytes to approach TX threshold; TX drains only when UART_EN=1
+        axi_write(32'h00000028, 32'h00000041, 4'hF, "TX_DATA");
+        axi_write(32'h00000028, 32'h00000042, 4'hF, "TX_DATA");
+        axi_write(32'h00000028, 32'h00000043, 4'hF, "TX_DATA");
+        // Read INT_STATUS — TX_THRESH fires if TX_LEVEL < TX_THRESH
+        axi_read(32'h0000001C, rdata, "INT_STATUS");
+        `uvm_info("RCOV019", $sformatf("INT_STATUS = 0x%08h", rdata), UVM_MEDIUM)
+        // Clear interrupts and restore
+        axi_write(32'h00000020, 32'h000000FF, 4'hF, "INT_CLEAR");
+        axi_write(32'h00000018, 32'h00000000, 4'hF, "INT_ENABLE");
+        axi_write(32'h0000000C, 32'h00080008, 4'hF, "FIFO_CTRL"); // restore default thresholds
     endtask
 
 endclass

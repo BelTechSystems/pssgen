@@ -20,9 +20,21 @@ class seq_RCOV013_baud_tuning_write_while_enabled extends buffered_axi_lite_uart
     endfunction
 
     virtual task body();
-        `uvm_info("SEQ_PENDING",
-            "seq_RCOV013_baud_tuning_write_while_enabled: body not yet implemented — see VPR COV-013",
-            UVM_MEDIUM)
+        bit [31:0] rdata_before, rdata_after;
+        // Read original BAUD_TUNING value (set by RCOV001 — may not be reset value)
+        axi_read(32'h00000008, rdata_before, "BAUD_TUNING");
+        // Assert UART_EN (bit 7); BAUD_TUNING write is silently ignored when UART_EN=1
+        axi_write(32'h00000000, 32'h00000080, 4'hF, "CTRL");
+        // Attempt write — DUT shall ignore this (UART-REG-028)
+        axi_write(32'h00000008, 32'hDEADBEEF, 4'hF, "BAUD_TUNING");
+        // Readback must equal rdata_before
+        axi_read(32'h00000008, rdata_after, "BAUD_TUNING");
+        if (rdata_before !== rdata_after)
+            `uvm_error("RCOV013",
+                $sformatf("BAUD_TUNING changed while UART_EN=1: before=0x%08h after=0x%08h",
+                    rdata_before, rdata_after))
+        // Disable UART to restore state for subsequent sequences
+        axi_write(32'h00000000, 32'h00000000, 4'hF, "CTRL");
     endtask
 
 endclass

@@ -20,8 +20,14 @@ class seq_RCOV004_fifo_status_rx_level extends buffered_axi_lite_uart_base_seq;
     endfunction
 
     virtual task body();
-        `uvm_info("SEQ_PENDING",
-            "seq_RCOV004_fifo_status_rx_level: body not yet implemented — see VPR COV-004",
+        bit [31:0] rdata;
+        // Read FIFO_STATUS to sample RX_LEVEL.
+        // Dynamic occupancy (RX_THRESH±1, G_FIFO_DEPTH) requires loopback stimulus
+        // with baud-rate timing — deferred to loopback regression suite.
+        axi_read(32'h00000010, rdata, "FIFO_STATUS");
+        `uvm_info("RCOV004",
+            $sformatf("FIFO_STATUS = 0x%08h (RX_LEVEL[7:0] = 0x%02h)",
+                rdata, rdata[7:0]),
             UVM_MEDIUM)
     endtask
 

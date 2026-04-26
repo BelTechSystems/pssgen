@@ -20,9 +20,22 @@ class seq_RCOV016_uart_en_control extends buffered_axi_lite_uart_base_seq;
     endfunction
 
     virtual task body();
-        `uvm_info("SEQ_PENDING",
-            "seq_RCOV016_uart_en_control: body not yet implemented — see VPR COV-016",
-            UVM_MEDIUM)
+        bit [31:0] rdata;
+        // CTRL layout: [7]=UART_EN, [6]=TX_EN, [5]=RX_EN, [4]=LOOP_EN, [3:2]=PARITY, [1]=STOP
+        // Step 1: confirm UART_EN=0 (reset default — no TX/RX activity)
+        axi_write(32'h00000000, 32'h00000000, 4'hF, "CTRL");
+        axi_read (32'h00000000, rdata,              "CTRL");
+        // Step 2: TX only (TX_EN=1, RX_EN=0, UART_EN=1)
+        axi_write(32'h00000000, 32'h000000C0, 4'hF, "CTRL"); // UART_EN|TX_EN
+        axi_read (32'h00000000, rdata,              "CTRL");
+        // Step 3: RX only (TX_EN=0, RX_EN=1, UART_EN=1)
+        axi_write(32'h00000000, 32'h000000A0, 4'hF, "CTRL"); // UART_EN|RX_EN
+        axi_read (32'h00000000, rdata,              "CTRL");
+        // Step 4: loopback (LOOP_EN=1, UART_EN=1, TX_EN=1, RX_EN=1)
+        axi_write(32'h00000000, 32'h000000F0, 4'hF, "CTRL"); // UART_EN|TX_EN|RX_EN|LOOP_EN
+        axi_read (32'h00000000, rdata,              "CTRL");
+        // Restore: disable all
+        axi_write(32'h00000000, 32'h00000000, 4'hF, "CTRL");
     endtask
 
 endclass

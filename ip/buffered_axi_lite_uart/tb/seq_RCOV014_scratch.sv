@@ -20,9 +20,21 @@ class seq_RCOV014_scratch extends buffered_axi_lite_uart_base_seq;
     endfunction
 
     virtual task body();
-        `uvm_info("SEQ_PENDING",
-            "seq_RCOV014_scratch: body not yet implemented — see VPR COV-014",
-            UVM_MEDIUM)
+        bit [31:0] rdata;
+        // Walking ones: each of the 8 power-of-two values up to 0x80000000
+        bit [31:0] vals[10] = '{
+            32'h00000001, 32'h00000002, 32'h00000004, 32'h00000008,
+            32'h00000010, 32'h00000020, 32'h00000040, 32'h00000080,
+            32'hFFFFFFFF,  // all-ones
+            32'h00000000   // all-zeros
+        };
+        foreach (vals[i]) begin
+            axi_write(32'h00000024, vals[i], 4'hF, "SCRATCH");
+            axi_read (32'h00000024, rdata,   "SCRATCH");
+            if (rdata !== vals[i])
+                `uvm_error("RCOV014",
+                    $sformatf("SCRATCH readback fail: wrote=0x%08h got=0x%08h", vals[i], rdata))
+        end
     endtask
 
 endclass

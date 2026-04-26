@@ -26,3 +26,7 @@ hdl = "vhdl/buffered_axi_lite_uart.vhd"
 [[register_maps]]
 source = "buffered_axi_lite_uart_regmap.xlsx"
 format = "simple_block"
+
+[simulator]
+tool = "vivado"
+vivado_bin = "C:/Xilinx/2025.1/Vivado/bin"
