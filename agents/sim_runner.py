@@ -111,10 +111,10 @@ def generate_build_cov_tcl(build_tcl_path: str) -> str:
     with open(build_tcl_path, "r", encoding="utf-8") as fh:
         content = fh.read()
 
-    # 1. Add coverage DB name to xelab
+    # 1. Add coverage instrumentation flags to xelab
     content = content.replace(
         "    -debug typical]",
-        "    -debug typical \\\n    -cov_db_name ${DESIGN}_cov]",
+        "    -debug typical \\\n    -cov_db_name ${DESIGN}_cov \\\n    -code_coverage]",
     )
 
     # 2. Add coverage DB dir to xsim
