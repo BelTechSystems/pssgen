@@ -67,7 +67,7 @@ _XCRG_BLOCK = (
 _CODE_COV_BLOCK = (
     '\nputs "--- Collecting code coverage ---"\n'
     "run_cmd [list xcrg \\\n"
-    "    -cov_db_dir ./coverage_db/xsim.codeCov \\\n"
+    "    -cov_db_dir ./coverage_db/xsim.codecov \\\n"
     "    -cov_db_name ${DESIGN}_cov \\\n"
     "    -report_dir ./coverage_db/html/codeCoverageReport \\\n"
     "    -report_format html]\n"
@@ -114,7 +114,7 @@ def generate_build_cov_tcl(build_tcl_path: str) -> str:
     # 1. Add coverage instrumentation flags to xelab
     content = content.replace(
         "    -debug typical]",
-        "    -debug typical \\\n    -cov_db_name ${DESIGN}_cov \\\n    -code_coverage]",
+        "    -debug typical \\\n    -cov_db_name ${DESIGN}_cov \\\n    --cc_type sbct]",
     )
 
     # 2. Add coverage DB dir to xsim

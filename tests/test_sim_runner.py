@@ -85,11 +85,11 @@ def test_generate_build_cov_tcl_adds_cov_db_dir(tmp_path) -> None:
 
 
 def test_xelab_has_code_coverage_flag(tmp_path) -> None:
-    """build_cov.tcl contains -code_coverage in the xelab invocation."""
+    """build_cov.tcl contains --cc_type sbct in the xelab invocation."""
     build_tcl = _write_build_tcl(str(tmp_path))
     out = generate_build_cov_tcl(build_tcl)
     content = open(out, encoding="utf-8").read()
-    assert "-code_coverage" in content
+    assert "--cc_type sbct" in content
 
 
 def test_generate_build_cov_tcl_adds_xcrg_call(tmp_path) -> None:
@@ -185,11 +185,11 @@ def test_build_cov_has_two_xsim_calls(tmp_path) -> None:
 
 
 def test_second_xcrg_uses_codeCov_dir(tmp_path) -> None:
-    """build_cov.tcl second xcrg call uses coverage_db/xsim.codeCov as input."""
+    """build_cov.tcl second xcrg call uses coverage_db/xsim.codecov as input."""
     build_tcl = _write_build_tcl(str(tmp_path))
     out = generate_build_cov_tcl(build_tcl)
     content = open(out, encoding="utf-8").read()
-    assert "xsim.codeCov" in content
+    assert "xsim.codecov" in content
 
 
 # ---------------------------------------------------------------------------
