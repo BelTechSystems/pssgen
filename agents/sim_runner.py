@@ -64,15 +64,6 @@ _XCRG_BLOCK = (
     'puts "Coverage report written to ./coverage_db/html"'
 )
 
-_CODE_COV_BLOCK = (
-    '\nputs "--- Collecting code coverage ---"\n'
-    "run_cmd [list xcrg \\\n"
-    "    -cov_db_dir ./coverage_db/xsim.codecov \\\n"
-    "    -cov_db_name ${DESIGN}_cov \\\n"
-    "    -report_dir ./coverage_db/html/codeCoverageReport \\\n"
-    "    -report_format html]\n"
-    'puts "Code coverage report written to ./coverage_db/html/codeCoverageReport"'
-)
 
 _XSIM_COV_TCL_TEMPLATE = (
     "write_xsim_coverage \\\n"
@@ -93,12 +84,11 @@ _WRITE_COV_BLOCK = (
 def generate_build_cov_tcl(build_tcl_path: str) -> str:
     """Read existing build.tcl, inject coverage flags, write build_cov.tcl.
 
-    Makes five targeted changes:
-      1. xelab gains ``-cov_db_name ${DESIGN}_cov``
+    Makes four targeted changes:
+      1. xelab gains ``-cov_db_name ${DESIGN}_cov`` and ``--cc_type sbct``
       2. xsim gains ``-cov_db_dir ./coverage_db`` (keeps ``-runall``)
       3. Second xsim invocation via ``-tclbatch xsim_cov.tcl`` writes coverage DB
-      4. Functional xcrg invocation appended after coverage write
-      5. Code coverage xcrg and ``exit 0`` appended after functional xcrg
+      4. Single xcrg invocation appended after coverage write; ``exit 0`` appended
 
     The original build.tcl is never modified.
 
@@ -128,7 +118,7 @@ def generate_build_cov_tcl(build_tcl_path: str) -> str:
     sim_complete_line = 'puts "Simulation complete. Log: xsim.log"'
     content = content.replace(
         sim_complete_line,
-        sim_complete_line + _WRITE_COV_BLOCK + _XCRG_BLOCK + _CODE_COV_BLOCK,
+        sim_complete_line + _WRITE_COV_BLOCK + _XCRG_BLOCK,
     )
 
     # 6. Ensure Vivado exits cleanly
@@ -181,7 +171,7 @@ def _parse_coverage_pct(html_path: str) -> float:
     try:
         with open(html_path, "r", encoding="utf-8", errors="replace") as fh:
             html = fh.read()
-        m = re.search(r"Score.*?(\d+\.?\d*)", html, re.DOTALL | re.IGNORECASE)
+        m = re.search(r">Score<.*?<td[^>]*>(\d+\.?\d*)", html, re.DOTALL)
         if m:
             return float(m.group(1))
     except OSError:
@@ -189,22 +179,45 @@ def _parse_coverage_pct(html_path: str) -> float:
     return 0.0
 
 
-def parse_xcrg_results(coverage_db_dir: str) -> dict[str, Any]:
-    """Parse xcrg HTML reports to extract coverage percentages and covergroup details.
+def _parse_code_coverage_from_stdout(stdout: str) -> dict[str, float | None]:
+    """Extract SBCT code coverage scores from xcrg terminal output."""
+    patterns = {
+        "line_coverage_pct":      r"Line Coverage Score\s+([\d.]+)",
+        "branch_coverage_pct":    r"Branch Coverage Score\s+([\d.]+)",
+        "condition_coverage_pct": r"Condition Coverage Score\s+([\d.]+)",
+        "toggle_coverage_pct":    r"Toggle Coverage Score\s+([\d.]+)",
+    }
+    result: dict[str, float | None] = {}
+    for key, pat in patterns.items():
+        m = re.search(pat, stdout)
+        result[key] = float(m.group(1)) if m else None
+    vals = [v for v in result.values() if v is not None]
+    result["code_coverage_pct"] = sum(vals) / len(vals) if vals else None
+    return result
 
-    Reads the functionalCoverageReport and codeCoverageReport subdirectories
-    under coverage_db_dir/html/. Missing files are handled gracefully.
+
+def parse_xcrg_results(
+    coverage_db_dir: str,
+    xcrg_stdout: str = "",
+) -> dict[str, Any]:
+    """Parse xcrg HTML reports and terminal output for all coverage metrics.
+
+    Reads functionalCoverageReport from coverage_db_dir/html/. SBCT code
+    coverage metrics (line, branch, condition, toggle) are extracted from
+    the captured xcrg terminal output. Missing files are handled gracefully.
 
     Args:
         coverage_db_dir: Path to the coverage_db directory (parent of html/).
+        xcrg_stdout: Captured stdout from the Vivado/xcrg run; used to
+            extract SBCT code coverage scores.
 
     Returns:
-        Dict with keys: functional_coverage_pct, covergroups, code_coverage_pct,
-        report_dir, parsed_at.
+        Dict with keys: functional_coverage_pct, covergroups,
+        line_coverage_pct, branch_coverage_pct, condition_coverage_pct,
+        toggle_coverage_pct, code_coverage_pct, report_dir, parsed_at.
     """
     html_dir = os.path.join(coverage_db_dir, "html")
     func_report = os.path.join(html_dir, "functionalCoverageReport")
-    code_report = os.path.join(html_dir, "codeCoverageReport")
 
     functional_pct = _parse_coverage_pct(os.path.join(func_report, "dashboard.html"))
 
@@ -245,16 +258,16 @@ def parse_xcrg_results(coverage_db_dir: str) -> dict[str, Any]:
         except OSError:
             pass
 
-    code_pct: float | None = None
-    code_dashboard = os.path.join(code_report, "dashboard.html")
-    if os.path.isfile(code_dashboard):
-        val = _parse_coverage_pct(code_dashboard)
-        code_pct = val if val > 0.0 else None
+    cc = _parse_code_coverage_from_stdout(xcrg_stdout)
 
     return {
         "functional_coverage_pct": functional_pct,
         "covergroups": covergroups,
-        "code_coverage_pct": code_pct,
+        "line_coverage_pct":      cc["line_coverage_pct"],
+        "branch_coverage_pct":    cc["branch_coverage_pct"],
+        "condition_coverage_pct": cc["condition_coverage_pct"],
+        "toggle_coverage_pct":    cc["toggle_coverage_pct"],
+        "code_coverage_pct":      cc["code_coverage_pct"],
         "report_dir": html_dir,
         "parsed_at": datetime.now(timezone.utc).isoformat(),
     }
@@ -359,8 +372,8 @@ def run_simulate(ip_dir: str, pssgen_toml_path: str) -> dict[str, Any]:
 
     version = _parse_vivado_version(vivado_log)
 
-    # Parse xcrg HTML reports — best-effort; defaults on missing files
-    xcrg = parse_xcrg_results(coverage_db_dir)
+    # Parse xcrg reports — HTML for functional coverage, stdout for SBCT metrics
+    xcrg = parse_xcrg_results(coverage_db_dir, xcrg_stdout=stdout_data)
 
     # Write vivado_coverage_results.json
     try:
@@ -393,7 +406,11 @@ def run_simulate(ip_dir: str, pssgen_toml_path: str) -> dict[str, Any]:
             "target_pct": target_pct,
             "target_reached": target_reached,
             "functional_coverage_pct": func_pct,
-            "code_coverage_pct": xcrg["code_coverage_pct"],
+            "line_coverage_pct":      xcrg.get("line_coverage_pct"),
+            "branch_coverage_pct":    xcrg.get("branch_coverage_pct"),
+            "condition_coverage_pct": xcrg.get("condition_coverage_pct"),
+            "toggle_coverage_pct":    xcrg.get("toggle_coverage_pct"),
+            "code_coverage_pct":      xcrg.get("code_coverage_pct"),
             "covergroups": xcrg["covergroups"],
             "verdict": verdict,
             "coverage_note": (

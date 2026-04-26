@@ -184,14 +184,6 @@ def test_build_cov_has_two_xsim_calls(tmp_path) -> None:
     assert content.count("xsim ") >= 2
 
 
-def test_second_xcrg_uses_codeCov_dir(tmp_path) -> None:
-    """build_cov.tcl second xcrg call uses coverage_db/xsim.codecov as input."""
-    build_tcl = _write_build_tcl(str(tmp_path))
-    out = generate_build_cov_tcl(build_tcl)
-    content = open(out, encoding="utf-8").read()
-    assert "xsim.codecov" in content
-
-
 # ---------------------------------------------------------------------------
 # run_simulate tests
 # ---------------------------------------------------------------------------
@@ -264,8 +256,14 @@ def test_parse_xcrg_functional_coverage(tmp_path) -> None:
     """parse_xcrg_results extracts functional_coverage_pct from dashboard.html."""
     func_dir = os.path.join(str(tmp_path), "html", "functionalCoverageReport")
     os.makedirs(func_dir, exist_ok=True)
+    # HTML mirrors real xcrg structure: th header with width attribute, td data cell
     with open(os.path.join(func_dir, "dashboard.html"), "w", encoding="utf-8") as fh:
-        fh.write("<html><body><td>Score</td><td>41.6667</td></body></html>")
+        fh.write(
+            "<html><body><table>"
+            "<tr><th nowrap width=65>Score</th><th nowrap width=65>Inst Score</th></tr>"
+            "<tr><td bgcolor='#98FF98'>41.6667</td><td bgcolor='#98FF98'>41.6667</td></tr>"
+            "</table></body></html>"
+        )
 
     result = parse_xcrg_results(str(tmp_path))
     assert result["functional_coverage_pct"] == pytest.approx(41.6667)
@@ -299,9 +297,37 @@ def test_parse_xcrg_covergroups(tmp_path) -> None:
 
 
 def test_parse_xcrg_missing_code_coverage(tmp_path) -> None:
-    """code_coverage_pct is None when codeCoverageReport directory is absent."""
+    """code_coverage_pct is None when no SBCT metrics appear in stdout."""
     result = parse_xcrg_results(str(tmp_path))
     assert result["code_coverage_pct"] is None
+
+
+def test_parse_line_coverage_pct(tmp_path) -> None:
+    """parse_xcrg_results extracts line_coverage_pct from xcrg stdout."""
+    stdout = "Line Coverage Score      93.3054\n"
+    result = parse_xcrg_results(str(tmp_path), xcrg_stdout=stdout)
+    assert result["line_coverage_pct"] == pytest.approx(93.3054)
+
+
+def test_parse_branch_coverage_pct(tmp_path) -> None:
+    """parse_xcrg_results extracts branch_coverage_pct from xcrg stdout."""
+    stdout = "Branch Coverage Score    25.1374\n"
+    result = parse_xcrg_results(str(tmp_path), xcrg_stdout=stdout)
+    assert result["branch_coverage_pct"] == pytest.approx(25.1374)
+
+
+def test_parse_condition_coverage_pct(tmp_path) -> None:
+    """parse_xcrg_results extracts condition_coverage_pct from xcrg stdout."""
+    stdout = "Condition Coverage Score 41.6949\n"
+    result = parse_xcrg_results(str(tmp_path), xcrg_stdout=stdout)
+    assert result["condition_coverage_pct"] == pytest.approx(41.6949)
+
+
+def test_parse_toggle_coverage_pct(tmp_path) -> None:
+    """parse_xcrg_results extracts toggle_coverage_pct from xcrg stdout."""
+    stdout = "Toggle Coverage Score    18.49\n"
+    result = parse_xcrg_results(str(tmp_path), xcrg_stdout=stdout)
+    assert result["toggle_coverage_pct"] == pytest.approx(18.49)
 
 
 def test_vivado_coverage_results_json_written(tmp_path) -> None:
