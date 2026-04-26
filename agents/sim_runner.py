@@ -75,11 +75,18 @@ _CODE_COV_BLOCK = (
 )
 
 _XSIM_COV_TCL_TEMPLATE = (
-    "run -all\n"
     "write_xsim_coverage \\\n"
     "    -cov_db_dir ./coverage_db \\\n"
     "    -cov_db_name {design_name}_cov\n"
     "exit\n"
+)
+
+# Second xsim invocation block — runs after simulation to write coverage DB
+_WRITE_COV_BLOCK = (
+    '\nputs "--- Writing code coverage database ---"\n'
+    "run_cmd [list xsim $SNAPSHOT \\\n"
+    "    -tclbatch xsim_cov.tcl \\\n"
+    "    -log xsim_cov.log]\n"
 )
 
 
@@ -88,10 +95,10 @@ def generate_build_cov_tcl(build_tcl_path: str) -> str:
 
     Makes five targeted changes:
       1. xelab gains ``-cov_db_name ${DESIGN}_cov``
-      2. xsim gains ``-cov_db_dir ./coverage_db``
-      3. Functional xcrg invocation appended after "Simulation complete."
-      4. Code coverage xcrg invocation appended after functional xcrg
-      5. ``exit 0`` appended to prevent Vivado hanging at prompt
+      2. xsim gains ``-cov_db_dir ./coverage_db`` (keeps ``-runall``)
+      3. Second xsim invocation via ``-tclbatch xsim_cov.tcl`` writes coverage DB
+      4. Functional xcrg invocation appended after coverage write
+      5. Code coverage xcrg and ``exit 0`` appended after functional xcrg
 
     The original build.tcl is never modified.
 
@@ -110,23 +117,18 @@ def generate_build_cov_tcl(build_tcl_path: str) -> str:
         "    -debug typical \\\n    -cov_db_name ${DESIGN}_cov]",
     )
 
-    # 2. Replace -runall with -tclbatch so xsim sources xsim_cov.tcl instead
-    content = content.replace(
-        "    -runall \\\n",
-        "    -tclbatch xsim_cov.tcl \\\n",
-    )
-
-    # 3. Add coverage DB dir to xsim
+    # 2. Add coverage DB dir to xsim
     content = content.replace(
         "    -log xsim.log]",
         "    -log xsim.log \\\n    -cov_db_dir ./coverage_db]",
     )
 
-    # 4+5. Append functional then code coverage xcrg calls after sim complete
+    # 3. After simulation completes: write coverage DB via second xsim invocation,
+    #    then run both xcrg passes (functional + code coverage)
     sim_complete_line = 'puts "Simulation complete. Log: xsim.log"'
     content = content.replace(
         sim_complete_line,
-        sim_complete_line + _XCRG_BLOCK + _CODE_COV_BLOCK,
+        sim_complete_line + _WRITE_COV_BLOCK + _XCRG_BLOCK + _CODE_COV_BLOCK,
     )
 
     # 6. Ensure Vivado exits cleanly

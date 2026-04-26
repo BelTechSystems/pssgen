@@ -156,14 +156,24 @@ puts "Simulation complete. Log: xsim.log"
 
 
 def test_build_cov_uses_tclbatch(tmp_path) -> None:
-    """build_cov.tcl replaces -runall with -tclbatch xsim_cov.tcl."""
+    """build_cov.tcl contains both -runall (simulation) and -tclbatch (coverage write)."""
     path = os.path.join(str(tmp_path), "build.tcl")
     with open(path, "w", encoding="utf-8") as fh:
         fh.write(_RUNALL_BUILD_TCL)
     out = generate_build_cov_tcl(path)
     content = open(out, encoding="utf-8").read()
     assert "-tclbatch xsim_cov.tcl" in content
-    assert "-runall" not in content
+    assert "-runall" in content
+
+
+def test_build_cov_has_two_xsim_calls(tmp_path) -> None:
+    """build_cov.tcl invokes xsim twice: once for simulation, once for coverage write."""
+    path = os.path.join(str(tmp_path), "build.tcl")
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write(_RUNALL_BUILD_TCL)
+    out = generate_build_cov_tcl(path)
+    content = open(out, encoding="utf-8").read()
+    assert content.count("xsim ") >= 2
 
 
 def test_second_xcrg_uses_codeCov_dir(tmp_path) -> None:
