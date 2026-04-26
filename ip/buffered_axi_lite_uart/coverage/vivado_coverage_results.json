@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-04-25T23:41:45.052584+00:00",
+  "generated_at": "2026-04-26T17:29:28.198564+00:00",
   "simulator": "vivado",
   "version": "2025.1",
   "coverage_source": "Vivado 2025.1 xcrg",
@@ -8,14 +8,14 @@
   "max_passes": 1,
   "target_pct": 95.0,
   "target_reached": false,
-  "functional_coverage_pct": 41.6667,
+  "functional_coverage_pct": 0.0,
   "code_coverage_pct": null,
   "covergroups": [
     {
       "name": "buffered_axi_lite_uart_pkg::buffered_axi_lite_uart_coverage_subscriber::axi_transaction_cg",
-      "score": 41.6667,
+      "score": 100.0,
       "expected": 16,
-      "covered": 4
+      "covered": 16
     }
   ],
   "verdict": "CRITICAL_GAPS",
