@@ -201,10 +201,19 @@ def test_parse_xcrg_covergroups(tmp_path) -> None:
     """parse_xcrg_results returns non-empty covergroups list from groups.html."""
     func_dir = os.path.join(str(tmp_path), "html", "functionalCoverageReport")
     os.makedirs(func_dir, exist_ok=True)
+    # groups.html uses anchor-tag format as emitted by actual xcrg
     with open(os.path.join(func_dir, "groups.html"), "w", encoding="utf-8") as fh:
         fh.write(
             "<html><body><table>"
-            "<tr><td>axi_transaction_cg</td><td>41.6667</td><td>24</td><td>10</td></tr>"
+            '<tr><td><a href="grp0.html"> axi_transaction_cg</a></td>'
+            "<td>41.6667</td></tr>"
+            "</table></body></html>"
+        )
+    # grp0.html provides bin counts via Instance Variable Summary (Variables row)
+    with open(os.path.join(func_dir, "grp0.html"), "w", encoding="utf-8") as fh:
+        fh.write(
+            "<html><body><table>"
+            "<tr><td>3</td><td>Variables</td><td>24</td><td>14</td><td>10</td></tr>"
             "</table></body></html>"
         )
 

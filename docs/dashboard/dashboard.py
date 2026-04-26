@@ -7,7 +7,7 @@
 #
 # DESCRIPTION:
 #   Streamlit verification dashboard for the pssgen BALU IP block.
-#   Reads gap_report.json and balu_coverage_results.json from GitHub
+#   Reads gap_report.json and vivado_coverage_results.json from GitHub
 #   and displays requirement coverage, simulation status, and VSL
 #   sequence generation progress.
 #
@@ -20,6 +20,7 @@
 #
 # HISTORY:
 #   D-034  2026-04-18  SB  Initial implementation
+#   D-035  2026-04-25  SB  Remove self-assessed coverage; promote Vivado xcrg
 #
 # ===========================================================
 
@@ -32,10 +33,6 @@ import streamlit as st
 GAP_REPORT_URL = (
     "https://raw.githubusercontent.com/BelTechSystems/pssgen/main"
     "/ip/buffered_axi_lite_uart/gap_report.json"
-)
-BALU_COVERAGE_URL = (
-    "https://raw.githubusercontent.com/BelTechSystems/pssgen/main"
-    "/ip/buffered_axi_lite_uart/results/balu_coverage_results.json"
 )
 VIVADO_COVERAGE_URL = (
     "https://raw.githubusercontent.com/BelTechSystems/pssgen/main"
@@ -59,36 +56,6 @@ def load_gap_report() -> dict:
 
 
 @st.cache_data(ttl=300)
-def load_coverage_results() -> dict:
-    r = requests.get(BALU_COVERAGE_URL, timeout=10)
-    r.raise_for_status()
-    return r.json()
-
-
-@st.cache_data(ttl=300)
-def load_coverage_assessment() -> dict:
-    import requests
-    url = "https://raw.githubusercontent.com/BelTechSystems/pssgen/main/ip/buffered_axi_lite_uart/coverage/coverage_assessment.json"
-    try:
-        r = requests.get(url, timeout=10)
-        r.raise_for_status()
-        return r.json()
-    except Exception:
-        return {}
-
-@st.cache_data(ttl=300)
-def load_code_coverage() -> dict:
-    import requests
-    url = "https://raw.githubusercontent.com/BelTechSystems/pssgen/main/ip/buffered_axi_lite_uart/coverage/code_coverage.json"
-    try:
-        r = requests.get(url, timeout=10)
-        r.raise_for_status()
-        return r.json()
-    except Exception:
-        return {}
-
-
-@st.cache_data(ttl=300)
 def load_vivado_coverage() -> dict:
     try:
         r = requests.get(VIVADO_COVERAGE_URL, timeout=10)
@@ -99,8 +66,9 @@ def load_vivado_coverage() -> dict:
 
 
 def fetch_data():
-    gap, cov = None, None
-    gap_ok, cov_ok = True, True
+    # Reads gap_report.json and vivado_coverage_results.json
+    gap = None
+    gap_ok = True
 
     try:
         gap = load_gap_report()
@@ -108,19 +76,15 @@ def fetch_data():
         gap_ok = False
         st.error(f"Failed to load gap report from:\n{GAP_REPORT_URL}\n\n{exc}")
 
-    try:
-        cov = load_coverage_results()
-    except Exception as exc:
-        cov_ok = False
-        st.error(f"Failed to load coverage results from:\n{BALU_COVERAGE_URL}\n\n{exc}")
+    vc = load_vivado_coverage()
 
-    if not gap_ok or not cov_ok:
+    if not gap_ok:
         if st.button("Retry"):
             st.cache_data.clear()
             st.rerun()
         st.stop()
 
-    return gap, cov
+    return gap, vc
 
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
@@ -134,7 +98,6 @@ if st.sidebar.button("Refresh Data"):
 
 st.sidebar.markdown("**Data sources**")
 st.sidebar.markdown(f"[gap\\_report.json]({GAP_REPORT_URL})")
-st.sidebar.markdown(f"[balu\\_coverage\\_results.json]({BALU_COVERAGE_URL})")
 st.sidebar.markdown(f"[vivado\\_coverage\\_results.json]({VIVADO_COVERAGE_URL})")
 st.sidebar.markdown("---")
 st.sidebar.info("Data cached for up to 5 minutes")
@@ -142,14 +105,12 @@ st.sidebar.info("Data cached for up to 5 minutes")
 
 # ── Load data ─────────────────────────────────────────────────────────────────
 
-gap, cov = fetch_data()
+gap, vc = fetch_data()
 
 sim = gap["sim_result"]
 summary = gap["summary"]
 families = gap["family_summary_array"]
 requirements = gap["requirements"]
-cov_summary = cov["summary"]
-goals = cov["goals"]
 
 commit = gap.get("commit", "unknown")
 generated = gap.get("generated", "")
@@ -185,7 +146,7 @@ m1, m2, m3, m4 = st.columns(4)
 
 uvm_errors = sim.get("uvm_errors", 0)
 uvm_fatals = sim.get("uvm_fatals", 0)
-cov_pct = sim.get("coverage_pct", 0.0)
+vc_pct = vc.get("functional_coverage_pct", 0.0) if vc else 0.0
 passing = summary.get("passing", 0)
 total = summary.get("total", 0)
 
@@ -200,13 +161,14 @@ with m2:
               delta_color="normal" if uvm_fatals == 0 else "inverse")
 
 with m3:
-    if cov_pct >= 80:
-        cov_label = f"{cov_pct:.1f}% ✓"
-    elif cov_pct >= 50:
-        cov_label = f"{cov_pct:.1f}% ⚠"
+    if vc_pct >= 95:
+        cov_label = f"{vc_pct:.1f}% ✅"
+    elif vc_pct >= 80:
+        cov_label = f"{vc_pct:.1f}% ⚠️"
     else:
-        cov_label = f"{cov_pct:.1f}% ✗"
-    st.metric("Functional Coverage", cov_label)
+        cov_label = f"{vc_pct:.1f}% ❌"
+    st.metric("Vivado Coverage", cov_label)
+    st.caption("Vivado 2025.1 xcrg")
 
 with m4:
     st.metric("Requirements Passing", f"{passing} / {total}")
@@ -214,7 +176,67 @@ with m4:
 st.markdown("---")
 
 
-# ── Section 3: Coverage by Family ─────────────────────────────────────────────
+# ── Section 3: Vivado Coverage Detail ─────────────────────────────────────────
+
+st.subheader("Vivado Coverage Results")
+
+if vc:
+    st.info(
+        "Coverage source: Vivado 2025.1 xcrg — "
+        "independently measured, not self-assessed."
+    )
+
+    _verdict_emoji = {
+        "PRODUCTION_READY": "✅",
+        "NEEDS_WORK": "⚠️",
+        "CRITICAL_GAPS": "❌",
+    }
+
+    # Row 1 — four metrics
+    r1c1, r1c2, r1c3, r1c4 = st.columns(4)
+    r1c1.metric("Functional Coverage", f"{vc.get('functional_coverage_pct', 0.0):.1f}%")
+    r1c2.metric("Effort Level", vc.get("effort_level", "—").upper())
+    r1c3.metric(
+        "Passes Run",
+        f"{vc.get('passes_run', 0)} of {vc.get('max_passes', 0)}",
+    )
+    reached = vc.get("target_reached", False)
+    r1c4.metric("Target Reached", "✅ Yes" if reached else "⚠️ No")
+
+    # Row 2 — three metrics
+    r2c1, r2c2, r2c3 = st.columns(3)
+    r2c1.metric("Target", f"{vc.get('target_pct', 0.0):.1f}%")
+    vc_verdict = vc.get("verdict", "UNKNOWN")
+    vc_emoji = _verdict_emoji.get(vc_verdict, "❓")
+    r2c2.metric("Verdict", f"{vc_emoji} {vc_verdict}")
+    r2c3.metric("Covergroups", len(vc.get("covergroups", [])))
+
+    # Covergroup table
+    covergroups = vc.get("covergroups", [])
+    if covergroups:
+        def _truncate_cg_name(name: str) -> str:
+            parts = name.split("::")
+            return "::".join(parts[-2:]) if len(parts) >= 2 else name
+
+        cg_df = pd.DataFrame([
+            {
+                "Covergroup": _truncate_cg_name(cg["name"]),
+                "Score": f"{cg['score']:.1f}%",
+                "Expected": cg.get("expected", 0),
+                "Covered": cg.get("covered", 0),
+            }
+            for cg in covergroups
+        ])
+        st.dataframe(cg_df, use_container_width=True, hide_index=True)
+else:
+    st.warning(
+        "Vivado coverage results not available. Run --simulate to generate."
+    )
+
+st.markdown("---")
+
+
+# ── Section 4: Requirements Coverage by Family ────────────────────────────────
 
 st.subheader("Requirements Coverage by Family")
 
@@ -269,49 +291,65 @@ with tbl_col:
 st.markdown("---")
 
 
-# ── Section 4: D-034 Phase 1 VSL Coverage ─────────────────────────────────────
+# ── Section 5: D-034 Phase 1 VSL Coverage ─────────────────────────────────────
 
 with st.expander("D-034 Phase 1 — VSL Sequence Generation", expanded=True):
+    try:
+        _vsl_url = (
+            "https://raw.githubusercontent.com/BelTechSystems/pssgen/main"
+            "/ip/buffered_axi_lite_uart/results/balu_coverage_results.json"
+        )
+        _vsl_r = requests.get(_vsl_url, timeout=10)
+        _vsl_r.raise_for_status()
+        _cov = _vsl_r.json()
+    except Exception:
+        _cov = {}
+    _cov_summary = _cov.get("summary", {})
+    _goals = _cov.get("goals", [])
+
     d034_col, goals_col = st.columns([1, 2])
 
     with d034_col:
-        st.metric("D-034 Phase", cov.get("d034_phase", "—"))
-        st.metric("WRITTEN",     cov_summary.get("WRITTEN", 0))
-        st.metric("APPROVED",    cov_summary.get("APPROVED", 0))
-        st.metric("VSL Coverage", f"{cov_summary.get('coverage_pct', 0.0):.1f}%")
-        st.metric("PHASE_2_GAP", cov_summary.get("PHASE_2_GAP", 0))
-        notes = cov_summary.get("notes", "")
+        st.metric("D-034 Phase", _cov.get("d034_phase", "—"))
+        st.metric("WRITTEN",     _cov_summary.get("WRITTEN", 0))
+        st.metric("APPROVED",    _cov_summary.get("APPROVED", 0))
+        st.metric("VSL Coverage", f"{_cov_summary.get('coverage_pct', 0.0):.1f}%")
+        st.metric("PHASE_2_GAP", _cov_summary.get("PHASE_2_GAP", 0))
+        notes = _cov_summary.get("notes", "")
         if notes:
             st.caption(f"Notes: {notes}")
 
     with goals_col:
-        goals_df = pd.DataFrame([
-            {
-                "COV ID":          g["id"],
-                "Name":            g["name"],
-                "Seq Status":      g["seq_status"],
-                "Coverage Status": g["coverage_status"],
-                "VSL Steps":       g.get("vsl_steps", 0),
-            }
-            for g in goals
-        ])
+        if _goals:
+            goals_df = pd.DataFrame([
+                {
+                    "COV ID":          g["id"],
+                    "Name":            g["name"],
+                    "Seq Status":      g["seq_status"],
+                    "Coverage Status": g["coverage_status"],
+                    "VSL Steps":       g.get("vsl_steps", 0),
+                }
+                for g in _goals
+            ])
 
-        def _color_goal_row(row):
-            if row["Seq Status"] == "PHASE_1" and row["Coverage Status"] == "WRITTEN":
-                return ["background-color: #0D3320"] * len(row)
-            if row["Seq Status"] == "PHASE_2_GAP":
-                return ["background-color: #3D3000"] * len(row)
-            if row["Seq Status"] == "DRAFT":
-                return ["background-color: #3D1A00"] * len(row)
-            return [""] * len(row)
+            def _color_goal_row(row):
+                if row["Seq Status"] == "PHASE_1" and row["Coverage Status"] == "WRITTEN":
+                    return ["background-color: #0D3320"] * len(row)
+                if row["Seq Status"] == "PHASE_2_GAP":
+                    return ["background-color: #3D3000"] * len(row)
+                if row["Seq Status"] == "DRAFT":
+                    return ["background-color: #3D1A00"] * len(row)
+                return [""] * len(row)
 
-        styled_goals = goals_df.style.apply(_color_goal_row, axis=1)
-        st.dataframe(styled_goals, use_container_width=True, hide_index=True)
+            styled_goals = goals_df.style.apply(_color_goal_row, axis=1)
+            st.dataframe(styled_goals, use_container_width=True, hide_index=True)
+        else:
+            st.info("VSL goal data not available.")
 
 st.markdown("---")
 
 
-# ── Section 5: Requirements Detail ────────────────────────────────────────────
+# ── Section 6: Requirements Detail ────────────────────────────────────────────
 
 with st.expander("Requirements Detail", expanded=False):
     search = st.text_input("Filter by Req ID or Family", key="req_filter")
@@ -352,143 +390,7 @@ with st.expander("Requirements Detail", expanded=False):
 st.markdown("---")
 
 
-st.markdown("---")
-with st.expander(
-    "Coverage Assessment Engine", expanded=True):
-    ca = load_coverage_assessment()
-    cc = load_code_coverage()
-    if ca:
-        verdict = ca.get("verdict", "UNKNOWN")
-        emoji = {"PRODUCTION_READY": "✅",
-                 "NEEDS_WORK": "⚠️",
-                 "CRITICAL_GAPS": "❌"
-                 }.get(verdict, "❓")
-        m = ca.get("coverage_metrics", {})
-        rm = ca.get("risk_matrix", {})
-        easy = ca.get("easy_wins", [])
-
-        st.subheader(f"{emoji} Verdict: {verdict}")
-        st.caption(ca.get("verdict_rationale", ""))
-
-        col1, col2, col3, col4 = st.columns(4)
-        col1.metric("Address Coverage",
-            f"{m.get('address_coverage_pct',0):.1f}%")
-        col2.metric("Branch Coverage",
-            f"{m.get('adjusted_branch_pct',0):.1f}%")
-        col3.metric("Functional Coverage",
-            f"{m.get('functional_coverage_pct',0):.1f}%")
-        col4.metric("Overall",
-            f"{m.get('overall_pct',0):.1f}%")
-
-        col5, col6, col7 = st.columns(3)
-        col5.metric("High Risk Gaps",
-            rm.get("high_risk_gaps", 0),
-            delta_color="inverse")
-        col6.metric("Real RTL Gaps",
-            rm.get("real_rtl_gaps", 0),
-            delta_color="inverse")
-        col7.metric("Easy Wins",
-            len(easy))
-
-        if cc:
-            st.markdown("**RTL Branch Classification**")
-            cls = cc.get(
-                "uncovered_by_classification", {})
-            if cls:
-                import pandas as pd
-                df = pd.DataFrame([
-                    {"Classification": k,
-                     "Count": v}
-                    for k, v in cls.items()
-                    if v > 0])
-                if not df.empty:
-                    st.dataframe(df,
-                        use_container_width=True,
-                        hide_index=True)
-
-        if easy:
-            st.markdown("**Easy Wins**")
-            import pandas as pd
-            df = pd.DataFrame(easy)
-            cols = [c for c in
-                ["req_id","family","covered_by",
-                 "seq_status","recommended_action"]
-                if c in df.columns]
-            st.dataframe(df[cols],
-                use_container_width=True,
-                hide_index=True)
-        else:
-            st.info(
-                "No easy wins in current assessment. "
-                "CAE-004 enrichment pending.")
-    else:
-        st.warning(
-            "Coverage assessment data not available. "
-            "Run --assess-coverage to generate.")
-
-# ── Section 6: Vivado Coverage Results ───────────────────────────────────────
-
-st.markdown("---")
-with st.expander("Vivado Coverage Results", expanded=True):
-    vc = load_vivado_coverage()
-    if vc:
-        _verdict_emoji = {
-            "PRODUCTION_READY": "✅",
-            "NEEDS_WORK": "⚠️",
-            "CRITICAL_GAPS": "❌",
-        }
-
-        # Row 1 — source / effort / passes / target reached
-        r1c1, r1c2, r1c3, r1c4 = st.columns(4)
-        r1c1.metric("Coverage Source", vc.get("coverage_source", "—"))
-        r1c2.metric("Effort Level", vc.get("effort_level", "—").upper())
-        r1c3.metric(
-            "Passes Run",
-            f"{vc.get('passes_run', 0)} of {vc.get('max_passes', 0)}",
-        )
-        reached = vc.get("target_reached", False)
-        r1c4.metric("Target Reached", "✅ Yes" if reached else "⚠️ No")
-
-        # Row 2 — coverage numbers / verdict
-        r2c1, r2c2, r2c3 = st.columns(3)
-        r2c1.metric(
-            "Final Coverage",
-            f"{vc.get('final_coverage_pct', 0.0):.1f}%",
-        )
-        r2c2.metric("Target", f"{vc.get('target_pct', 0.0):.1f}%")
-        vc_verdict = vc.get("verdict", "UNKNOWN")
-        vc_emoji = _verdict_emoji.get(vc_verdict, "❓")
-        r2c3.metric("Verdict", f"{vc_emoji} {vc_verdict}")
-
-        # Row 3 — pass-by-pass table (only when more than one pass was run)
-        pass_results = vc.get("pass_results", [])
-        if vc.get("passes_run", 0) > 1 and pass_results:
-            st.markdown("**Pass-by-Pass Results**")
-            target = vc.get("target_pct", 0.0)
-            pass_df = pd.DataFrame([
-                {
-                    "Pass": p["pass"],
-                    "Coverage %": f"{p['coverage_pct']:.1f}%",
-                    "vs Target": f"{p['coverage_pct'] - target:+.1f}%",
-                }
-                for p in pass_results
-            ])
-            st.dataframe(pass_df, use_container_width=True, hide_index=True)
-
-        # Row 4 — coverage note
-        if vc.get("coverage_note"):
-            st.info(vc["coverage_note"])
-
-        # Row 5 — verdict rationale
-        if vc.get("verdict_rationale"):
-            st.caption(vc["verdict_rationale"])
-    else:
-        st.warning(
-            "Vivado coverage results not available. "
-            "Run --simulate to generate."
-        )
-
-# ── Section 7: Footer ─────────────────────────────────────────────────────────
+# ── Footer ─────────────────────────────────────────────────────────────────────
 
 st.markdown(
     "MIT Licensed | Open Source | "
