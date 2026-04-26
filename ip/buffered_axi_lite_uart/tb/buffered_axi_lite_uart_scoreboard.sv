@@ -30,8 +30,8 @@ class buffered_axi_lite_uart_scoreboard extends uvm_scoreboard;
     local function void _init_shadow();
         shadow[32'h00] = 32'h00000000;   // CTRL
         shadow[32'h08] = 32'h004FA6D5;   // BAUD_TUNING
-        shadow[32'h0C] = 32'h00000808;   // FIFO_CTRL (TX_THRESH=8, RX_THRESH=8)
-        shadow[32'h14] = 32'h000000FF;   // TIMEOUT_VAL
+        shadow[32'h0C] = 32'h00000004;   // FIFO_CTRL
+        shadow[32'h14] = 32'h00000064;   // TIMEOUT_VAL (16-bit register, reset=0x0064)
         shadow[32'h18] = 32'h00000000;   // INT_ENABLE
         shadow[32'h24] = 32'h00000000;   // SCRATCH
     endfunction
@@ -46,6 +46,9 @@ class buffered_axi_lite_uart_scoreboard extends uvm_scoreboard;
             if (wstrb[b])
                 shadow[addr][b*8 +: 8] = wdata[b*8 +: 8];
         end
+        // TIMEOUT_VAL is 16-bit — RTL ignores upper bits
+        if (addr[7:0] === 8'h14)
+            shadow[addr] = shadow[addr] & 32'h0000FFFF;
     endfunction
 
     function void write(buffered_axi_lite_uart_seq_item item);
@@ -53,21 +56,26 @@ class buffered_axi_lite_uart_scoreboard extends uvm_scoreboard;
 
         if (item.cmd === buffered_axi_lite_uart_seq_item::AXI_WRITE) begin
 
-            if (item.resp !== 2'b00) begin
-                error_count++;
-                `uvm_error("SB", $sformatf(
-                    "UART-IF-006: write response not OKAY — addr=0x%08h resp=%02b",
-                    item.addr, item.resp))
-            end
-
             case (reg_offset)
                 8'h00, 8'h0C, 8'h14, 8'h18, 8'h24: begin
                     // RW register — update shadow with wstrb masking
-                    _apply_write(item.addr, item.wdata, item.wstrb);
+                    if (item.resp !== 2'b00) begin
+                        error_count++;
+                        `uvm_error("SB", $sformatf(
+                            "UART-IF-006: write response not OKAY — addr=0x%08h resp=%02b",
+                            item.addr, item.resp))
+                    end else begin
+                        _apply_write(item.addr, item.wdata, item.wstrb);
+                    end
                 end
                 8'h08: begin
                     // BAUD_TUNING — write ignored while UART_EN (CTRL[7]) is set
-                    if (shadow[32'h00][7] === 1'b1) begin
+                    if (item.resp !== 2'b00) begin
+                        error_count++;
+                        `uvm_error("SB", $sformatf(
+                            "UART-IF-006: write response not OKAY — addr=0x%08h resp=%02b",
+                            item.addr, item.resp))
+                    end else if (shadow[32'h00][7] === 1'b1) begin
                         `uvm_info("SB", $sformatf(
                             "BAUD_TUNING write ignored — UART_EN=1, per UART-BR-004 (wdata=0x%08h)",
                             item.wdata), UVM_MEDIUM)
@@ -77,34 +85,58 @@ class buffered_axi_lite_uart_scoreboard extends uvm_scoreboard;
                 end
                 8'h20: begin
                     // INT_CLEAR: W1C side-effect register — shadow not updated
+                    if (item.resp !== 2'b00) begin
+                        error_count++;
+                        `uvm_error("SB", $sformatf(
+                            "UART-IF-006: write response not OKAY — addr=0x%08h resp=%02b",
+                            item.addr, item.resp))
+                    end
                 end
                 8'h28: begin
                     // TX_DATA: WO — no shadow entry
+                    if (item.resp !== 2'b00) begin
+                        error_count++;
+                        `uvm_error("SB", $sformatf(
+                            "UART-IF-006: write response not OKAY — addr=0x%08h resp=%02b",
+                            item.addr, item.resp))
+                    end
                 end
                 8'h04, 8'h10, 8'h1C, 8'h2C: begin
-                    `uvm_warning("SB", $sformatf(
-                        "Write to read-only register addr=0x%08h wdata=0x%08h",
-                        item.addr, item.wdata))
+                    // RO register — SLVERR is correct and expected per UART-IF-010/011
+                    if (item.resp === 2'b10) begin
+                        `uvm_info("SB", $sformatf(
+                            "Write to RO register returned SLVERR (expected) — addr=0x%08h",
+                            item.addr), UVM_MEDIUM)
+                    end else begin
+                        error_count++;
+                        `uvm_error("SB", $sformatf(
+                            "UART-IF-010: write to RO register did not return SLVERR — addr=0x%08h resp=%02b",
+                            item.addr, item.resp))
+                    end
                 end
                 default: begin
-                    `uvm_warning("SB", $sformatf(
-                        "Write to unknown register addr=0x%08h wdata=0x%08h",
-                        item.addr, item.wdata))
+                    if (item.resp !== 2'b00) begin
+                        `uvm_info("SB", $sformatf(
+                            "Write to unknown register returned non-OKAY resp=%02b (expected for undefined space) — addr=0x%08h",
+                            item.resp, item.addr), UVM_MEDIUM)
+                    end else begin
+                        `uvm_warning("SB", $sformatf(
+                            "Write to unknown register returned OKAY — addr=0x%08h wdata=0x%08h",
+                            item.addr, item.wdata))
+                    end
                 end
             endcase
 
         end else begin  // AXI_READ
 
-            if (item.resp !== 2'b00) begin
-                error_count++;
-                `uvm_error("SB", $sformatf(
-                    "UART-IF-007: read response not OKAY — addr=0x%08h resp=%02b",
-                    item.addr, item.resp))
-            end
-
             case (reg_offset)
                 8'h00, 8'h0C, 8'h14, 8'h18, 8'h24: begin
-                    if (item.rdata !== shadow[item.addr]) begin
+                    if (item.resp !== 2'b00) begin
+                        error_count++;
+                        `uvm_error("SB", $sformatf(
+                            "UART-IF-007: read response not OKAY — addr=0x%08h resp=%02b",
+                            item.addr, item.resp))
+                    end else if (item.rdata !== shadow[item.addr]) begin
                         error_count++;
                         `uvm_error("SB", $sformatf(
                             "UART-REG: register readback mismatch — addr=0x%08h expected=0x%08h actual=0x%08h",
@@ -112,7 +144,12 @@ class buffered_axi_lite_uart_scoreboard extends uvm_scoreboard;
                     end
                 end
                 8'h08: begin
-                    if (item.rdata !== shadow[item.addr]) begin
+                    if (item.resp !== 2'b00) begin
+                        error_count++;
+                        `uvm_error("SB", $sformatf(
+                            "UART-IF-007: read response not OKAY — addr=0x%08h resp=%02b",
+                            item.addr, item.resp))
+                    end else if (item.rdata !== shadow[item.addr]) begin
                         error_count++;
                         `uvm_error("SB", $sformatf(
                             "UART-REG-027: BAUD_TUNING readback mismatch — expected=0x%08h actual=0x%08h",
@@ -120,7 +157,12 @@ class buffered_axi_lite_uart_scoreboard extends uvm_scoreboard;
                     end
                 end
                 8'h20: begin
-                    if (item.rdata !== 32'h00000000) begin
+                    if (item.resp !== 2'b00) begin
+                        error_count++;
+                        `uvm_error("SB", $sformatf(
+                            "UART-IF-007: read response not OKAY — addr=0x%08h resp=%02b",
+                            item.addr, item.resp))
+                    end else if (item.rdata !== 32'h00000000) begin
                         error_count++;
                         `uvm_error("SB", $sformatf(
                             "INT_CLEAR reads non-zero — expected=0x00000000 actual=0x%08h",
@@ -128,14 +170,34 @@ class buffered_axi_lite_uart_scoreboard extends uvm_scoreboard;
                     end
                 end
                 8'h04, 8'h10, 8'h1C, 8'h2C: begin
+                    if (item.resp !== 2'b00) begin
+                        error_count++;
+                        `uvm_error("SB", $sformatf(
+                            "UART-IF-007: read response not OKAY — addr=0x%08h resp=%02b",
+                            item.addr, item.resp))
+                    end else begin
+                        `uvm_info("SB", $sformatf(
+                            "RO register read — addr=0x%08h rdata=0x%08h",
+                            item.addr, item.rdata), UVM_HIGH)
+                    end
+                end
+                8'h28: begin
+                    // TX_DATA: WO register — read returns 0x00000000, no check
                     `uvm_info("SB", $sformatf(
-                        "RO register read — addr=0x%08h rdata=0x%08h",
+                        "TX_DATA (WO) read — addr=0x%08h rdata=0x%08h",
                         item.addr, item.rdata), UVM_HIGH)
                 end
                 default: begin
-                    `uvm_warning("SB", $sformatf(
-                        "Read from unknown register addr=0x%08h rdata=0x%08h",
-                        item.addr, item.rdata))
+                    // SLVERR on undefined address space is correct per spec
+                    if (item.resp === 2'b10) begin
+                        `uvm_info("SB", $sformatf(
+                            "Read from unknown register returned SLVERR (expected) — addr=0x%08h",
+                            item.addr), UVM_MEDIUM)
+                    end else begin
+                        `uvm_warning("SB", $sformatf(
+                            "Read from unknown register addr=0x%08h rdata=0x%08h resp=%02b",
+                            item.addr, item.rdata, item.resp))
+                    end
                 end
             endcase
         end
