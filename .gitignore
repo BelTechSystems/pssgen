@@ -115,3 +115,4 @@ ip/*/scripts/
 # Vivado coverage run artifacts
 ip/buffered_axi_lite_uart/tb/scripts/vivado/coverage_db/
 ip/buffered_axi_lite_uart/tb/scripts/vivado/build_cov.tcl
+ip/buffered_axi_lite_uart/tb/scripts/vivado/xsim_cov.tcl

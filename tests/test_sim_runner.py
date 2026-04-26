@@ -15,6 +15,7 @@
 #
 # HISTORY:
 #   D-035  2026-04-25  SB  Initial implementation; 10 sim_runner tests
+#   D-035  2026-04-26  SB  Tests 15-19: xsim_cov.tcl, tclbatch, xsim.codeCov
 #
 # ===========================================================
 """Unit tests for the sim_runner simulator integration module."""
@@ -116,6 +117,61 @@ def test_build_cov_tcl_written_to_correct_location(tmp_path) -> None:
     expected = os.path.join(str(tmp_path), "build_cov.tcl")
     assert os.path.abspath(out) == os.path.abspath(expected)
     assert os.path.isfile(expected)
+
+
+def test_generate_xsim_cov_tcl_created(tmp_path) -> None:
+    """generate_build_cov_tcl() also creates xsim_cov.tcl in the same directory."""
+    build_tcl = _write_build_tcl(str(tmp_path))
+    generate_build_cov_tcl(build_tcl)
+    xsim_cov = os.path.join(str(tmp_path), "xsim_cov.tcl")
+    assert os.path.isfile(xsim_cov)
+
+
+def test_xsim_cov_tcl_contains_write_coverage(tmp_path) -> None:
+    """xsim_cov.tcl contains the write_xsim_coverage command."""
+    build_tcl = _write_build_tcl(str(tmp_path))
+    generate_build_cov_tcl(build_tcl)
+    content = open(os.path.join(str(tmp_path), "xsim_cov.tcl"), encoding="utf-8").read()
+    assert "write_xsim_coverage" in content
+    assert "-cov_db_dir ./coverage_db" in content
+
+
+def test_xsim_cov_tcl_contains_exit(tmp_path) -> None:
+    """xsim_cov.tcl ends with exit so xsim returns to the shell cleanly."""
+    build_tcl = _write_build_tcl(str(tmp_path))
+    generate_build_cov_tcl(build_tcl)
+    content = open(os.path.join(str(tmp_path), "xsim_cov.tcl"), encoding="utf-8").read()
+    assert "exit" in content
+
+
+_RUNALL_BUILD_TCL = """\
+set DESIGN up_down_counter
+run_cmd [list xelab \\
+    -debug typical]
+run_cmd [list xsim \\
+    -runall \\
+    -log xsim.log]
+puts "Simulation complete. Log: xsim.log"
+"""
+
+
+def test_build_cov_uses_tclbatch(tmp_path) -> None:
+    """build_cov.tcl replaces -runall with -tclbatch xsim_cov.tcl."""
+    path = os.path.join(str(tmp_path), "build.tcl")
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write(_RUNALL_BUILD_TCL)
+    out = generate_build_cov_tcl(path)
+    content = open(out, encoding="utf-8").read()
+    assert "-tclbatch xsim_cov.tcl" in content
+    assert "-runall" not in content
+
+
+def test_second_xcrg_uses_codeCov_dir(tmp_path) -> None:
+    """build_cov.tcl second xcrg call uses coverage_db/xsim.codeCov as input."""
+    build_tcl = _write_build_tcl(str(tmp_path))
+    out = generate_build_cov_tcl(build_tcl)
+    content = open(out, encoding="utf-8").read()
+    assert "xsim.codeCov" in content
 
 
 # ---------------------------------------------------------------------------

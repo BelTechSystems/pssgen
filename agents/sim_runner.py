@@ -32,6 +32,7 @@
 # HISTORY:
 #   D-035  2026-04-25  SB  Initial implementation; Vivado coverage flow
 #   D-035  2026-04-25  SB  xcrg parser, code coverage flags, closeout
+#   D-035  2026-04-26  SB  xsim_cov.tcl; tclbatch; xsim.codeCov path
 #
 # ===========================================================
 """agents/sim_runner.py — Simulator integration for --simulate CLI flag."""
@@ -66,11 +67,19 @@ _XCRG_BLOCK = (
 _CODE_COV_BLOCK = (
     '\nputs "--- Collecting code coverage ---"\n'
     "run_cmd [list xcrg \\\n"
-    "    -cov_db_dir ./coverage_db \\\n"
+    "    -cov_db_dir ./coverage_db/xsim.codeCov \\\n"
     "    -cov_db_name ${DESIGN}_cov \\\n"
     "    -report_dir ./coverage_db/html/codeCoverageReport \\\n"
     "    -report_format html]\n"
     'puts "Code coverage report written to ./coverage_db/html/codeCoverageReport"'
+)
+
+_XSIM_COV_TCL_TEMPLATE = (
+    "run -all\n"
+    "write_xsim_coverage \\\n"
+    "    -cov_db_dir ./coverage_db \\\n"
+    "    -cov_db_name {design_name}_cov\n"
+    "exit\n"
 )
 
 
@@ -101,26 +110,40 @@ def generate_build_cov_tcl(build_tcl_path: str) -> str:
         "    -debug typical \\\n    -cov_db_name ${DESIGN}_cov]",
     )
 
-    # 2. Add coverage DB dir to xsim
+    # 2. Replace -runall with -tclbatch so xsim sources xsim_cov.tcl instead
+    content = content.replace(
+        "    -runall \\\n",
+        "    -tclbatch xsim_cov.tcl \\\n",
+    )
+
+    # 3. Add coverage DB dir to xsim
     content = content.replace(
         "    -log xsim.log]",
         "    -log xsim.log \\\n    -cov_db_dir ./coverage_db]",
     )
 
-    # 3+4. Append functional then code coverage xcrg calls after sim complete
+    # 4+5. Append functional then code coverage xcrg calls after sim complete
     sim_complete_line = 'puts "Simulation complete. Log: xsim.log"'
     content = content.replace(
         sim_complete_line,
         sim_complete_line + _XCRG_BLOCK + _CODE_COV_BLOCK,
     )
 
-    # 5. Ensure Vivado exits cleanly
+    # 6. Ensure Vivado exits cleanly
     content += "\nexit 0\n"
 
     out_dir = os.path.dirname(os.path.abspath(build_tcl_path))
     out_path = os.path.join(out_dir, "build_cov.tcl")
     with open(out_path, "w", encoding="utf-8") as fh:
         fh.write(content)
+
+    # 7. Write xsim_cov.tcl — sourced by xsim via -tclbatch; runs sim and
+    #    writes code coverage database before exiting.
+    design_match = re.search(r"set\s+DESIGN\s+(\S+)", content)
+    design_name = design_match.group(1) if design_match else "design"
+    xsim_cov_path = os.path.join(out_dir, "xsim_cov.tcl")
+    with open(xsim_cov_path, "w", encoding="utf-8") as fh:
+        fh.write(_XSIM_COV_TCL_TEMPLATE.format(design_name=design_name))
 
     return out_path
 
