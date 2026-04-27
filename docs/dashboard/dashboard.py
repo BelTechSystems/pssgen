@@ -23,6 +23,7 @@
 #   D-035  2026-04-25  SB  Remove self-assessed coverage; promote Vivado xcrg
 #   D-036  2026-04-26  SB  Full overhaul: two-column status, remove legacy sources
 #   D-037  2026-04-27  SB  Coverage Detail: functional/code/weighted panels, 12-CG table
+#   D-038  2026-04-27  SB  Remove VSL Sequence Generation expander; fetch_data returns gap only
 #
 # ===========================================================
 
@@ -77,15 +78,13 @@ def fetch_data():
         gap_ok = False
         st.error(f"Failed to load gap report from:\n{GAP_REPORT_URL}\n\n{exc}")
 
-    vc = load_vivado_coverage()
-
     if not gap_ok:
         if st.button("Retry"):
             st.cache_data.clear()
             st.rerun()
         st.stop()
 
-    return gap, vc
+    return gap
 
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
@@ -106,7 +105,8 @@ st.sidebar.info("Data cached for up to 5 minutes")
 
 # ── Load data ─────────────────────────────────────────────────────────────────
 
-gap, vc = fetch_data()
+gap = fetch_data()
+vc = load_vivado_coverage()
 
 sim = gap["sim_result"]
 summary = gap["summary"]
@@ -241,56 +241,7 @@ with tbl_col:
 st.markdown("---")
 
 
-# ── Section 4: Verification Sequence Generation ───────────────────────────────
-
-with st.expander("Verification Sequence Generation", expanded=True):
-    _cov = {}
-    _cov_summary = _cov.get("summary", {})
-    _goals = _cov.get("goals", [])
-
-    d034_col, goals_col = st.columns([1, 2])
-
-    with d034_col:
-        st.metric("D-034 Phase", _cov.get("d034_phase", "—"))
-        st.metric("WRITTEN",     _cov_summary.get("WRITTEN", 0))
-        st.metric("APPROVED",    _cov_summary.get("APPROVED", 0))
-        st.metric("VSL Coverage", f"{_cov_summary.get('coverage_pct', 0.0):.1f}%")
-        st.metric("PHASE_2_GAP", _cov_summary.get("PHASE_2_GAP", 0))
-        notes = _cov_summary.get("notes", "")
-        if notes:
-            st.caption(f"Notes: {notes}")
-
-    with goals_col:
-        if _goals:
-            goals_df = pd.DataFrame([
-                {
-                    "COV ID":          g["id"],
-                    "Name":            g["name"],
-                    "Seq Status":      g["seq_status"],
-                    "Coverage Status": g["coverage_status"],
-                    "VSL Steps":       g.get("vsl_steps", 0),
-                }
-                for g in _goals
-            ])
-
-            def _color_goal_row(row):
-                if row["Seq Status"] == "PHASE_1" and row["Coverage Status"] == "WRITTEN":
-                    return ["background-color: #0D3320"] * len(row)
-                if row["Seq Status"] == "PHASE_2_GAP":
-                    return ["background-color: #3D3000"] * len(row)
-                if row["Seq Status"] == "DRAFT":
-                    return ["background-color: #3D1A00"] * len(row)
-                return [""] * len(row)
-
-            styled_goals = goals_df.style.apply(_color_goal_row, axis=1)
-            st.dataframe(styled_goals, use_container_width=True, hide_index=True)
-        else:
-            st.info("VSL goal data not available.")
-
-st.markdown("---")
-
-
-# ── Section 5: Requirements Detail ────────────────────────────────────────────
+# ── Section 4: Requirements Detail ────────────────────────────────────────────
 
 with st.expander("Requirements Detail", expanded=False):
     search = st.text_input("Filter by Req ID or Family", key="req_filter")
