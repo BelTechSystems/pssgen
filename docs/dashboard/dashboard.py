@@ -22,6 +22,7 @@
 #   D-034  2026-04-18  SB  Initial implementation
 #   D-035  2026-04-25  SB  Remove self-assessed coverage; promote Vivado xcrg
 #   D-036  2026-04-26  SB  Full overhaul: two-column status, remove legacy sources
+#   D-037  2026-04-27  SB  Coverage Detail: functional/code/weighted panels, 12-CG table
 #
 # ===========================================================
 
@@ -166,7 +167,7 @@ with left_col:
         cov_delta_color = "off"
     else:
         cov_delta_color = "inverse"
-    st.metric("Coverage", f"{vc_pct:.1f}%",
+    st.metric("Functional Coverage", f"{vc_pct:.1f}%",
               delta="Vivado 2025.1 xcrg", delta_color=cov_delta_color)
 
 with right_col:
@@ -332,40 +333,76 @@ st.markdown("---")
 
 # ── Section 6: Verification Coverage Detail ───────────────────────────────────
 
+_COVERGROUP_VPR_FAMILY = {
+    "axi_transaction_cg":  "IF",
+    "baud_rate_cg":        "BR",
+    "uart_enable_cg":      "EN",
+    "parity_cg":           "PAR",
+    "stop_bits_cg":        "PAR",
+    "fifo_threshold_cg":   "FIFO",
+    "timeout_cg":          "TO",
+    "interrupt_enable_cg": "INT",
+    "interrupt_clear_cg":  "INT",
+    "reset_values_cg":     "RST",
+    "ro_access_cg":        "FF",
+    "error_response_cg":   "IF",
+}
+
+
+def _truncate_cg_name(name: str) -> str:
+    parts = name.split("::")
+    return "::".join(parts[-2:]) if len(parts) >= 2 else name
+
+
+def _fc_delta(pct: float):
+    if pct >= 95:
+        return "✓ On target", "normal"
+    if pct >= 80:
+        return "⚠ Below target", "off"
+    return "✗ Needs work", "inverse"
+
+
+def _cc_delta(pct: float):
+    if pct >= 80:
+        return "✓", "normal"
+    if pct >= 50:
+        return "⚠", "off"
+    return "✗", "inverse"
+
+
 with st.expander("Verification Coverage Detail", expanded=True):
-    if vc:
+    if not vc:
+        st.warning("Vivado coverage results not available. Run --simulate to generate.")
+    else:
+        # Banner
         st.info(vc.get("coverage_note", "Coverage measured by Vivado xcrg."))
 
-        _verdict_emoji = {
-            "PRODUCTION_READY": "✅",
-            "NEEDS_WORK":       "⚠️",
-            "CRITICAL_GAPS":    "❌",
-        }
+        # ── Functional Coverage ───────────────────────────────────────────────
+        st.markdown("### Functional Coverage")
+        st.caption(
+            "Source: Vivado 2025.1 xcrg — user-defined covergroups measuring "
+            "specification compliance"
+        )
 
-        r1c1, r1c2, r1c3 = st.columns(3)
-        r1c1.metric("Functional Coverage",
-                    f"{vc.get('functional_coverage_pct', 0.0):.1f}%")
-        r1c2.metric("Target", f"{vc.get('target_pct', 0.0):.1f}%")
-        vc_verdict = vc.get("verdict", "UNKNOWN")
-        vc_emoji = _verdict_emoji.get(vc_verdict, "❓")
-        r1c3.metric("Verdict", f"{vc_emoji} {vc_verdict}")
-
+        fc_pct = vc.get("functional_coverage_pct", 0.0)
         covergroups = vc.get("covergroups", [])
+        fc_d, fc_dc = _fc_delta(fc_pct)
+
+        fc_col1, fc_col2 = st.columns(2)
+        fc_col1.metric("Overall Functional Coverage", f"{fc_pct:.1f}%",
+                       delta=fc_d, delta_color=fc_dc)
+        fc_col2.metric("Covergroups", f"{len(covergroups)} defined")
+
         if covergroups:
-            def _truncate_cg_name(name: str) -> str:
-                parts = name.split("::")
-                return "::".join(parts[-2:]) if len(parts) >= 2 else name
-
-            st.markdown("**Covergroup Detail**")
-
             cg_df = pd.DataFrame([
                 {
                     "Covergroup":    _truncate_cg_name(cg["name"]),
+                    "VPR Family":    _COVERGROUP_VPR_FAMILY.get(cg["name"], "—"),
                     "Score":         cg["score"],
                     "Bins Covered":  cg.get("covered", 0),
                     "Bins Expected": cg.get("expected", 0),
                 }
-                for cg in covergroups
+                for cg in sorted(covergroups, key=lambda c: c["score"])
             ])
 
             def _color_score_col(series):
@@ -383,14 +420,52 @@ with st.expander("Verification Coverage Detail", expanded=True):
             )
             st.dataframe(styled_cg, use_container_width=True, hide_index=True)
 
+        st.markdown("---")
+
+        # ── Code Coverage ─────────────────────────────────────────────────────
+        st.markdown("### Code Coverage")
         st.caption(
-            "Branch, statement, condition, and toggle coverage will appear here "
-            "when enabled."
+            "Source: Vivado 2025.1 xcrg — cc_type sbct — structural RTL coverage "
+            "measuring implementation completeness"
         )
-    else:
-        st.warning(
-            "Vivado coverage results not available. Run --simulate to generate."
+
+        line_pct   = vc.get("line_coverage_pct",      0.0)
+        branch_pct = vc.get("branch_coverage_pct",    0.0)
+        cond_pct   = vc.get("condition_coverage_pct", 0.0)
+        toggle_pct = vc.get("toggle_coverage_pct",    0.0)
+
+        cc_col1, cc_col2, cc_col3, cc_col4 = st.columns(4)
+        d, dc = _cc_delta(line_pct)
+        cc_col1.metric("Line", f"{line_pct:.1f}%", delta=d, delta_color=dc)
+        d, dc = _cc_delta(branch_pct)
+        cc_col2.metric("Branch", f"{branch_pct:.1f}%", delta=d, delta_color=dc)
+        d, dc = _cc_delta(cond_pct)
+        cc_col3.metric("Condition", f"{cond_pct:.1f}%", delta=d, delta_color=dc)
+        d, dc = _cc_delta(toggle_pct)
+        cc_col4.metric("Toggle", f"{toggle_pct:.1f}%", delta=d, delta_color=dc)
+
+        st.caption(
+            "Branch coverage gap (26.7%) indicates FIFO boundary conditions and "
+            "error paths not yet fully exercised. See CAE gap analysis for details."
         )
+
+        st.markdown("---")
+
+        # ── Weighted Score ────────────────────────────────────────────────────
+        st.markdown("### Weighted Verification Score")
+        st.caption(
+            "Weighted estimate — not a standalone claim. "
+            "Formula: (0.7 × Functional + 0.3 × Code Average)"
+        )
+
+        wt_score = (0.7 * vc.get("functional_coverage_pct", 0.0) +
+                    0.3 * vc.get("code_coverage_pct", 0.0))
+
+        ws_col1, ws_col2, ws_col3 = st.columns(3)
+        ws_col1.metric("Functional Weight", "70%")
+        ws_col2.metric("Code Weight", "30%")
+        ws_col3.metric("Weighted Score", f"{wt_score:.1f}%",
+                       help="(0.7 × FC + 0.3 × CC_avg)")
 
 st.markdown("---")
 
