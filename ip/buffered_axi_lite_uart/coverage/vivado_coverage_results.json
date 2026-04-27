@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-04-27T20:17:41.650904+00:00",
+  "generated_at": "2026-04-27T21:01:58.154226+00:00",
   "simulator": "vivado",
   "version": "2025.1",
   "coverage_source": "Vivado 2025.1 xcrg",
@@ -7,21 +7,87 @@
   "passes_run": 1,
   "max_passes": 1,
   "target_pct": 95.0,
-  "target_reached": true,
-  "functional_coverage_pct": 100.0,
-  "line_coverage_pct": 92.3437,
-  "branch_coverage_pct": 24.3421,
-  "condition_coverage_pct": 41.6949,
+  "target_reached": false,
+  "functional_coverage_pct": 83.0556,
+  "line_coverage_pct": 93.0682,
+  "branch_coverage_pct": 26.6582,
+  "condition_coverage_pct": 45.7413,
   "toggle_coverage_pct": 18.49,
-  "code_coverage_pct": 44.217675,
+  "code_coverage_pct": 45.989425000000004,
   "covergroups": [
     {
       "name": "buffered_axi_lite_uart_pkg::buffered_axi_lite_uart_coverage_subscriber::axi_transaction_cg",
       "score": 100.0,
       "expected": 16,
       "covered": 16
+    },
+    {
+      "name": "buffered_axi_lite_uart_pkg::buffered_axi_lite_uart_coverage_subscriber::baud_rate_cg",
+      "score": 80.0,
+      "expected": 5,
+      "covered": 4
+    },
+    {
+      "name": "buffered_axi_lite_uart_pkg::buffered_axi_lite_uart_coverage_subscriber::uart_enable_cg",
+      "score": 50.0,
+      "expected": 2,
+      "covered": 1
+    },
+    {
+      "name": "buffered_axi_lite_uart_pkg::buffered_axi_lite_uart_coverage_subscriber::parity_cg",
+      "score": 100.0,
+      "expected": 3,
+      "covered": 3
+    },
+    {
+      "name": "buffered_axi_lite_uart_pkg::buffered_axi_lite_uart_coverage_subscriber::stop_bits_cg",
+      "score": 66.6667,
+      "expected": 3,
+      "covered": 2
+    },
+    {
+      "name": "buffered_axi_lite_uart_pkg::buffered_axi_lite_uart_coverage_subscriber::fifo_threshold_cg",
+      "score": 50.0,
+      "expected": 6,
+      "covered": 3
+    },
+    {
+      "name": "buffered_axi_lite_uart_pkg::buffered_axi_lite_uart_coverage_subscriber::timeout_cg",
+      "score": 100.0,
+      "expected": 4,
+      "covered": 4
+    },
+    {
+      "name": "buffered_axi_lite_uart_pkg::buffered_axi_lite_uart_coverage_subscriber::interrupt_enable_cg",
+      "score": 100.0,
+      "expected": 2,
+      "covered": 2
+    },
+    {
+      "name": "buffered_axi_lite_uart_pkg::buffered_axi_lite_uart_coverage_subscriber::interrupt_clear_cg",
+      "score": 50.0,
+      "expected": 2,
+      "covered": 1
+    },
+    {
+      "name": "buffered_axi_lite_uart_pkg::buffered_axi_lite_uart_coverage_subscriber::reset_values_cg",
+      "score": 100.0,
+      "expected": 1,
+      "covered": 1
+    },
+    {
+      "name": "buffered_axi_lite_uart_pkg::buffered_axi_lite_uart_coverage_subscriber::ro_access_cg",
+      "score": 100.0,
+      "expected": 4,
+      "covered": 4
+    },
+    {
+      "name": "buffered_axi_lite_uart_pkg::buffered_axi_lite_uart_coverage_subscriber::error_response_cg",
+      "score": 100.0,
+      "expected": 4,
+      "covered": 4
     }
   ],
-  "verdict": "PRODUCTION_READY",
+  "verdict": "NEEDS_WORK",
   "coverage_note": "Coverage measured by Vivado 2025.1 xcrg. Not self-assessed."
 }
