@@ -30,7 +30,7 @@ class buffered_axi_lite_uart_scoreboard extends uvm_scoreboard;
     local function void _init_shadow();
         shadow[32'h00] = 32'h00000000;   // CTRL
         shadow[32'h08] = 32'h004FA6D5;   // BAUD_TUNING
-        shadow[32'h0C] = 32'h00000004;   // FIFO_CTRL
+        shadow[32'h0C] = 32'h00000808;   // FIFO_CTRL (16-bit register, reset=G_FIFO_DEPTH/2 & G_FIFO_DEPTH/2)
         shadow[32'h14] = 32'h00000064;   // TIMEOUT_VAL (16-bit register, reset=0x0064)
         shadow[32'h18] = 32'h00000000;   // INT_ENABLE
         shadow[32'h24] = 32'h00000000;   // SCRATCH
@@ -46,8 +46,8 @@ class buffered_axi_lite_uart_scoreboard extends uvm_scoreboard;
             if (wstrb[b])
                 shadow[addr][b*8 +: 8] = wdata[b*8 +: 8];
         end
-        // TIMEOUT_VAL is 16-bit — RTL ignores upper bits
-        if (addr[7:0] === 8'h14)
+        // TIMEOUT_VAL and FIFO_CTRL are 16-bit — RTL ignores upper bits
+        if (addr[7:0] === 8'h14 || addr[7:0] === 8'h0C)
             shadow[addr] = shadow[addr] & 32'h0000FFFF;
     endfunction
 
