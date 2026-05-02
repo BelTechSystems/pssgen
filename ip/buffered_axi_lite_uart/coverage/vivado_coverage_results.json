@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-04-27T21:01:58.154226+00:00",
+  "generated_at": "2026-05-02T16:16:04.888870+00:00",
   "simulator": "vivado",
   "version": "2025.1",
   "coverage_source": "Vivado 2025.1 xcrg",
@@ -7,13 +7,13 @@
   "passes_run": 1,
   "max_passes": 1,
   "target_pct": 95.0,
-  "target_reached": false,
-  "functional_coverage_pct": 83.0556,
-  "line_coverage_pct": 93.0682,
+  "target_reached": true,
+  "functional_coverage_pct": 95.5556,
+  "line_coverage_pct": 93.0794,
   "branch_coverage_pct": 26.6582,
   "condition_coverage_pct": 45.7413,
-  "toggle_coverage_pct": 18.49,
-  "code_coverage_pct": 45.989425000000004,
+  "toggle_coverage_pct": 18.82,
+  "code_coverage_pct": 46.074725,
   "covergroups": [
     {
       "name": "buffered_axi_lite_uart_pkg::buffered_axi_lite_uart_coverage_subscriber::axi_transaction_cg",
@@ -29,9 +29,9 @@
     },
     {
       "name": "buffered_axi_lite_uart_pkg::buffered_axi_lite_uart_coverage_subscriber::uart_enable_cg",
-      "score": 50.0,
+      "score": 100.0,
       "expected": 2,
-      "covered": 1
+      "covered": 2
     },
     {
       "name": "buffered_axi_lite_uart_pkg::buffered_axi_lite_uart_coverage_subscriber::parity_cg",
@@ -47,9 +47,9 @@
     },
     {
       "name": "buffered_axi_lite_uart_pkg::buffered_axi_lite_uart_coverage_subscriber::fifo_threshold_cg",
-      "score": 50.0,
+      "score": 100.0,
       "expected": 6,
-      "covered": 3
+      "covered": 6
     },
     {
       "name": "buffered_axi_lite_uart_pkg::buffered_axi_lite_uart_coverage_subscriber::timeout_cg",
@@ -65,9 +65,9 @@
     },
     {
       "name": "buffered_axi_lite_uart_pkg::buffered_axi_lite_uart_coverage_subscriber::interrupt_clear_cg",
-      "score": 50.0,
+      "score": 100.0,
       "expected": 2,
-      "covered": 1
+      "covered": 2
     },
     {
       "name": "buffered_axi_lite_uart_pkg::buffered_axi_lite_uart_coverage_subscriber::reset_values_cg",
@@ -88,6 +88,6 @@
       "covered": 4
     }
   ],
-  "verdict": "NEEDS_WORK",
+  "verdict": "PRODUCTION_READY",
   "coverage_note": "Coverage measured by Vivado 2025.1 xcrg. Not self-assessed."
 }
