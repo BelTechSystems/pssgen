@@ -62,6 +62,9 @@ class seq_RCOV001_baud_tuning extends buffered_axi_lite_uart_base_seq;
 
         bit [31:0] rdata;
 
+        // ZERO bin — must be sampled before the sweep
+        axi_write(32'h00000008, 32'h00000000, 4'hF, "BAUD_TUNING");
+
         for (int i = 0; i < 12; i++) begin
             // Write tuning word
             axi_write(32'h00000008, tuning_words[i], 4'hF, "BAUD_TUNING");
