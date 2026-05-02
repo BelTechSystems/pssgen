@@ -58,7 +58,7 @@ class buffered_axi_lite_uart_coverage_subscriber extends
 
     // EN family: UART enable/disable transitions
     covergroup uart_enable_cg;
-        cp_uart_en: coverpoint item_s.wdata[0]
+        cp_uart_en: coverpoint item_s.wdata[7]
             iff (item_s.cmd == buffered_axi_lite_uart_seq_item::AXI_WRITE &&
                  item_s.addr[7:0] == 8'h00) {
             bins DISABLED = {1'b0};

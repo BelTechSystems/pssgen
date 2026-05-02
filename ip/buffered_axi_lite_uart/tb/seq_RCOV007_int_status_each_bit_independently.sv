@@ -30,6 +30,7 @@ class seq_RCOV007_int_status_each_bit_independently extends buffered_axi_lite_ua
             $sformatf("INT_STATUS = 0x%08h", rdata), UVM_MEDIUM)
         // W1C clear all via INT_CLEAR; read INT_CLEAR to verify it is readable (returns 0)
         axi_write(32'h00000020, 32'h000000FF, 4'hF, "INT_CLEAR");
+        axi_write(32'h00000020, 32'h00000000, 4'hF, "INT_CLEAR"); // CLEAR_NONE bin
         axi_read (32'h00000020, rdata,              "INT_CLEAR");
         // Confirm INT_STATUS cleared
         axi_read(32'h0000001C, rdata, "INT_STATUS");

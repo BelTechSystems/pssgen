@@ -21,6 +21,10 @@ class seq_RCOV019_int_thresh_frame extends buffered_axi_lite_uart_base_seq;
 
     virtual task body();
         bit [31:0] rdata;
+        // Hit ZERO bins for both TX_THRESH[15:8] and RX_THRESH[7:0]
+        axi_write(32'h0000000C, 32'h00000000, 4'hF, "FIFO_CTRL");
+        // Hit MAX bins
+        axi_write(32'h0000000C, 32'h0000FFFF, 4'hF, "FIFO_CTRL");
         // Program FIFO_CTRL: TX_THRESH=8, RX_THRESH=4 (FIFO_CTRL[15:8]=TX, [7:0]=RX)
         axi_write(32'h0000000C, 32'h00000804, 4'hF, "FIFO_CTRL");
         axi_read (32'h0000000C, rdata,              "FIFO_CTRL");
