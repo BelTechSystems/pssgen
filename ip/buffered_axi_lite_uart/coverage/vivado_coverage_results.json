@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-02T16:16:04.888870+00:00",
+  "generated_at": "2026-05-02T19:19:17.504672+00:00",
   "simulator": "vivado",
   "version": "2025.1",
   "coverage_source": "Vivado 2025.1 xcrg",
@@ -8,12 +8,12 @@
   "max_passes": 1,
   "target_pct": 95.0,
   "target_reached": true,
-  "functional_coverage_pct": 95.5556,
-  "line_coverage_pct": 93.0794,
+  "functional_coverage_pct": 100.0,
+  "line_coverage_pct": 93.0905,
   "branch_coverage_pct": 26.6582,
   "condition_coverage_pct": 45.7413,
   "toggle_coverage_pct": 18.82,
-  "code_coverage_pct": 46.074725,
+  "code_coverage_pct": 46.0775,
   "covergroups": [
     {
       "name": "buffered_axi_lite_uart_pkg::buffered_axi_lite_uart_coverage_subscriber::axi_transaction_cg",
@@ -23,9 +23,9 @@
     },
     {
       "name": "buffered_axi_lite_uart_pkg::buffered_axi_lite_uart_coverage_subscriber::baud_rate_cg",
-      "score": 80.0,
+      "score": 100.0,
       "expected": 5,
-      "covered": 4
+      "covered": 5
     },
     {
       "name": "buffered_axi_lite_uart_pkg::buffered_axi_lite_uart_coverage_subscriber::uart_enable_cg",
@@ -41,9 +41,9 @@
     },
     {
       "name": "buffered_axi_lite_uart_pkg::buffered_axi_lite_uart_coverage_subscriber::stop_bits_cg",
-      "score": 66.6667,
+      "score": 100.0,
       "expected": 3,
-      "covered": 2
+      "covered": 3
     },
     {
       "name": "buffered_axi_lite_uart_pkg::buffered_axi_lite_uart_coverage_subscriber::fifo_threshold_cg",
